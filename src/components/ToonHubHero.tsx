@@ -136,7 +136,7 @@ export default function ToonHubHero() {
             zIndex: 2,
             top: '18%',
             fontFamily: "'Anton', sans-serif",
-            fontSize: 'clamp(90px, 28vw, 380px)',
+            fontSize: 'clamp(45px, 14vw, 190px)',
             fontWeight: 900,
             color: 'white',
             opacity: 1,
