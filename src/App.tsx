@@ -3,6 +3,7 @@ import { SoapProvider } from './context/SoapContext'
 import Navbar from './components/Navbar'
 import FlyingSoap from './components/FlyingSoap'
 import HeroSection from './components/HeroSection'
+import UnwrapSection from './components/UnwrapSection'
 import CraftSection from './components/CraftSection'
 import HandsSection from './components/HandsSection'
 import ShopSection from './components/ShopSection'
@@ -20,6 +21,7 @@ function App() {
             <FlyingSoap />
             <main>
               <HeroSection />
+              <UnwrapSection />
               <CraftSection />
               <HandsSection />
               <ShopSection />
