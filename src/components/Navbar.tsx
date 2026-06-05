@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { Leaf, Menu, X, ShoppingCart } from 'lucide-react'
+import { Menu, X, ShoppingCart } from 'lucide-react'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -33,7 +33,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <Leaf className="w-5 h-5 text-sage-dark transition-transform duration-300 group-hover:rotate-12" />
+            <img src="/cclogo.png" alt="CareCraftz" className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
             <span className="font-['Poppins',sans-serif] text-xl text-charcoal tracking-wide font-bold">
               Care<span className="font-bold">Craftz</span>
             </span>
