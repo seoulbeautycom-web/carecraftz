@@ -4,13 +4,13 @@ import ProductPanel from './ProductPanel'
 const BG_BLUE = '#4BB3ED'
 
 const SCENT_PRODUCT = {
-  name: 'Eau So Sweet',
-  size: '100 ml / 3.3 oz',
-  image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260511_151640_5b4a7bf8-4eb2-4a49-aa63-17a9bb642b88.png&w=1280&q=85',
+  name: 'Delicate Zone',
+  size: '50ml',
+  image: '/delicatezone.png',
   notes: [
-    { label: 'Fruity top', ingredient: 'WHITE RASPBERRIES' },
-    { label: 'Floral heart', ingredient: 'DAISY TREE PETALS' },
-    { label: 'Feminine base', ingredient: 'SUGAR MUSKS' },
+    { label: 'Even Skin Tone', ingredient: 'GLUTATHIONE' },
+    { label: 'Lightens Dark Spots', ingredient: 'NIACINAMIDE' },
+    { label: 'For Private Parts', ingredient: 'ALPHA ARBUTIN' },
   ],
 }
 
