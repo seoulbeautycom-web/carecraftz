@@ -44,7 +44,7 @@ export default function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className="font-['ABeeZee',sans-serif] text-sm font-medium text-charcoal/70 hover:text-charcoal transition-colors duration-300 relative group"
+                className={`font-['ABeeZee',sans-serif] text-sm font-medium transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-white hover:text-white/80'}`}
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
@@ -52,7 +52,7 @@ export default function Navbar() {
             ))}
             <Link
               to="/seoul-beauty"
-              className="font-['ABeeZee',sans-serif] text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
+              className={`font-['ABeeZee',sans-serif] text-sm font-medium transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-white hover:text-white/80'}`}
             >
               Seoul Beauty
             </Link>
@@ -90,7 +90,7 @@ export default function Navbar() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="font-['ABeeZee',sans-serif] text-base font-medium text-charcoal/80 hover:text-charcoal py-2"
+                className={`font-['ABeeZee',sans-serif] text-base font-medium py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-white hover:text-white/80'}`}
               >
                 {link.label}
               </a>
@@ -98,7 +98,7 @@ export default function Navbar() {
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
-              className="font-['ABeeZee',sans-serif] text-base font-medium text-rose-500 hover:text-rose-600 py-2"
+              className={`font-['ABeeZee',sans-serif] text-base font-medium py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-white hover:text-white/80'}`}
             >
               Seoul Beauty
             </Link>
