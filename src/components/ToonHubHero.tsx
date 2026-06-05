@@ -187,7 +187,7 @@ export default function ToonHubHero() {
           >
             spotless glow
           </p>
-          <div className="hidden sm:block mt-4 space-y-2">
+          <div className="hidden sm:block mt-2 space-y-2">
             <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
               <Check className="w-4 h-4" strokeWidth={2.5} />
               <span className="text-xs sm:text-sm">Even-toned, radiant skin</span>
