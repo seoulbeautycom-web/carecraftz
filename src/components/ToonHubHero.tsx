@@ -95,7 +95,7 @@ export default function ToonHubHero() {
           zIndex: 20,
           left: '50%',
           height: isMobile ? '60%' : '92%',
-          bottom: isMobile ? '22%' : '8%',
+          bottom: isMobile ? '22%' : '12%',
         }
       case 'left':
         return {
