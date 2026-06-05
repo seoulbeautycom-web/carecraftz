@@ -149,23 +149,6 @@ export default function ToonHubHero() {
           3D SHAPE
         </div>
 
-        {/* Top-left brand label */}
-        <div
-          className="absolute top-6 left-4 sm:left-8"
-          style={{ zIndex: 60 }}
-        >
-          <span
-            className="text-xs font-semibold uppercase"
-            style={{
-              color: 'white',
-              opacity: 0.9,
-              letterSpacing: '0.18em',
-            }}
-          >
-            TOONHUB
-          </span>
-        </div>
-
         {/* Carousel */}
         <div className="absolute inset-0" style={{ zIndex: 3 }}>
           {IMAGES.map((img, index) => {
