@@ -35,7 +35,7 @@ export default function ShopSection() {
           alt="Background"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-cream/80" />
+        <div className="absolute inset-0 bg-cream/30" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12">
