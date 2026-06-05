@@ -64,14 +64,16 @@ export default function HeroSection() {
               className="relative inline-flex items-center justify-center px-8 py-4 bg-forest text-ivory font-medium rounded-full overflow-hidden group"
             >
               <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Discover the Soap</span>
-              <span className="absolute inset-0 bg-white fill-left" />
+              <span className="absolute inset-0 bg-forest w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
+              <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
             </a>
             <a
               href="#craft"
               className="relative inline-flex items-center justify-center px-8 py-4 border border-charcoal/20 text-charcoal font-medium rounded-full overflow-hidden group"
             >
               <span className="relative z-10 group-hover:text-ivory transition-colors duration-500">See the Craft</span>
-              <span className="absolute inset-0 bg-forest fill-left" />
+              <span className="absolute inset-0 bg-white w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
+              <span className="absolute inset-0 bg-forest w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
             </a>
           </motion.div>
         </motion.div>
@@ -97,11 +99,11 @@ export default function HeroSection() {
       </motion.div>
 
       <style>{`
-        .fill-left {
+        .btn-overlay {
           clip-path: inset(0 100% 0 0);
-          transition: clip-path 0.5s ease-out;
+          transition: clip-path 0.6s ease-out;
         }
-        .group:hover .fill-left {
+        .group:hover .btn-overlay {
           clip-path: inset(0 0 0 0);
         }
       `}</style>
