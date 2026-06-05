@@ -146,7 +146,7 @@ export default function ToonHubHero() {
             whiteSpace: 'nowrap',
           }}
         >
-          3D SHAPE
+          FOR THAT GLASS SKIN
         </div>
 
         {/* Carousel */}
