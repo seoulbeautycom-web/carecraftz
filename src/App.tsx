@@ -1,3 +1,4 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SoapProvider } from './context/SoapContext'
 import Navbar from './components/Navbar'
 import FlyingSoap from './components/FlyingSoap'
@@ -6,20 +7,34 @@ import CraftSection from './components/CraftSection'
 import HandsSection from './components/HandsSection'
 import ShopSection from './components/ShopSection'
 import Footer from './components/Footer'
+import SeoulBeauty from './components/SeoulBeauty'
 
 function App() {
   return (
-    <SoapProvider>
-      <Navbar />
-      <FlyingSoap />
-      <main>
-        <HeroSection />
-        <CraftSection />
-        <HandsSection />
-        <ShopSection />
-      </main>
-      <Footer />
-    </SoapProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
+          <SoapProvider>
+            <Navbar />
+            <FlyingSoap />
+            <main>
+              <HeroSection />
+              <CraftSection />
+              <HandsSection />
+              <ShopSection />
+            </main>
+            <Footer />
+          </SoapProvider>
+        } />
+        <Route path="/seoul-beauty" element={
+          <>
+            <Navbar />
+            <SeoulBeauty />
+            <Footer />
+          </>
+        } />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

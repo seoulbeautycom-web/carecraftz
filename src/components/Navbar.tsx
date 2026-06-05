@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Leaf, Menu, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Leaf, Menu, X, Sparkles } from 'lucide-react'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -49,9 +50,16 @@ export default function Navbar() {
                 <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
               </a>
             ))}
+            <Link
+              to="/seoul-beauty"
+              className="flex items-center gap-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
+            >
+              <Sparkles className="w-4 h-4" />
+              Seoul Beauty
+            </Link>
           </div>
 
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-4">
             <a
               href="#shop"
               className="inline-flex items-center px-6 py-2.5 bg-forest text-ivory text-sm font-medium rounded-full hover:bg-forest-dark transition-colors duration-300"
@@ -88,6 +96,14 @@ export default function Navbar() {
                 {link.label}
               </a>
             ))}
+            <Link
+              to="/seoul-beauty"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 text-base font-medium text-rose-500 hover:text-rose-600 py-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Seoul Beauty
+            </Link>
             <a
               href="#shop"
               onClick={() => setMobileOpen(false)}
