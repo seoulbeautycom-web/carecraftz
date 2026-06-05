@@ -222,6 +222,7 @@ export default function ToonHubHero() {
               color: 'white',
               opacity: 0.95,
               letterSpacing: '0.02em',
+              fontFamily: "'Urbanist', sans-serif",
             }}
           >
             {CONTENT[activeIndex].title}
@@ -230,11 +231,11 @@ export default function ToonHubHero() {
             {CONTENT[activeIndex].bullets.map((bullet, index) => (
               <div key={index} className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
                 <Check className="w-4 h-4" strokeWidth={2.5} />
-                <span className="text-xs sm:text-sm">{bullet}</span>
+                <span className="text-xs sm:text-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>{bullet}</span>
               </div>
             ))}
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-4 mt-4">
             <button
               onClick={() => navigate('prev')}
               className="w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border-2 border-white bg-transparent transition-all duration-150 hover:scale-108 hover:bg-white/12"
