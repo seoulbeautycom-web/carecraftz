@@ -41,7 +41,21 @@ export default function CraftSection() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12">
         <div className="grid lg:grid-cols-2 gap-20 items-center">
-          <div className="hidden lg:block" />
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ delay: 0.3, duration: 1, ease: [0.4, 0, 0.2, 1] }}
+            className="hidden lg:block"
+          >
+            <video
+              src="/moringa.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-auto rounded-2xl shadow-2xl"
+            />
+          </motion.div>
 
           <div>
             <motion.span

@@ -4,7 +4,7 @@ import { ShoppingBag, Check, Star } from 'lucide-react'
 
 const trustSignals = [
   'Handmade in small batches',
-  '100% natural ingredients',
+  'Natural ingredients',
   'No harsh chemicals',
   'Cruelty-free',
 ]
@@ -95,7 +95,7 @@ export default function ShopSection() {
                   Moringa Handmade Soap
                 </h3>
                 <p className="text-sm text-charcoal/50 mb-6">
-                  100g · Cold-processed · Unscented
+                  50g
                 </p>
 
                 <div className="flex items-baseline gap-3 justify-center md:justify-start mb-8">
