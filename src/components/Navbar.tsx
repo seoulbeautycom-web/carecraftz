@@ -34,7 +34,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           <Link to="/" className="flex items-center gap-2.5 group">
             <Leaf className="w-5 h-5 text-sage-dark transition-transform duration-300 group-hover:rotate-12" />
-            <span className="font-serif text-xl text-charcoal tracking-wide">
+            <span className="font-['ABeeZee',sans-serif] text-xl text-charcoal tracking-wide">
               Care<span className="font-bold">Craftz</span>
             </span>
           </Link>
@@ -44,7 +44,7 @@ export default function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm font-medium text-charcoal/70 hover:text-charcoal transition-colors duration-300 relative group"
+                className="font-['ABeeZee',sans-serif] text-sm font-medium text-charcoal/70 hover:text-charcoal transition-colors duration-300 relative group"
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
@@ -52,7 +52,7 @@ export default function Navbar() {
             ))}
             <Link
               to="/seoul-beauty"
-              className="text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
+              className="font-['ABeeZee',sans-serif] text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
             >
               Seoul Beauty
             </Link>
@@ -61,7 +61,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-4">
             <a
               href="#shop"
-              className="inline-flex items-center px-6 py-2.5 bg-forest text-ivory text-sm font-medium rounded-full hover:bg-forest-dark transition-colors duration-300"
+              className="font-['ABeeZee',sans-serif] inline-flex items-center px-6 py-2.5 bg-forest text-ivory text-sm font-medium rounded-full hover:bg-forest-dark transition-colors duration-300"
             >
               Shop Now
             </a>
@@ -90,7 +90,7 @@ export default function Navbar() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-base font-medium text-charcoal/80 hover:text-charcoal py-2"
+                className="font-['ABeeZee',sans-serif] text-base font-medium text-charcoal/80 hover:text-charcoal py-2"
               >
                 {link.label}
               </a>
@@ -98,14 +98,14 @@ export default function Navbar() {
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
-              className="text-base font-medium text-rose-500 hover:text-rose-600 py-2"
+              className="font-['ABeeZee',sans-serif] text-base font-medium text-rose-500 hover:text-rose-600 py-2"
             >
               Seoul Beauty
             </Link>
             <a
               href="#shop"
               onClick={() => setMobileOpen(false)}
-              className="inline-flex items-center justify-center px-6 py-3 bg-forest text-ivory text-sm font-medium rounded-full mt-2"
+              className="font-['ABeeZee',sans-serif] inline-flex items-center justify-center px-6 py-3 bg-forest text-ivory text-sm font-medium rounded-full mt-2"
             >
               Shop Now
             </a>

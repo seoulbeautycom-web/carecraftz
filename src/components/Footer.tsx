@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-6">
               <Leaf className="w-5 h-5 text-sage" />
-              <span className="font-serif text-xl text-ivory">Care<span className="font-bold">Craftz</span></span>
+              <span className="font-['ABeeZee',sans-serif] text-xl text-ivory">Care<span className="font-bold">Craftz</span></span>
             </div>
             <p className="text-sm leading-relaxed text-ivory/50 max-w-xs">
               Small-batch handmade soaps, crafted with intention and respect for nature.
@@ -17,27 +17,27 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-ivory/40 mb-6">
+            <h4 className="font-['ABeeZee',sans-serif] text-xs font-semibold tracking-[0.2em] uppercase text-ivory/40 mb-6">
               Navigate
             </h4>
             <div className="flex flex-col gap-3">
-              <Link to="/" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+              <Link to="/" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Home
               </Link>
-              <Link to="/about-us" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+              <Link to="/about-us" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 About Us
               </Link>
-              <Link to="/seoul-beauty" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+              <Link to="/seoul-beauty" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Seoul Beauty
               </Link>
-              <a href="#shop" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+              <a href="#shop" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Shop
               </a>
             </div>
           </div>
 
           <div>
-            <h4 className="text-xs font-semibold tracking-[0.2em] uppercase text-ivory/40 mb-6">
+            <h4 className="font-['ABeeZee',sans-serif] text-xs font-semibold tracking-[0.2em] uppercase text-ivory/40 mb-6">
               Connect
             </h4>
             <div className="flex gap-4">
@@ -60,10 +60,10 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-ivory/10 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-ivory/30">
+          <p className="font-['ABeeZee',sans-serif] text-xs text-ivory/30">
             © 2025 CareCraftz. All rights reserved.
           </p>
-          <p className="text-xs text-ivory/30">
+          <p className="font-['ABeeZee',sans-serif] text-xs text-ivory/30">
             Handmade with care, always.
           </p>
         </div>
