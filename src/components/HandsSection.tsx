@@ -119,14 +119,7 @@ export default function HandsSection() {
             </div>
           </div>
 
-          <div className="hidden lg:block relative">
-            <img
-              ref={imageRef}
-              src="/sec4.png"
-              alt="Hands with soap"
-              className="w-full h-auto object-contain"
-            />
-          </div>
+          <div className="hidden lg:block relative" />
         </div>
       </div>
     </section>
