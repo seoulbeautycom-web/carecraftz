@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, User, Search, ShoppingBag, ChevronDown, Pause, Play, Menu, X } from 'lucide-react'
+import { Pause, Play } from 'lucide-react'
 
 const HERO_BG_IMAGE = 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260516_101925_8e509c31-4e75-4ae1-b164-2605265b2d47.png&w=1280&q=85'
 
@@ -104,7 +104,6 @@ export default function Shop() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [activeTab, setActiveTab] = useState('best sellers')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
 
@@ -154,61 +153,6 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Announcement Bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 bg-[#F9F4F0] py-2.5 sm:py-3">
-        <div className="flex items-center justify-center gap-4">
-          <ChevronLeft size={16} />
-          <span className="text-sm">free shipping for orders over 50€</span>
-          <ChevronRight size={16} />
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="absolute top-[38px] sm:top-[42px] left-0 right-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-10">
-        <div className="text-lg sm:text-xl font-bold tracking-[0.2em] uppercase">STRETCH</div>
-
-        <div className="hidden md:flex items-center gap-8">
-          {['shop', 'learn', 'journal', 'theme'].map((link) => (
-            <a key={link} href="#" className="text-sm relative group">
-              {link}
-              <span className="absolute -bottom-0.5 left-0 h-[1px] bg-white w-0 group-hover:w-full transition-all duration-300" />
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="w-6 h-4 flex">
-              <div className="w-1/3 h-full bg-blue-700" />
-              <div className="w-1/3 h-full bg-white" />
-              <div className="w-1/3 h-full bg-red-600" />
-            </div>
-            <span className="text-sm">eur €</span>
-            <ChevronDown size={16} />
-          </div>
-          <div className="hidden sm:block w-px h-5 bg-white/30 mx-2" />
-          <User size={20} className="hidden sm:block" />
-          <Search size={20} />
-          <ShoppingBag size={20} />
-          <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-black/95 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex flex-col items-center gap-8">
-            {['shop', 'learn', 'journal', 'theme'].map((link) => (
-              <a key={link} href="#" className="text-3xl font-light text-white" onClick={() => setMobileMenuOpen(false)}>
-                {link}
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Hero Section */}
       <section ref={heroRef as any} className="relative w-full min-h-screen flex flex-col lg:flex-row">
         {/* Hero Left */}
