@@ -3,9 +3,36 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 
 const IMAGES = [
   { src: '/s1.png', bg: '#F4845F', panel: '#F79B7F' },
-  { src: 'https://fifth-gentle-45902158.figma.site/_components/v2/4de492f6d9cf8244ad5293233e5c6f52407d42fc/2.b977faab.png', bg: '#6BBF7A', panel: '#85CC92' },
+  { src: '/s2.png', bg: '#6BBF7A', panel: '#85CC92' },
   { src: 'https://fifth-gentle-45902158.figma.site/_components/v2/4de492f6d9cf8244ad5293233e5c6f52407d42fc/3.4df853b4.png', bg: '#E882B4', panel: '#ED9DC4' },
   { src: 'https://fifth-gentle-45902158.figma.site/_components/v2/4de492f6d9cf8244ad5293233e5c6f52407d42fc/4.4457fbce.png', bg: '#6EB5FF', panel: '#8DC4FF' },
+]
+
+const CONTENT = [
+  {
+    title: 'spotless glow',
+    bullets: [
+      'Even-toned, radiant skin',
+      'Say bye to dark spots',
+      'Powered by natural ingredients',
+    ],
+  },
+  {
+    title: 'For your sensitive skin',
+    bullets: [
+      'Exfoliate',
+      'Cleanse',
+      'Shine',
+    ],
+  },
+  {
+    title: '',
+    bullets: [],
+  },
+  {
+    title: '',
+    bullets: [],
+  },
 ]
 
 export default function ToonHubHero() {
@@ -185,21 +212,15 @@ export default function ToonHubHero() {
               letterSpacing: '0.02em',
             }}
           >
-            spotless glow
+            {CONTENT[activeIndex].title}
           </p>
           <div className="hidden sm:block mt-2 space-y-2">
-            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
-              <Check className="w-4 h-4" strokeWidth={2.5} />
-              <span className="text-xs sm:text-sm">Even-toned, radiant skin</span>
-            </div>
-            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
-              <Check className="w-4 h-4" strokeWidth={2.5} />
-              <span className="text-xs sm:text-sm">Say bye to dark spots</span>
-            </div>
-            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
-              <Check className="w-4 h-4" strokeWidth={2.5} />
-              <span className="text-xs sm:text-sm">Powered by natural ingredients</span>
-            </div>
+            {CONTENT[activeIndex].bullets.map((bullet, index) => (
+              <div key={index} className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
+                <Check className="w-4 h-4" strokeWidth={2.5} />
+                <span className="text-xs sm:text-sm">{bullet}</span>
+              </div>
+            ))}
           </div>
           <div className="flex gap-4">
             <button
