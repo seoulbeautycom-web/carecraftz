@@ -61,15 +61,19 @@ export default function HeroSection() {
           >
             <a
               href="#shop"
-              className="inline-flex items-center justify-center px-8 py-4 bg-forest text-ivory font-medium rounded-full hover:bg-forest-dark transition-all duration-300 hover:shadow-lg hover:shadow-forest/20"
+              className="relative inline-flex items-center justify-center px-8 py-4 bg-forest text-ivory font-medium rounded-full overflow-hidden group"
             >
-              Discover the Soap
+              <span className="relative z-10">Discover the Soap</span>
+              <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+              <span className="absolute inset-0 bg-forest transform translate-x-0 group-hover:translate-x-full transition-transform duration-300 ease-out" />
             </a>
             <a
               href="#craft"
-              className="inline-flex items-center justify-center px-8 py-4 border border-charcoal/20 text-charcoal font-medium rounded-full hover:bg-charcoal/5 transition-all duration-300"
+              className="relative inline-flex items-center justify-center px-8 py-4 border border-charcoal/20 text-charcoal font-medium rounded-full overflow-hidden group"
             >
-              See the Craft
+              <span className="relative z-10">See the Craft</span>
+              <span className="absolute inset-0 bg-forest transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
+              <span className="absolute inset-0 bg-white transform translate-x-0 group-hover:translate-x-full transition-transform duration-300 ease-out" />
             </a>
           </motion.div>
         </motion.div>
