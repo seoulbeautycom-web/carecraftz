@@ -1,12 +1,18 @@
 import { motion } from 'framer-motion'
 import { Droplet, Shield, Heart } from 'lucide-react'
 import ToonHubHero from './ToonHubHero'
+import ScentFinderSection from './ScentFinderSection'
+import WildScentSection from './WildScentSection'
 
 export default function SeoulBeauty() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 via-pink-50 to-white">
       {/* Hero Section - ToonHub */}
       <ToonHubHero />
+
+      {/* Wild Daisy Fragrances Sections */}
+      <ScentFinderSection />
+      <WildScentSection />
 
       {/* Features Section */}
       <section className="py-24 px-6 bg-white">
