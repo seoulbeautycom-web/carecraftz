@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Sparkles, Droplet, Shield, Heart } from 'lucide-react'
+import { Droplet, Shield, Heart } from 'lucide-react'
 import ToonHubHero from './ToonHubHero'
 
 export default function SeoulBeauty() {
