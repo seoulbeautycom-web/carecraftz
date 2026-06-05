@@ -48,6 +48,7 @@ function App() {
           <>
             <Navbar />
             <Shop />
+            <Footer />
           </>
         } />
       </Routes>
