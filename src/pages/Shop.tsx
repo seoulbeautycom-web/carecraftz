@@ -71,7 +71,7 @@ const CATEGORIES = [
   },
   {
     name: 'body',
-    video: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260518_203051_85fee398-ea01-4aa0-972b-137a74213be5.mp4',
+    video: '/moringarotate.mp4',
   },
 ]
 
