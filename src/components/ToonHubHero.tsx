@@ -16,6 +16,7 @@ const CONTENT = [
       'Say bye to dark spots',
       'Powered by natural ingredients',
     ],
+    bottom: '10%',
   },
   {
     title: 'For your sensitive skin',
@@ -24,14 +25,17 @@ const CONTENT = [
       'Cleanse',
       'Shine',
     ],
+    bottom: '30%',
   },
   {
     title: '',
     bullets: [],
+    bottom: '10%',
   },
   {
     title: '',
     bullets: [],
+    bottom: '10%',
   },
 ]
 
@@ -95,7 +99,7 @@ export default function ToonHubHero() {
           zIndex: 20,
           left: '50%',
           height: isMobile ? '60%' : '92%',
-          bottom: isMobile ? '22%' : '35%',
+          bottom: isMobile ? '22%' : CONTENT[activeIndex].bottom,
         }
       case 'left':
         return {
