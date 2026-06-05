@@ -4,13 +4,13 @@ import ProductPanel from './ProductPanel'
 const BG_LIME = '#BDE84F'
 
 const WILD_PRODUCT = {
-  name: 'Eau So Extra',
-  size: '100 ml / 3.3 oz',
-  image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260511_151621_4fba6892-ed21-4c2e-8cb3-0bd2ec2abefa.png&w=1280&q=85',
+  name: 'Deep Clean',
+  size: '140ml',
+  image: '/deepclean.png',
   notes: [
-    { label: 'Top', ingredient: 'BANANA BLOSSOM ACCORD' },
-    { label: 'Heart', ingredient: 'CHOCOLATE DAISY ACCORD' },
-    { label: 'Base', ingredient: 'VETIVER OIL' },
+    { label: 'Purifies Pores', ingredient: 'VITAMIN-C' },
+    { label: 'Removes buildup', ingredient: 'SALICYLIC ACID' },
+    { label: 'Dirt Extractor', ingredient: 'HYDRATING FORMULA' },
   ],
 }
 

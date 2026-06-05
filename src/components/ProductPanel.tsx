@@ -39,10 +39,10 @@ export default function ProductPanel({ bg, product, notes, visible, noteStyle = 
     <div className="relative flex flex-col px-6 md:px-8 pt-6 md:pt-8 pb-8 md:pb-10" style={{ backgroundColor: bg, minHeight: '100%' }}>
       <div className="flex items-start justify-between mb-auto" {...anim(visible, 0, { y: 12, duration: 1400 })}>
         <span className="text-xs font-normal" style={{ color: TEXT_COLOR }}>
-          {noteStyle === 'bold' ? 'Daisy wild' : 'Extensive Research'}
+          {noteStyle === 'bold' ? 'Gel Cleanser' : 'Extensive Research'}
         </span>
         <span className="text-xs font-normal" style={{ color: TEXT_COLOR }}>
-          {noteStyle === 'bold' ? 'Playful' : 'Gentle'}
+          {noteStyle === 'bold' ? 'Exfoliating' : 'Gentle'}
         </span>
       </div>
 
