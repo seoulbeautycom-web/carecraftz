@@ -68,7 +68,7 @@ export default function ToonHubHero() {
           zIndex: 20,
           left: '50%',
           height: isMobile ? '60%' : '92%',
-          bottom: isMobile ? '22%' : 0,
+          bottom: isMobile ? '22%' : '5%',
         }
       case 'left':
         return {
@@ -178,7 +178,7 @@ export default function ToonHubHero() {
           style={{ zIndex: 60, maxWidth: '320px' }}
         >
           <p
-            className="font-bold uppercase tracking-widest mb-4 sm:mb-6 text-base sm:text-[22px]"
+            className="font-bold uppercase tracking-widest mb-2 sm:mb-3 text-base sm:text-[22px]"
             style={{
               color: 'white',
               opacity: 0.95,
