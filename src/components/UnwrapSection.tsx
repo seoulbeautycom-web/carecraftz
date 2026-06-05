@@ -32,8 +32,8 @@ export default function UnwrapSection() {
   }
 
   return (
-    <section ref={containerRef} className="relative h-[30vh] bg-cream overflow-hidden">
-      <div className="absolute inset-0 flex items-center justify-center">
+    <section ref={containerRef} className="relative h-[30vh] bg-cream overflow-hidden flex items-center justify-center">
+      <div className="relative w-[30vh] h-[30vh]">
         <motion.img
           src={getImagePath(currentFrame)}
           alt="Unwrapping soap"
@@ -42,30 +42,29 @@ export default function UnwrapSection() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: false }}
         />
-      </div>
-
-      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-        <div className="text-center px-6">
-          <motion.p
-            style={{ 
-              opacity: textOpacity1,
-              y: textY1,
-              fontFamily: "'Urbanist', sans-serif"
-            }}
-            className="text-3xl md:text-4xl font-bold text-white mb-4"
-          >
-            Unwrap to see what's inside
-          </motion.p>
-          <motion.p
-            style={{ 
-              opacity: textOpacity2,
-              y: textY2,
-              fontFamily: "'Poppins', sans-serif"
-            }}
-            className="text-2xl md:text-3xl font-medium text-white"
-          >
-            only for you and your gentle skin
-          </motion.p>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+          <div className="text-center px-6">
+            <motion.p
+              style={{ 
+                opacity: textOpacity1,
+                y: textY1,
+                fontFamily: "'Urbanist', sans-serif"
+              }}
+              className="text-lg md:text-xl font-bold text-white mb-2"
+            >
+              Unwrap to see what's inside
+            </motion.p>
+            <motion.p
+              style={{ 
+                opacity: textOpacity2,
+                y: textY2,
+                fontFamily: "'Poppins', sans-serif"
+              }}
+              className="text-base md:text-lg font-medium text-white"
+            >
+              only for you and your gentle skin
+            </motion.p>
+          </div>
         </div>
       </div>
     </section>
