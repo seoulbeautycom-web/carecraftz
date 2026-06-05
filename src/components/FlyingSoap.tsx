@@ -36,25 +36,12 @@ export default function FlyingSoap() {
   const rotateY = useTransform(smoothProgress, [0, 0.2, 0.4, 0.6, 0.75], [-5, 10, -8, 6, 0])
   const rotateZ = useTransform(smoothProgress, [0, 0.4, 0.75], [0, 180, 360])
 
-  const floatY = useMotionValue(0)
-  const floatSpring = useSpring(floatY, { stiffness: 30, damping: 10 })
-
-  useEffect(() => {
-    let frame: number
-    const animate = () => {
-      floatY.set(Math.sin(Date.now() / 1500) * 12)
-      frame = requestAnimationFrame(animate)
-    }
-    frame = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(frame)
-  }, [floatY])
-
-  const combinedY = useTransform([y, floatSpring], ([scrollY, float]: number[]) => scrollY + float)
-
   return (
     <div ref={containerRef} className="fixed inset-0 pointer-events-none z-30 perspective-1000">
       <motion.div
-        style={{ x, y: combinedY, scale, rotateX, rotateY, rotateZ }}
+        style={{ x, y, scale, rotateX, rotateY, rotateZ }}
+        animate={{ translateY: [-8, 8, -8] }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         className="preserve-3d will-change-transform"
       >
         <AnimatePresence mode="wait">
