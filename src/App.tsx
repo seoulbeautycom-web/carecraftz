@@ -8,6 +8,7 @@ import HandsSection from './components/HandsSection'
 import ShopSection from './components/ShopSection'
 import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
+import AboutUs from './components/AboutUs'
 
 function App() {
   return (
@@ -30,6 +31,13 @@ function App() {
           <>
             <Navbar />
             <SeoulBeauty />
+            <Footer />
+          </>
+        } />
+        <Route path="/about-us" element={
+          <>
+            <Navbar />
+            <AboutUs />
             <Footer />
           </>
         } />

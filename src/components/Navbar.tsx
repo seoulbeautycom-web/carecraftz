@@ -32,12 +32,12 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-20">
-          <a href="#" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center gap-2.5 group">
             <Leaf className="w-5 h-5 text-sage-dark transition-transform duration-300 group-hover:rotate-12" />
             <span className="font-serif text-xl font-medium text-charcoal tracking-wide">
               CareCraftz
             </span>
-          </a>
+          </Link>
 
           <div className="hidden md:flex items-center gap-10">
             {navLinks.map((link) => (
@@ -52,9 +52,8 @@ export default function Navbar() {
             ))}
             <Link
               to="/seoul-beauty"
-              className="flex items-center gap-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
+              className="text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors duration-300"
             >
-              <Sparkles className="w-4 h-4" />
               Seoul Beauty
             </Link>
           </div>
@@ -99,9 +98,8 @@ export default function Navbar() {
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
-              className="flex items-center gap-2 text-base font-medium text-rose-500 hover:text-rose-600 py-2"
+              className="text-base font-medium text-rose-500 hover:text-rose-600 py-2"
             >
-              <Sparkles className="w-4 h-4" />
               Seoul Beauty
             </Link>
             <a

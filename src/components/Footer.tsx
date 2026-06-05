@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Leaf, Instagram, Mail } from 'lucide-react'
 
 export default function Footer() {
@@ -20,15 +21,15 @@ export default function Footer() {
               Navigate
             </h4>
             <div className="flex flex-col gap-3">
-              <a href="#hero" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+              <Link to="/" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Home
-              </a>
-              <a href="#craft" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
-                The Craft
-              </a>
-              <a href="#hands" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
-                Experience
-              </a>
+              </Link>
+              <Link to="/about-us" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+                About Us
+              </Link>
+              <Link to="/seoul-beauty" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
+                Seoul Beauty
+              </Link>
               <a href="#shop" className="text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Shop
               </a>
