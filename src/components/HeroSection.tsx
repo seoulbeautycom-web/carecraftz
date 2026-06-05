@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
 export default function HeroSection() {
@@ -59,14 +60,14 @@ export default function HeroSection() {
             transition={{ delay: 0.7, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
           >
-            <a
-              href="#shop"
+            <Link
+              to="/shop"
               className="relative inline-flex items-center justify-center px-8 py-4 bg-forest text-ivory font-medium rounded-full overflow-hidden group"
             >
               <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Discover the Soap</span>
               <span className="absolute inset-0 bg-forest w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
               <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
-            </a>
+            </Link>
             <a
               href="#craft"
               className="relative inline-flex items-center justify-center px-8 py-4 border border-charcoal/20 text-charcoal font-medium rounded-full overflow-hidden group"

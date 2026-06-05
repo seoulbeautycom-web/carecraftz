@@ -10,6 +10,7 @@ import ShopSection from './components/ShopSection'
 import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
+import Shop from './pages/Shop'
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Footer />
           </>
         } />
+        <Route path="/shop" element={<Shop />} />
       </Routes>
     </BrowserRouter>
   )

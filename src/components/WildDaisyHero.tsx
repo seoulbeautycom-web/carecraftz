@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { CSSProperties } from 'react'
 
 const HERO_TEXT = '#332023'
@@ -58,10 +59,10 @@ export default function WildDaisyHero() {
           <div>Formulas</div>
         </div>
         <nav className="flex gap-5 sm:gap-8">
-          <a className="text-xs font-bold tracking-widest uppercase relative group" style={{ color: HERO_TEXT }}>
+          <Link to="/shop" className="text-xs font-bold tracking-widest uppercase relative group" style={{ color: HERO_TEXT }}>
             <span>Only Natural Ingredients</span>
             <span className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" style={{ backgroundColor: HERO_TEXT }} />
-          </a>
+          </Link>
           <a className="text-xs font-bold tracking-widest uppercase relative group" style={{ color: HERO_TEXT }}>
             <span className="font-black">K-Beauty</span>
             <span className="absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out" style={{ backgroundColor: HERO_TEXT }} />

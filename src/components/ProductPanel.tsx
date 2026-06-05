@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
 
 const TEXT_COLOR = '#000000'
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
@@ -69,10 +70,10 @@ export default function ProductPanel({ bg, product, notes, visible, noteStyle = 
             </div>
           ))}
         </div>
-        <button className="text-xs font-bold tracking-widest uppercase border px-6 py-3 relative group shrink-0" style={{ color: TEXT_COLOR, borderColor: TEXT_COLOR, backgroundColor: 'transparent', ...anim(visible, 1150, { y: 16, duration: 1400 }).style }}>
+        <Link to="/shop" className="text-xs font-bold tracking-widest uppercase border px-6 py-3 relative group shrink-0" style={{ color: TEXT_COLOR, borderColor: TEXT_COLOR, backgroundColor: 'transparent', ...anim(visible, 1150, { y: 16, duration: 1400 }).style }}>
           <span className="relative z-10 group-hover:text-black transition-colors duration-500">SHOP NOW</span>
           <span className="absolute inset-0 origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out" style={{ backgroundColor: '#ffffff' }} />
-        </button>
+        </Link>
       </div>
     </div>
   )
