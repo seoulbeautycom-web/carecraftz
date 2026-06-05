@@ -1,53 +1,12 @@
 import { motion } from 'framer-motion'
 import { Sparkles, Droplet, Shield, Heart } from 'lucide-react'
+import ToonHubHero from './ToonHubHero'
 
 export default function SeoulBeauty() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-50 via-pink-50 to-white">
-      {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-pink-200 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-rose-200 rounded-full blur-3xl" />
-        </div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="relative z-10 text-center max-w-4xl"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="mb-8 inline-block"
-          >
-            <Sparkles className="w-16 h-16 text-rose-400 mx-auto" />
-          </motion.div>
-          
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-rose-600 via-pink-600 to-purple-600 bg-clip-text text-transparent">
-            Seoul Beauty
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-700 mb-8 font-light">
-            Premium Korean Skincare
-          </p>
-          
-          <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-            Discover the secret to flawless skin with our curated collection of authentic Korean beauty products. 
-            Transform your routine with nature-inspired formulas backed by centuries of skincare wisdom.
-          </p>
-          
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-shadow"
-          >
-            Explore Collection
-          </motion.button>
-        </motion.div>
-      </section>
+      {/* Hero Section - ToonHub */}
+      <ToonHubHero />
 
       {/* Features Section */}
       <section className="py-24 px-6 bg-white">
