@@ -178,7 +178,7 @@ export default function ToonHubHero() {
           style={{ zIndex: 60, maxWidth: '320px' }}
         >
           <p
-            className="font-bold uppercase tracking-widest mb-2 sm:mb-3 text-base sm:text-[22px]"
+            className="font-bold uppercase tracking-widest mb-4 sm:mb-6 text-base sm:text-[22px]"
             style={{
               color: 'white',
               opacity: 0.95,
@@ -196,7 +196,7 @@ export default function ToonHubHero() {
               marginBottom: '1rem sm:mb-5',
             }}
           >
-            The artwork is stunning, shipped fully prepared. The finish is a vision, the 3D craft is flawless. Many thanks! Wishing you the win. Order now.
+            Get an even-toned, radiant skin and say bye to dark spots. Powered by natural ingredients.
           </p>
           <div className="flex gap-4">
             <button
