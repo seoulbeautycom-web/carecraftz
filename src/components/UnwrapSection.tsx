@@ -32,7 +32,7 @@ export default function UnwrapSection() {
   }
 
   return (
-    <section ref={containerRef} className="relative h-[80vh] bg-cream overflow-hidden">
+    <section ref={containerRef} className="relative h-[30vh] bg-cream overflow-hidden">
       <div className="sticky top-0 h-screen flex items-center justify-center px-6 md:px-12">
         <div className="flex items-center justify-center gap-8 md:gap-16 w-full max-w-6xl">
           <motion.div
