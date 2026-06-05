@@ -34,7 +34,7 @@ const CONTENT = [
       'Hydrating',
       'Anti-aging',
     ],
-    bottom: '10%',
+    bottom: '25%',
   },
   {
     title: '',
