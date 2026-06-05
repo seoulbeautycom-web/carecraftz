@@ -12,10 +12,10 @@ export default function UnwrapSection() {
   })
 
   const frameIndex = useTransform(scrollYProgress, [0, 1], [0, FRAMES - 1])
-  const textOpacity1 = useTransform(scrollYProgress, [0, 0.4], [1, 0])
-  const textOpacity2 = useTransform(scrollYProgress, [0.4, 1], [0, 1])
-  const textY1 = useTransform(scrollYProgress, [0, 0.4], [0, -20])
-  const textY2 = useTransform(scrollYProgress, [0.4, 1], [20, 0])
+  const textOpacity1 = useTransform(scrollYProgress, [0, 0.7], [1, 0])
+  const textOpacity2 = useTransform(scrollYProgress, [0.2, 1], [0, 1])
+  const textY1 = useTransform(scrollYProgress, [0, 0.7], [0, -20])
+  const textY2 = useTransform(scrollYProgress, [0.2, 1], [20, 0])
 
   const [currentFrame, setCurrentFrame] = useState(0)
 
