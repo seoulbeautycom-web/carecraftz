@@ -9,7 +9,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2.5 mb-6">
               <Leaf className="w-5 h-5 text-sage" />
-              <span className="font-serif text-xl font-medium text-ivory">CareCraftz</span>
+              <span className="font-serif text-xl text-ivory">Care<span className="font-bold">Craftz</span></span>
             </div>
             <p className="text-sm leading-relaxed text-ivory/50 max-w-xs">
               Small-batch handmade soaps, crafted with intention and respect for nature.
