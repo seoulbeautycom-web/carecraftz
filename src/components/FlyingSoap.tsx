@@ -28,8 +28,8 @@ export default function FlyingSoap() {
     })
   }, [scrollYProgress, rawProgress, setStage, setScrollProgress])
 
-  const x = useTransform(smoothProgress, [0, 0.15, 0.35, 0.55, 0.75], ['35vw', '40vw', '20vw', '30vw', '50vw'])
-  const y = useTransform(smoothProgress, [0, 0.15, 0.35, 0.55, 0.75], ['30vh', '25vh', '120vh', '220vh', '310vh'])
+  const x = useTransform(smoothProgress, [0, 0.15, 0.35, 0.55, 0.75], ['65vw', '60vw', '55vw', '65vw', '50vw'])
+  const y = useTransform(smoothProgress, [0, 0.15, 0.35, 0.55, 0.75], ['35vh', '45vh', '145vh', '245vh', '335vh'])
 
   const scale = useTransform(smoothProgress, [0, 0.2, 0.4, 0.6, 0.75], [1, 1.1, 0.95, 1.05, 1])
   const rotateX = useTransform(smoothProgress, [0, 0.2, 0.4, 0.6, 0.75], [5, -8, 12, -5, 0])
