@@ -5,7 +5,7 @@ const IMAGES = [
   { src: '/s1.png', bg: '#F4845F', panel: '#F79B7F' },
   { src: '/s2.png', bg: '#6BBF7A', panel: '#85CC92' },
   { src: '/s3.png', bg: '#E882B4', panel: '#ED9DC4' },
-  { src: 'https://fifth-gentle-45902158.figma.site/_components/v2/4de492f6d9cf8244ad5293233e5c6f52407d42fc/4.4457fbce.png', bg: '#6EB5FF', panel: '#8DC4FF' },
+  { src: '/s4.png', bg: '#6EB5FF', panel: '#8DC4FF' },
 ]
 
 const CONTENT = [
@@ -37,9 +37,13 @@ const CONTENT = [
     bottom: '25%',
   },
   {
-    title: '',
-    bullets: [],
-    bottom: '10%',
+    title: 'daily glow moisturizer',
+    bullets: [
+      'Hydrating',
+      'Brightening',
+      'Anti-aging',
+    ],
+    bottom: '25%',
   },
 ]
 
