@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
 
 const IMAGES = [
   { src: '/s1.png', bg: '#F4845F', panel: '#F79B7F' },
@@ -68,7 +68,7 @@ export default function ToonHubHero() {
           zIndex: 20,
           left: '50%',
           height: isMobile ? '60%' : '92%',
-          bottom: isMobile ? '22%' : '5%',
+          bottom: isMobile ? '22%' : '10%',
         }
       case 'left':
         return {
@@ -178,7 +178,7 @@ export default function ToonHubHero() {
           style={{ zIndex: 60, maxWidth: '320px' }}
         >
           <p
-            className="font-bold uppercase tracking-widest mb-2 sm:mb-3 text-base sm:text-[22px]"
+            className="font-bold uppercase tracking-widest text-base sm:text-[22px]"
             style={{
               color: 'white',
               opacity: 0.95,
@@ -187,17 +187,20 @@ export default function ToonHubHero() {
           >
             spotless glow
           </p>
-          <p
-            className="hidden sm:block text-xs sm:text-sm"
-            style={{
-              color: 'white',
-              opacity: 0.85,
-              lineHeight: 1.6,
-              marginBottom: '1rem sm:mb-5',
-            }}
-          >
-            Get an even-toned, radiant skin and say bye to dark spots. Powered by natural ingredients.
-          </p>
+          <div className="hidden sm:block mt-4 space-y-2">
+            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
+              <Check className="w-4 h-4" strokeWidth={2.5} />
+              <span className="text-xs sm:text-sm">Even-toned, radiant skin</span>
+            </div>
+            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
+              <Check className="w-4 h-4" strokeWidth={2.5} />
+              <span className="text-xs sm:text-sm">Say bye to dark spots</span>
+            </div>
+            <div className="flex items-center gap-2" style={{ color: 'white', opacity: 0.85 }}>
+              <Check className="w-4 h-4" strokeWidth={2.5} />
+              <span className="text-xs sm:text-sm">Powered by natural ingredients</span>
+            </div>
+          </div>
           <div className="flex gap-4">
             <button
               onClick={() => navigate('prev')}
