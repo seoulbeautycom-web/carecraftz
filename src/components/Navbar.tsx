@@ -44,7 +44,7 @@ export default function Navbar() {
               <a
                 key={link.label}
                 href={link.href}
-                className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-white hover:text-white/80'}`}
+                className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
               >
                 {link.label}
                 <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
@@ -52,7 +52,7 @@ export default function Navbar() {
             ))}
             <Link
               to="/seoul-beauty"
-              className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-white hover:text-white/80'}`}
+              className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
               Seoul Beauty
             </Link>
@@ -93,7 +93,7 @@ export default function Navbar() {
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-white hover:text-white/80'}`}
+                className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
               >
                 {link.label}
               </a>
@@ -101,7 +101,7 @@ export default function Navbar() {
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
-              className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-white hover:text-white/80'}`}
+              className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
               Seoul Beauty
             </Link>
