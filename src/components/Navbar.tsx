@@ -64,9 +64,10 @@ export default function Navbar() {
             </button>
             <a
               href="#shop"
-              className="font-['Poppins',sans-serif] inline-flex items-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full hover:bg-forest-dark transition-colors duration-300"
+              className="relative inline-flex items-center justify-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full overflow-hidden group"
             >
-              Shop Now
+              <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Shop Now</span>
+              <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-500 ease-out left-0" />
             </a>
           </div>
 

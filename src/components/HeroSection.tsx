@@ -63,17 +63,15 @@ export default function HeroSection() {
               href="#shop"
               className="relative inline-flex items-center justify-center px-8 py-4 bg-forest text-ivory font-medium rounded-full overflow-hidden group"
             >
-              <span className="relative z-10">Discover the Soap</span>
-              <span className="absolute inset-0 bg-white transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
-              <span className="absolute inset-0 bg-forest transform translate-x-0 group-hover:translate-x-full transition-transform duration-300 ease-out" />
+              <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Discover the Soap</span>
+              <span className="absolute inset-0 bg-white fill-left" />
             </a>
             <a
               href="#craft"
               className="relative inline-flex items-center justify-center px-8 py-4 border border-charcoal/20 text-charcoal font-medium rounded-full overflow-hidden group"
             >
-              <span className="relative z-10">See the Craft</span>
-              <span className="absolute inset-0 bg-forest transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out" />
-              <span className="absolute inset-0 bg-white transform translate-x-0 group-hover:translate-x-full transition-transform duration-300 ease-out" />
+              <span className="relative z-10 group-hover:text-ivory transition-colors duration-500">See the Craft</span>
+              <span className="absolute inset-0 bg-forest fill-left" />
             </a>
           </motion.div>
         </motion.div>
@@ -97,6 +95,16 @@ export default function HeroSection() {
           <ChevronDown className="w-5 h-5" />
         </motion.a>
       </motion.div>
+
+      <style>{`
+        .fill-left {
+          clip-path: inset(0 100% 0 0);
+          transition: clip-path 0.5s ease-out;
+        }
+        .group:hover .fill-left {
+          clip-path: inset(0 0 0 0);
+        }
+      `}</style>
     </section>
   )
 }
