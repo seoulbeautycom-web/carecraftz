@@ -154,7 +154,7 @@ export default function Shop() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section ref={heroRef as any} className="relative w-full min-h-screen flex flex-col lg:flex-row">
+      <section ref={heroRef as any} className="relative w-full min-h-screen flex flex-col lg:flex-row pt-16">
         {/* Hero Left */}
         <div className="w-full lg:w-1/2 min-h-[60vh] lg:min-h-0 relative">
           <img src={HERO_BG_IMAGE} alt="" className="absolute inset-0 w-full h-full object-cover" />
