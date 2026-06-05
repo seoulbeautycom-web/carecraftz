@@ -33,7 +33,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <img src="/cclogo.png" alt="CareCraftz" className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12" />
+            <img src="/cclogo.png" alt="CareCraftz" className="w-10 h-10 transition-transform duration-300 group-hover:rotate-12" />
             <span className="font-['Poppins',sans-serif] text-xl text-charcoal tracking-wide font-bold">
               Care<span className="font-bold">Craftz</span>
             </span>

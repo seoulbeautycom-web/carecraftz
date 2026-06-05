@@ -92,7 +92,16 @@ export default function HandsSection() {
             </div>
           </div>
 
-          <div className="hidden lg:block" />
+          <div className="hidden lg:block relative">
+            <motion.img
+              src="/sec4.png"
+              alt="Hands with soap"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={isInView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ delay: 0.4, duration: 1, ease: [0.4, 0, 0.2, 1] }}
+              className="w-full h-auto object-contain"
+            />
+          </div>
         </div>
       </div>
     </section>
