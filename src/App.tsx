@@ -11,6 +11,7 @@ import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
 import Shop from './pages/Shop'
+import FutureLaunches from './pages/FutureLaunches'
 
 function App() {
   return (
@@ -48,6 +49,13 @@ function App() {
           <>
             <Navbar />
             <Shop />
+            <Footer />
+          </>
+        } />
+        <Route path="/future-launches" element={
+          <>
+            <Navbar />
+            <FutureLaunches />
             <Footer />
           </>
         } />
