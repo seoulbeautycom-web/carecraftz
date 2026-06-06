@@ -124,6 +124,10 @@ export default function AboutUs() {
             BUY MATCH PASS
           </button>
         </div>
+
+        <button className="hidden md:flex items-center justify-center px-5 py-2 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition-colors">
+          Shop Now
+        </button>
       </motion.header>
 
       {/* Scrollable content */}
