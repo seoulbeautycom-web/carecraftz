@@ -78,10 +78,10 @@ export default function Navbar() {
               <ShoppingCart className="w-5 h-5" />
             </button>
             <Link
-              to="/shop"
+              to="/about"
               className="relative inline-flex items-center justify-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full overflow-hidden group"
             >
-              <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Shop Now</span>
+              <span className="relative z-10 group-hover:text-forest transition-colors duration-500">About</span>
               <span className="absolute inset-0 bg-forest w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
               <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
             </Link>
@@ -137,11 +137,11 @@ export default function Navbar() {
               Seoul Beauty
             </Link>
             <Link
-              to="/shop"
+              to="/about"
               onClick={() => setMobileOpen(false)}
               className="font-['Poppins',sans-serif] inline-flex items-center justify-center px-6 py-3 bg-forest text-ivory text-sm font-bold rounded-full mt-2"
             >
-              Shop Now
+              About
             </Link>
           </div>
         </motion.div>

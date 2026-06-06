@@ -38,7 +38,7 @@ function App() {
             <Footer />
           </>
         } />
-        <Route path="/about-us" element={
+        <Route path="/about" element={
           <>
             <Navbar />
             <AboutUs />
