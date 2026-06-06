@@ -20,7 +20,7 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 }
 
 function NavItem({ children }: { children: string }) {
-  const [cycle, setCycle] = useState(0)
+  const [cycle, _setCycle] = useState(0)
 
   return (
     <a className="relative overflow-hidden group flex items-center justify-center py-1">
@@ -37,9 +37,8 @@ function NavItem({ children }: { children: string }) {
 }
 
 export default function AboutUs() {
-  const [arrowCycle, setArrowCycle] = useState(0)
+  const [arrowCycle, _setArrowCycle] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const videoContainerRef = useRef<HTMLDivElement>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const screen3Ref = useRef<HTMLDivElement>(null)
 
