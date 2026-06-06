@@ -17,6 +17,7 @@ export default function Navbar() {
     { label: 'Craft', href: '#craft' },
     { label: 'Experience', href: '#hands' },
     { label: 'Shop', href: '#shop' },
+    { label: 'Future Launches', href: '/future-launches', isLink: true },
   ]
 
   return (
@@ -40,16 +41,30 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-10">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
-              >
-                {link.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              if (link.isLink) {
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                  >
+                    {link.label}
+                    <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                >
+                  {link.label}
+                  <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
+                </a>
+              )
+            })}
             <Link
               to="/seoul-beauty"
               className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
@@ -90,16 +105,30 @@ export default function Navbar() {
           className="md:hidden bg-cream/95 backdrop-blur-md border-t border-warm/50"
         >
           <div className="px-6 py-6 flex flex-col gap-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              if (link.isLink) {
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              }
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                >
+                  {link.label}
+                </a>
+              )
+            })}
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
