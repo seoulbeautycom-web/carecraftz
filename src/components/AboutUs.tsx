@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import ScrollReveal from './ScrollReveal'
@@ -24,24 +24,6 @@ export default function AboutUs() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const screen3Ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-
-    const handleScroll = () => {
-      if (!screen3Ref.current || video.seeking) return
-      const rect = screen3Ref.current.getBoundingClientRect()
-      const absoluteTop = window.scrollY + rect.top
-      const stopScroll = Math.max(1, absoluteTop - window.innerHeight * 0.2)
-      const scrollFraction = Math.max(0, Math.min(1, window.scrollY / stopScroll))
-      video.currentTime = scrollFraction * video.duration
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   return (
     <div className="relative min-h-screen bg-black">
       {/* Fixed video background */}
@@ -54,11 +36,12 @@ export default function AboutUs() {
           playsInline
           autoPlay
           loop
+          onError={() => console.log('Video error')}
         />
       </div>
 
       {/* Scrollable content */}
-      <div className="relative z-10 pointer-events-none pt-16">
+      <div className="relative z-10 pointer-events-auto pt-16">
         {/* Section 1: Hero */}
         <section className="w-[90%] mx-auto h-screen flex flex-col py-8 md:py-12 lg:py-16 pb-12 pointer-events-auto">
           <div className="flex-1 w-full flex flex-col md:grid md:grid-cols-12 md:grid-rows-[1fr_auto] gap-y-8 md:gap-y-0 md:gap-x-8">
