@@ -16,7 +16,7 @@ export default function Navbar() {
   const navLinks = [
     { label: 'Craft', href: '#craft' },
     { label: 'Experience', href: '#hands' },
-    { label: 'Shop', href: '#shop' },
+    { label: 'Shop Now', href: '/shop', isLink: true, isButton: true },
     { label: 'Future Launches', href: '/future-launches', isLink: true },
   ]
 
@@ -42,6 +42,19 @@ export default function Navbar() {
 
           <div className="hidden md:flex items-center gap-10">
             {navLinks.map((link) => {
+              if (link.isButton) {
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    className="relative inline-flex items-center justify-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full overflow-hidden group"
+                  >
+                    <span className="relative z-10 group-hover:text-forest transition-colors duration-500">Shop Now</span>
+                    <span className="absolute inset-0 bg-forest w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
+                    <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
+                  </Link>
+                )
+              }
               if (link.isLink) {
                 return (
                   <Link
@@ -77,14 +90,6 @@ export default function Navbar() {
             <button className="font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 text-charcoal hover:text-forest transition-colors duration-300">
               <ShoppingCart className="w-5 h-5" />
             </button>
-            <Link
-              to="/about"
-              className="relative inline-flex items-center justify-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full overflow-hidden group"
-            >
-              <span className="relative z-10 group-hover:text-forest transition-colors duration-500">About</span>
-              <span className="absolute inset-0 bg-forest w-full group-hover:w-0 transition-all duration-600 ease-out left-0" />
-              <span className="absolute inset-0 bg-white w-0 group-hover:w-full transition-all duration-600 ease-out left-0" />
-            </Link>
           </div>
 
           <button
@@ -106,6 +111,18 @@ export default function Navbar() {
         >
           <div className="px-6 py-6 flex flex-col gap-4">
             {navLinks.map((link) => {
+              if (link.isButton) {
+                return (
+                  <Link
+                    key={link.label}
+                    to={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="font-['Poppins',sans-serif] inline-flex items-center justify-center px-6 py-3 bg-forest text-ivory text-sm font-bold rounded-full"
+                  >
+                    Shop Now
+                  </Link>
+                )
+              }
               if (link.isLink) {
                 return (
                   <Link
@@ -135,13 +152,6 @@ export default function Navbar() {
               className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
               Seoul Beauty
-            </Link>
-            <Link
-              to="/about"
-              onClick={() => setMobileOpen(false)}
-              className="font-['Poppins',sans-serif] inline-flex items-center justify-center px-6 py-3 bg-forest text-ivory text-sm font-bold rounded-full mt-2"
-            >
-              About
             </Link>
           </div>
         </motion.div>
