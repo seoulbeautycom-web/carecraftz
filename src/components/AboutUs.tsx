@@ -22,22 +22,11 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
 export default function AboutUs() {
   const [arrowCycle, _setArrowCycle] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
   const screen3Ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    const handleCanPlay = () => setIsLoaded(true)
-    video.addEventListener('canplaythrough', handleCanPlay)
-    video.load()
-    return () => video.removeEventListener('canplaythrough', handleCanPlay)
-  }, [])
-
-  useEffect(() => {
-    if (!isLoaded) return
-    const video = videoRef.current
-    if (!video || !video.duration) return
 
     const handleScroll = () => {
       if (!screen3Ref.current || video.seeking) return
@@ -51,18 +40,7 @@ export default function AboutUs() {
     window.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isLoaded])
-
-  if (!isLoaded) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-        <span className="text-[10px] font-mono tracking-widest mb-4 text-white/50">LOADING</span>
-        <div className="w-64 h-[1px] bg-white/10 mt-8 overflow-hidden">
-          <div className="h-full bg-white w-1/3 animate-pulse" />
-        </div>
-      </div>
-    )
-  }
+  }, [])
 
   return (
     <div className="relative min-h-screen bg-black">
