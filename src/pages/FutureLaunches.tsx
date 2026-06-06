@@ -233,7 +233,8 @@ function OrbitImages({
   const currentRotation = rotationOverride || useMotionValue(-8)
   const currentTranslateX = translateXOverride || useMotionValue(0)
 
-  const pathValue = useTransform([currentRadiusX, currentRadiusY], ([rx, ry]: [number, number]) => {
+  const pathValue = useTransform(currentRadiusX, (rx) => {
+    const ry = currentRadiusY.get()
     return generateEllipsePath(designCenterX, designCenterY, rx, ry)
   })
 
@@ -304,13 +305,13 @@ function OrbitImages({
         <motion.div className="orbit-rotation-wrapper" style={{ rotate: currentRotation, x: currentTranslateX }}>
           {showPath && (
             <svg width="100%" height="100%" viewBox={`0 0 ${baseWidth} ${baseWidth}`} className="orbit-path-svg">
-              <path d={pathValue.get()} fill="none" stroke={pathColor} strokeWidth={pathWidth / scale} />
+              <motion.path d={pathValue} fill="none" stroke={pathColor} strokeWidth={pathWidth / scale} />
             </svg>
           )}
           {items.map((item, index) => {
             const entry = images[index]
-            const title = typeof entry === 'object' ? entry.title : null
-            const desc = typeof entry === 'object' ? entry.desc : null
+            const title = typeof entry === 'object' ? entry.title : undefined
+            const desc = typeof entry === 'object' ? entry.desc : undefined
             return (
               <OrbitItem
                 key={index}
