@@ -16,6 +16,7 @@ export default function Navbar() {
   const navLinks = [
     { label: 'Craft', href: '#craft' },
     { label: 'Experience', href: '#hands' },
+    { label: 'About', href: '/about', isLink: true },
     { label: 'Future Launches', href: '/future-launches', isLink: true },
   ]
 

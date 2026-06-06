@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import ScrollReveal from './ScrollReveal'
 
@@ -19,31 +19,11 @@ function Reveal({ children, delay = 0, className = '' }: { children: React.React
   )
 }
 
-function NavItem({ children }: { children: string }) {
-  const [cycle, _setCycle] = useState(0)
-
-  return (
-    <a className="relative overflow-hidden group flex items-center justify-center py-1">
-      {cycle === 0 ? (
-        <span className="text-white/64 group-hover:text-white transition-colors duration-300">{children}</span>
-      ) : (
-        <>
-          <span key={cycle} className="animate-fly-out-up">{children}</span>
-          <span key={cycle + 1} className="absolute animate-fly-in-up">{children}</span>
-        </>
-      )}
-    </a>
-  )
-}
-
 export default function AboutUs() {
   const [arrowCycle, _setArrowCycle] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const screen3Ref = useRef<HTMLDivElement>(null)
-
-  const { scrollY } = useScroll()
-  const headerY = useTransform(scrollY, [0, 500, 800], [0, 0, -150])
 
   useEffect(() => {
     const video = videoRef.current
@@ -97,41 +77,8 @@ export default function AboutUs() {
         />
       </div>
 
-      {/* Fixed header */}
-      <motion.header
-        style={{ y: headerY }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed top-0 left-1/2 -translate-x-1/2 z-20 w-[90%] flex items-center justify-between pointer-events-auto py-4 md:py-6 lg:py-8"
-      >
-        <svg width="157" height="25" viewBox="0 0 157 25" fill="none">
-          <path d="M10 5 L20 20 L30 5" stroke="white" strokeWidth="2" fill="none" />
-          <path d="M40 5 L50 20 L60 5" stroke="white" strokeWidth="2" fill="none" />
-          <path d="M70 5 L80 20 L90 5" stroke="white" strokeWidth="2" fill="none" />
-          <path d="M100 5 L110 20 L120 5" stroke="white" strokeWidth="2" fill="none" />
-        </svg>
-
-        <div className="hidden lg:flex items-stretch bg-[#1A1A1A]/40 backdrop-blur-[80px]">
-          <div className="flex items-center justify-between px-6 font-mono text-xs tracking-[-0.01em] w-[480px]">
-            <NavItem>LEAGUES</NavItem>
-            <NavItem>STADIUMS</NavItem>
-            <NavItem>TRAINING</NavItem>
-            <NavItem>COMPETITIONS</NavItem>
-            <NavItem>TICKETS</NavItem>
-          </div>
-          <button className="bg-white text-black px-6 py-5 font-mono text-xs leading-4 font-bold tracking-[-0.01em] hover:bg-gray-200 transition-colors w-[148px]">
-            BUY MATCH PASS
-          </button>
-        </div>
-
-        <button className="hidden md:flex items-center justify-center px-5 py-2 bg-white text-black text-sm font-bold rounded-full hover:bg-gray-200 transition-colors">
-          Shop Now
-        </button>
-      </motion.header>
-
       {/* Scrollable content */}
-      <div className="relative z-10 pointer-events-none">
+      <div className="relative z-10 pointer-events-none pt-16">
         {/* Section 1: Hero */}
         <section className="w-[90%] mx-auto h-screen flex flex-col py-8 md:py-12 lg:py-16 pb-12 pointer-events-auto">
           <div className="flex-1 w-full flex flex-col md:grid md:grid-cols-12 md:grid-rows-[1fr_auto] gap-y-8 md:gap-y-0 md:gap-x-8">

@@ -45,6 +45,13 @@ function App() {
             <Footer />
           </>
         } />
+        <Route path="/about-us" element={
+          <>
+            <Navbar />
+            <AboutUs />
+            <Footer />
+          </>
+        } />
         <Route path="/shop" element={
           <>
             <Navbar />
