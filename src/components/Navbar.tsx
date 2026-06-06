@@ -17,7 +17,7 @@ export default function Navbar() {
   const isAboutPage = location.pathname === '/about' || location.pathname === '/about-us'
 
   const navLinks = [
-    { label: 'Craft', href: '#craft' },
+    { label: 'Craft', href: '/craft', isLink: true },
     { label: 'Experience', href: '#hands' },
     { label: 'About', href: '/about', isLink: true },
     { label: 'Future Launches', href: '/future-launches', isLink: true },
