@@ -235,7 +235,7 @@ function OrbitImages({
 
   const pathValue = useTransform(currentRadiusX, (rx) => {
     const ry = currentRadiusY.get()
-    return generateEllipsePath(designCenterX, designCenterY, rx, ry)
+    return generateEllipsePath(designCenterX, designCenterY, rx as number, ry as number)
   })
 
   useEffect(() => {
