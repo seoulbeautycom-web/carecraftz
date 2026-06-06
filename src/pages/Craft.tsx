@@ -273,53 +273,28 @@ export default function Craft() {
 
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '42vh', background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 45 }} />
 
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? '18px 20px' : '22px 48px', zIndex: 50 }}>
-          {isMobile ? (
-            <>
-              <span style={{ fontFamily: 'Imprima, sans-serif', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', opacity: 0.9 }}>Explore</span>
-              <svg width="28" height="28" viewBox="0 0 28 28">
-                <path d="M14 2l2.09 6.42H23l-5.45 3.96 2.09 6.42L14 14.84l-5.64 4.06 2.09-6.42L4.96 8.42h6.95L14 2z" fill="white" opacity="0.9" />
-                <circle cx="14" cy="24" r="1.5" fill="white" opacity="0.6" />
-                <circle cx="6" cy="6" r="1" fill="white" opacity="0.4" />
-                <circle cx="22" cy="6" r="1" fill="white" opacity="0.4" />
-              </svg>
-              <span style={{ fontFamily: 'Imprima, sans-serif', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', opacity: 0.9 }}>Connect</span>
-            </>
-          ) : (
-            <>
-              <div style={{ display: 'flex', gap: 36 }}>
-                {['Worlds', 'Atelier', 'Immersions'].map((item) => (
-                  <a key={item} href="#" style={{ fontFamily: 'Imprima, sans-serif', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', opacity: 0.9, textDecoration: 'none' }}>{item}</a>
-                ))}
-              </div>
-              <svg width="28" height="28" viewBox="0 0 28 28">
-                <path d="M14 2l2.09 6.42H23l-5.45 3.96 2.09 6.42L14 14.84l-5.64 4.06 2.09-6.42L4.96 8.42h6.95L14 2z" fill="white" opacity="0.9" />
-                <circle cx="14" cy="24" r="1.5" fill="white" opacity="0.6" />
-                <circle cx="6" cy="6" r="1" fill="white" opacity="0.4" />
-                <circle cx="22" cy="6" r="1" fill="white" opacity="0.4" />
-              </svg>
-              <div style={{ display: 'flex', gap: 36 }}>
-                {['Craft', 'Codex', 'Connect'].map((item) => (
-                  <a key={item} href="#" style={{ fontFamily: 'Imprima, sans-serif', fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', opacity: 0.9, textDecoration: 'none' }}>{item}</a>
-                ))}
-              </div>
-            </>
-          )}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: isMobile ? '18px 20px' : '22px 48px', zIndex: 50 }}>
+          <svg width="28" height="28" viewBox="0 0 28 28">
+            <path d="M14 2l2.09 6.42H23l-5.45 3.96 2.09 6.42L14 14.84l-5.64 4.06 2.09-6.42L4.96 8.42h6.95L14 2z" fill="white" opacity="0.9" />
+            <circle cx="14" cy="24" r="1.5" fill="white" opacity="0.6" />
+            <circle cx="6" cy="6" r="1" fill="white" opacity="0.4" />
+            <circle cx="22" cy="6" r="1" fill="white" opacity="0.4" />
+          </svg>
         </div>
 
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, opacity: scene1Opacity, pointerEvents: 'none' }}>
           
           <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 24px 100px', opacity: uiVisible ? 1 : 0, transition: 'opacity 0.9s ease, transform 0.9s ease', transform: uiVisible ? 'translateY(0)' : 'translateY(20px)', transitionDelay: '0.3s' }}>
             <h1 style={{ fontFamily: 'Viaoda Libre, serif', textAlign: 'center' }}>
-              <div style={{ fontSize: 'clamp(26px, 7vw, 42px)', letterSpacing: '0.1em', color: '#3b1a0a' }}>
-                FALL <span style={{ color: '#6b2e0e', fontSize: '0.8em' }}>›</span> <span style={{ fontStyle: 'italic' }}>INTO</span>
+              <div style={{ fontSize: 'clamp(28px, 7vw, 44px)', letterSpacing: '0.1em', color: '#3b1a0a' }}>
+                EXPLORE OUR
               </div>
               <div style={{ fontSize: 'clamp(52px, 16vw, 80px)', letterSpacing: '-0.02em', lineHeight: 0.9, color: '#3b1a0a' }}>
-                REVERIE
+                CRAFT JOURNEY
               </div>
             </h1>
             <p style={{ fontFamily: 'Imprima, sans-serif', fontSize: 15, lineHeight: 1.6, color: '#5c2d0e', maxWidth: 280, textAlign: 'center', marginTop: 20 }}>
-              Crafting boundless digital worlds where the edge between AI, vision, and living myth dissolves.
+              Handcrafted organic skincare, meticulously researched and refined. Every bar tells a story of nature's wisdom and our dedication to pure, sophisticated formulations.
             </p>
             <div style={{ width: 140, height: 140, borderRadius: 22, backgroundImage: `url(${CARD_IMAGES[0]})`, backgroundSize: 'cover', marginTop: 32, position: 'relative', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
@@ -337,14 +312,14 @@ export default function Craft() {
           <div className="hidden md:flex xl:hidden" style={{ flexDirection: 'column', alignItems: 'center', gap: 28, padding: '80px 32px 96px', opacity: uiVisible ? 1 : 0, transition: 'opacity 0.9s ease, transform 0.9s ease', transform: uiVisible ? 'translateY(0)' : 'translateY(20px)', transitionDelay: '0.3s' }}>
             <h1 style={{ fontFamily: 'Viaoda Libre, serif', textAlign: 'center' }}>
               <div style={{ fontSize: 'clamp(28px, 5vw, 44px)', letterSpacing: '0.1em', color: '#3b1a0a' }}>
-                FALL <span style={{ color: '#6b2e0e', fontSize: '0.8em' }}>›</span> <span style={{ fontStyle: 'italic' }}>INTO</span>
+                EXPLORE OUR
               </div>
               <div style={{ fontSize: 'clamp(60px, 12vw, 86px)', letterSpacing: '-0.02em', lineHeight: 0.9, color: '#3b1a0a' }}>
-                REVERIE
+                CRAFT JOURNEY
               </div>
             </h1>
             <p style={{ fontFamily: 'Imprima, sans-serif', fontSize: 16, lineHeight: 1.6, color: '#5c2d0e', maxWidth: 400, textAlign: 'center' }}>
-              Crafting boundless digital worlds where the edge between AI, vision, and living myth dissolves.
+              Handcrafted organic skincare, meticulously researched and refined. Every bar tells a story of nature's wisdom and our dedication to pure, sophisticated formulations.
             </p>
             <div style={{ display: 'flex', gap: 14 }}>
               {CARD_IMAGES.map((img, i) => (
@@ -375,14 +350,14 @@ export default function Craft() {
             <div style={{ position: 'absolute', top: '46%', left: 60, maxWidth: 440, opacity: uiVisible ? 1 : 0, transition: 'opacity 0.9s ease, transform 0.9s ease', transform: uiVisible ? 'translateY(-50%)' : 'translateY(-30px)', transitionDelay: '0.3s' }}>
               <h1 style={{ fontFamily: 'Viaoda Libre, serif', textShadow: '0 2px 24px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)' }}>
                 <div style={{ fontSize: 'clamp(32px, 4.5vw, 54px)', lineHeight: 1.1, letterSpacing: '0.04em', color: 'white' }}>
-                  FALL <span style={{ color: 'rgba(255,220,180,0.7)' }}>›</span> <span style={{ fontStyle: 'italic' }}>INTO</span>
+                  EXPLORE OUR
                 </div>
                 <div style={{ fontSize: 'clamp(50px, 7.5vw, 88px)', lineHeight: 0.9, letterSpacing: '-0.02em', color: 'white' }}>
-                  REVERIE
+                  CRAFT JOURNEY
                 </div>
               </h1>
               <p style={{ fontFamily: 'Imprima, sans-serif', fontSize: 18, lineHeight: 1.7, color: 'rgba(255,245,235,0.88)', maxWidth: 300, marginTop: 16, textShadow: '0 1px 12px rgba(0,0,0,0.8)' }}>
-                Crafting boundless digital worlds where the edge between AI, vision, and living myth dissolves.
+                Handcrafted organic skincare, meticulously researched and refined. Every bar tells a story of nature's wisdom and our dedication to pure, sophisticated formulations.
               </p>
             </div>
             <div style={{ position: 'absolute', right: 40, top: '50%', display: 'flex', gap: 12, opacity: uiVisible ? 1 : 0, transition: 'opacity 0.9s ease, transform 0.9s ease', transform: uiVisible ? 'translateY(-50%)' : 'translateY(-30px)', transitionDelay: '0.55s' }}>
@@ -432,10 +407,10 @@ export default function Craft() {
 
         <div style={{ position: 'absolute', inset: 0, zIndex: 46, opacity: scene2Opacity, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 20px' }}>
           <h2 style={{ fontFamily: 'Viaoda Libre, serif', fontSize: isMobile ? 'clamp(28px, 8vw, 44px)' : 'clamp(38px, 6.5vw, 78px)', color: 'white', letterSpacing: '0.03em', lineHeight: 1.05, textAlign: 'center', textShadow: '0 2px 20px rgba(0,0,0,0.4)' }}>
-            FORGE BEYOND THE REAL
+            PURE FORMULATIONS
           </h2>
           <p style={{ fontFamily: 'Imprima, sans-serif', fontSize: isMobile ? 14 : 20, lineHeight: 1.6, letterSpacing: '-0.01em', maxWidth: isMobile ? 260 : 480, color: 'rgba(255,255,255,0.82)', textAlign: 'center', marginTop: isMobile ? '8vh' : '12vh' }}>
-            Singular voyages to astonishing destinations, shaped for those who seek beauty beyond the ordinary and the known.
+            Discover our collection of handcrafted organic soaps, each meticulously formulated with natural ingredients sourced from the UAE and Pakistan. Experience the difference of truly refined skincare.
           </p>
         </div>
 
