@@ -99,15 +99,16 @@ export default function StaffManagement() {
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       console.log('Attempting to reset password for:', selectedStaff.email)
-      console.log('Edge Function URL:', `${supabaseUrl}/functions/v1/reset-password`)
+      console.log('Edge Function URL:', `${supabaseUrl}/functions/v1/user-management`)
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/user-management`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
         },
         body: JSON.stringify({
+          action: 'reset_password',
           email: selectedStaff.email,
           newPassword: resetPassword
         })
@@ -137,7 +138,7 @@ export default function StaffManagement() {
     try {
       // Delete auth user via Edge Function
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+      await fetch(`${supabaseUrl}/functions/v1/user-management`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export default function StaffManagement() {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
         console.log('Creating auth user for:', formData.email)
         
-        const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/user-management`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
