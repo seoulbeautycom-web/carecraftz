@@ -20,11 +20,14 @@ ON staff FOR SELECT
 TO authenticated
 USING (true);
 
--- Policy: Allow admins to insert staff
+-- Policy: Allow users to insert staff if they have admin role in their JWT metadata
+-- OR if no staff records exist yet (for initial setup)
 CREATE POLICY "Allow admins to insert staff"
 ON staff FOR INSERT
 TO authenticated
 WITH CHECK (
+  auth.jwt()->>'role' = 'admin' OR
+  NOT EXISTS (SELECT 1 FROM staff LIMIT 1) OR
   EXISTS (
     SELECT 1 FROM staff 
     WHERE user_id = auth.uid() AND role = 'admin'
@@ -36,12 +39,14 @@ CREATE POLICY "Allow admins to update staff"
 ON staff FOR UPDATE
 TO authenticated
 USING (
+  auth.jwt()->>'role' = 'admin' OR
   EXISTS (
     SELECT 1 FROM staff 
     WHERE user_id = auth.uid() AND role = 'admin'
   )
 )
 WITH CHECK (
+  auth.jwt()->>'role' = 'admin' OR
   EXISTS (
     SELECT 1 FROM staff 
     WHERE user_id = auth.uid() AND role = 'admin'
@@ -53,6 +58,7 @@ CREATE POLICY "Allow admins to delete staff"
 ON staff FOR DELETE
 TO authenticated
 USING (
+  auth.jwt()->>'role' = 'admin' OR
   EXISTS (
     SELECT 1 FROM staff 
     WHERE user_id = auth.uid() AND role = 'admin'
@@ -63,8 +69,11 @@ USING (
 CREATE OR REPLACE FUNCTION create_staff_record()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO staff (user_id, email, full_name, role)
-  VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', 'Admin'), 'admin');
+  -- Only create staff record if one doesn't already exist for this email
+  IF NOT EXISTS (SELECT 1 FROM staff WHERE email = NEW.email) THEN
+    INSERT INTO staff (user_id, email, full_name, role)
+    VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', 'Admin'), COALESCE(NEW.raw_user_meta_data->>'role', 'staff'));
+  END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

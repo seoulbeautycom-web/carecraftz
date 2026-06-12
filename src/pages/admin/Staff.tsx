@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, supabaseAdmin } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
@@ -107,13 +107,9 @@ export default function StaffManagement() {
 
         if (error) throw error
       } else {
-        // Create new staff member - just create staff record first
-        // User will be linked when they sign up
-        const tempPassword = formData.password || Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
-        
-        console.log('Creating staff record for:', formData.email)
-        
-        const { data: staffData, error: staffError } = await supabaseAdmin
+        // Create new staff member - just create staff record without user_id initially
+        // The user will be linked when they sign up via the trigger
+        const { data: staffData, error: staffError } = await supabase
           .from('staff')
           .insert({
             email: formData.email,
@@ -130,36 +126,7 @@ export default function StaffManagement() {
         }
 
         console.log('Staff record created:', staffData.id)
-
-        // Try to create auth user using admin API
-        try {
-          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email: formData.email,
-            password: tempPassword,
-            email_confirm: true,
-            user_metadata: {
-              full_name: formData.full_name,
-              role: formData.role
-            }
-          })
-
-          if (authError) {
-            console.error('Auth error (non-fatal):', authError)
-            // Continue even if auth user creation fails
-            // Staff record is created, user can sign up later
-          } else {
-            console.log('Auth user created:', authData.user.id)
-            // Link the auth user to staff record
-            await supabaseAdmin
-              .from('staff')
-              .update({ user_id: authData.user.id })
-              .eq('id', staffData.id)
-          }
-        } catch (authErr: any) {
-          console.error('Auth creation failed (non-fatal):', authErr.message)
-        }
-
-        alert(`Staff member created! Temporary password: ${tempPassword}\nPlease ask them to change it after first login.`)
+        alert(`Staff member created! They can sign up at /admin/login with their email.`)
       }
 
       setShowModal(false)
