@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Users, Plus, Edit, Trash2, LogOut, Shield, Mail, User } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal } from 'lucide-react'
+import AdminLayout from '../../components/admin/AdminLayout'
 
 interface StaffMember {
   id: string
@@ -54,11 +55,6 @@ export default function StaffManagement() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/admin/login')
   }
 
   const handleAddStaff = () => {
@@ -135,45 +131,42 @@ export default function StaffManagement() {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-800'
-      case 'manager': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'admin': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'manager': return 'bg-blue-100 text-blue-700 border-blue-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
 
+  const getStatusBadgeColor = (isActive: boolean) => {
+    return isActive 
+      ? 'bg-green-100 text-green-700 border-green-200' 
+      : 'bg-red-100 text-red-700 border-red-200'
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/admin/dashboard')}
-                className="text-gray-600 hover:text-gray-900 transition"
-              >
-                ← Dashboard
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">Staff Management</h1>
+    <AdminLayout>
+      <div className="p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Staff</h1>
+              <p className="text-gray-600 mt-1">Manage your team members and their permissions</p>
             </div>
             <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+              onClick={handleAddStaff}
+              className="flex items-center gap-2 bg-green-700 text-white px-4 py-2.5 rounded-lg hover:bg-green-800 transition font-medium"
             >
-              <LogOut className="w-5 h-5" />
-              <span>Logout</span>
+              <Plus className="w-5 h-5" />
+              <span>Add staff</span>
             </button>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="bg-purple-50 p-3 rounded-lg">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-50 p-3 rounded-xl">
                 <Users className="w-6 h-6 text-purple-600" />
               </div>
               <div>
@@ -183,9 +176,9 @@ export default function StaffManagement() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-50 p-3 rounded-lg">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-green-50 p-3 rounded-xl">
                 <Shield className="w-6 h-6 text-green-600" />
               </div>
               <div>
@@ -195,9 +188,9 @@ export default function StaffManagement() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-50 p-3 rounded-xl">
                 <User className="w-6 h-6 text-blue-600" />
               </div>
               <div>
@@ -209,39 +202,51 @@ export default function StaffManagement() {
         </div>
 
         {/* Staff Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-900">Staff Members</h2>
-            <button
-              onClick={handleAddStaff}
-              className="flex items-center gap-2 bg-forest text-white px-4 py-2 rounded-lg hover:bg-forest-dark transition"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Staff</span>
-            </button>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          {/* Table Header with Search */}
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search staff..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none w-64"
+                />
+              </div>
+              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700">
+                <Filter className="w-4 h-4" />
+                <span>Filter</span>
+              </button>
+            </div>
           </div>
 
           {loading ? (
-            <div className="p-6 text-center text-gray-600">Loading...</div>
+            <div className="p-12 text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading staff...</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff Member</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Staff Member</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200">
                   {staff.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50">
+                    <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-gray-500" />
+                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                            <span className="text-white font-medium text-sm">
+                              {member.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </span>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{member.full_name}</div>
@@ -253,31 +258,42 @@ export default function StaffManagement() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(member.role)}`}>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRoleBadgeColor(member.role)} capitalize`}>
                           {member.role}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${member.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadgeColor(member.is_active)}`}>
                           {member.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(member.created_at).toLocaleDateString()}
+                        {new Date(member.created_at).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEditStaff(member)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteStaff(member.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEditStaff(member)}
+                            className="p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(member.id)}
+                            className="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -285,91 +301,112 @@ export default function StaffManagement() {
               </table>
 
               {staff.length === 0 && (
-                <div className="p-6 text-center text-gray-500">
-                  No staff members found. Add your first staff member to get started.
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-gray-900 font-medium mb-1">No staff members yet</h3>
+                  <p className="text-gray-600 text-sm mb-4">Get started by adding your first team member</p>
+                  <button
+                    onClick={handleAddStaff}
+                    className="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition font-medium mx-auto"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Add staff</span>
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
               {editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}
             </h3>
+            <p className="text-gray-600 text-sm mb-6">
+              {editingStaff ? 'Update staff member details and permissions.' : 'Invite a new team member to your store.'}
+            </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest focus:border-transparent outline-none"
+                  placeholder="John Doe"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
                   disabled={!!editingStaff}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest focus:border-transparent outline-none disabled:bg-gray-100"
+                  placeholder="john@example.com"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:text-gray-500"
                 />
+                {editingStaff && (
+                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest focus:border-transparent outline-none"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
                 >
-                  <option value="staff">Staff</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  <option value="staff">Staff - Can manage orders and products</option>
+                  <option value="manager">Manager - Can manage staff and view reports</option>
+                  <option value="admin">Admin - Full access to everything</option>
                 </select>
               </div>
 
-              <div className="flex items-center">
+              <div className="flex items-center py-2">
                 <input
                   type="checkbox"
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-forest border-gray-300 rounded focus:ring-forest"
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
                 />
-                <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">Active</label>
+                <label htmlFor="is_active" className="ml-2.5 text-sm text-gray-700">
+                  Active account
+                </label>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-forest text-white rounded-lg hover:bg-forest-dark transition disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 bg-green-700 text-white rounded-lg hover:bg-green-800 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Saving...' : 'Save'}
+                  {loading ? 'Saving...' : editingStaff ? 'Save Changes' : 'Add Staff'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   )
 }
