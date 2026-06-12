@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SoapProvider } from './context/SoapContext'
 import Navbar from './components/Navbar'
 import FlyingSoap from './components/FlyingSoap'
@@ -78,6 +78,7 @@ function App() {
             <Footer />
           </>
         } />
+        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={
           <ProtectedRoute>
