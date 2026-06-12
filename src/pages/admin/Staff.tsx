@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal, RefreshCw } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
 interface StaffMember {
@@ -27,6 +27,7 @@ export default function StaffManagement() {
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [resetPassword, setResetPassword] = useState('')
   const [resettingPassword, setResettingPassword] = useState(false)
+  const [showResetPassword, setShowResetPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
@@ -96,6 +97,9 @@ export default function StaffManagement() {
     setResettingPassword(true)
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      console.log('Attempting to reset password for:', selectedStaff.email)
+      console.log('Edge Function URL:', `${supabaseUrl}/functions/v1/reset-password`)
+      
       const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
         method: 'POST',
         headers: {
@@ -108,17 +112,19 @@ export default function StaffManagement() {
         })
       })
 
+      console.log('Response status:', response.status)
       const data = await response.json()
+      console.log('Response data:', data)
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password')
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
       alert('Password reset successfully!')
       setResetPassword('')
     } catch (error: any) {
       console.error('Error resetting password:', error)
-      alert(`Failed to reset password: ${error.message}`)
+      alert(`Failed to reset password: ${error.message}\n\nMake sure the Edge Function is deployed in Supabase.`)
     } finally {
       setResettingPassword(false)
     }
@@ -552,13 +558,22 @@ export default function StaffManagement() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
-                    <input
-                      type="password"
-                      value={resetPassword}
-                      onChange={(e) => setResetPassword(e.target.value)}
-                      placeholder="Enter new password"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showResetPassword ? 'text' : 'password'}
+                        value={resetPassword}
+                        onChange={(e) => setResetPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPassword(!showResetPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <button
                     onClick={handlePasswordReset}
