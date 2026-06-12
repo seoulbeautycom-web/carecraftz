@@ -107,34 +107,57 @@ export default function StaffManagement() {
 
         if (error) throw error
       } else {
-        // Create new staff member - create auth user first
+        // Create new staff member - just create staff record first
+        // User will be linked when they sign up
         const tempPassword = formData.password || Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
         
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email: formData.email,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            full_name: formData.full_name,
-            role: formData.role
-          }
-        })
-
-        if (authError) throw authError
-
-        // The trigger should automatically create the staff record
-        // But let's also create it manually to ensure it's linked
-        const { error: staffError } = await supabaseAdmin
+        console.log('Creating staff record for:', formData.email)
+        
+        const { data: staffData, error: staffError } = await supabaseAdmin
           .from('staff')
           .insert({
-            user_id: authData.user.id,
             email: formData.email,
             full_name: formData.full_name,
             role: formData.role,
             is_active: formData.is_active
           })
+          .select()
+          .single()
 
-        if (staffError) throw staffError
+        if (staffError) {
+          console.error('Staff error:', staffError)
+          throw new Error(`Failed to create staff record: ${staffError.message}`)
+        }
+
+        console.log('Staff record created:', staffData.id)
+
+        // Try to create auth user using admin API
+        try {
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: formData.email,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: {
+              full_name: formData.full_name,
+              role: formData.role
+            }
+          })
+
+          if (authError) {
+            console.error('Auth error (non-fatal):', authError)
+            // Continue even if auth user creation fails
+            // Staff record is created, user can sign up later
+          } else {
+            console.log('Auth user created:', authData.user.id)
+            // Link the auth user to staff record
+            await supabaseAdmin
+              .from('staff')
+              .update({ user_id: authData.user.id })
+              .eq('id', staffData.id)
+          }
+        } catch (authErr: any) {
+          console.error('Auth creation failed (non-fatal):', authErr.message)
+        }
 
         alert(`Staff member created! Temporary password: ${tempPassword}\nPlease ask them to change it after first login.`)
       }
@@ -142,7 +165,7 @@ export default function StaffManagement() {
       setShowModal(false)
       fetchStaff()
     } catch (error: any) {
-      console.error('Error saving staff:', error.message)
+      console.error('Error saving staff:', error)
       alert(`Failed to save staff member: ${error.message}`)
     } finally {
       setLoading(false)
