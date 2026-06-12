@@ -13,6 +13,10 @@ import AboutUs from './components/AboutUs'
 import Shop from './pages/Shop'
 import FutureLaunches from './pages/FutureLaunches'
 import Craft from './pages/Craft'
+import AdminLogin from './pages/admin/Login'
+import AdminDashboard from './pages/admin/Dashboard'
+import StaffManagement from './pages/admin/Staff'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
@@ -73,6 +77,17 @@ function App() {
             <Craft />
             <Footer />
           </>
+        } />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/staff" element={
+          <ProtectedRoute>
+            <StaffManagement />
+          </ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>
