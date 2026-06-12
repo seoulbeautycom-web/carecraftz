@@ -95,14 +95,30 @@ export default function StaffManagement() {
 
     setResettingPassword(true)
     try {
-      // We need to use the admin API to reset password
-      // For now, we'll use the regular client with updateUser which requires the user to be logged in
-      // Since we don't have service role on client, we'll show instructions
-      alert(`To reset password for ${selectedStaff.email}:\n\nNew password: ${resetPassword}\n\n1. Go to Supabase Dashboard > Authentication > Users\n2. Find the user and click "Reset Password"\n3. Enter the new password above\n\nNote: For full UI password reset, you need to create a backend API endpoint with service role key.`)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          email: selectedStaff.email,
+          newPassword: resetPassword
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reset password')
+      }
+
+      alert('Password reset successfully!')
       setResetPassword('')
     } catch (error: any) {
       console.error('Error resetting password:', error)
-      alert('Failed to reset password')
+      alert(`Failed to reset password: ${error.message}`)
     } finally {
       setResettingPassword(false)
     }
