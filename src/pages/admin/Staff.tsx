@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal, RefreshCw } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
 interface StaffMember {
@@ -21,6 +21,8 @@ export default function StaffManagement() {
   const [staff, setStaff] = useState<StaffMember[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
   const [formData, setFormData] = useState({
     email: '',
@@ -74,6 +76,22 @@ export default function StaffManagement() {
       password: ''
     })
     setShowModal(true)
+  }
+
+  const handleViewDetails = (member: StaffMember) => {
+    setSelectedStaff(member)
+    setShowDetailsModal(true)
+  }
+
+  const handleResetPassword = async (email: string) => {
+    try {
+      // Note: This requires service role which we don't have on client
+      // For now, we'll show a message that this needs to be done via Supabase dashboard
+      alert(`To reset password for ${email}:\n\n1. Go to Supabase Dashboard > Authentication > Users\n2. Find the user and click "Reset Password"\n\nNote: Passwords cannot be viewed due to security (they are hashed). You can only reset them.\n\nOr create a backend API endpoint for this functionality.`)
+    } catch (error: any) {
+      console.error('Error resetting password:', error)
+      alert('Failed to reset password')
+    }
   }
 
   const handleDeleteStaff = async (id: string) => {
@@ -250,7 +268,11 @@ export default function StaffManagement() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {staff.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+                    <tr 
+                      key={member.id} 
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleViewDetails(member)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
@@ -285,7 +307,7 @@ export default function StaffManagement() {
                         })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => handleEditStaff(member)}
                             className="p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition"
@@ -428,6 +450,87 @@ export default function StaffManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Details Modal */}
+      {showDetailsModal && selectedStaff && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Staff Details</h3>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-xl">
+                    {selectedStaff.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900">{selectedStaff.full_name}</h4>
+                  <p className="text-gray-600">{selectedStaff.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <p className="text-sm text-gray-500">Role</p>
+                  <p className="font-medium text-gray-900 capitalize">{selectedStaff.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <p className={`font-medium ${selectedStaff.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedStaff.is_active ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Created</p>
+                  <p className="font-medium text-gray-900">
+                    {new Date(selectedStaff.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">User ID</p>
+                  <p className="font-medium text-gray-900 text-xs">
+                    {selectedStaff.user_id ? 'Linked' : 'Not linked'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-500 mb-3">Password Management</p>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleResetPassword(selectedStaff.email)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Reset Password</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDetailsModal(false)
+                      handleEditStaff(selectedStaff)
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-700 text-white rounded-lg hover:bg-green-800 transition font-medium"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit Staff Member</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
