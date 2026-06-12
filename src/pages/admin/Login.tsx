@@ -36,10 +36,10 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-cream flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-charcoal mb-2">CareCraftz Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">CareCraftz Admin</h1>
           <p className="text-gray-600">Sign in to access the admin dashboard</p>
         </div>
 
@@ -60,7 +60,7 @@ export default function AdminLogin() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest focus:border-transparent outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent outline-none transition"
               placeholder="admin@carecraftz.com"
             />
           </div>
@@ -75,7 +75,7 @@ export default function AdminLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest focus:border-transparent outline-none transition"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent outline-none transition"
               placeholder="••••••••"
             />
           </div>
@@ -83,14 +83,14 @@ export default function AdminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-forest text-white py-3 rounded-lg font-medium hover:bg-forest-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-green-700 text-white py-3 rounded-lg font-medium hover:bg-green-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <a href="/" className="hover:text-forest transition">
+          <a href="/" className="hover:text-green-700 transition">
             ← Back to website
           </a>
         </div>
