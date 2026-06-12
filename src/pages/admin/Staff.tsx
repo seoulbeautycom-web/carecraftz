@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { supabase, supabaseAdmin } from '../../lib/supabase'
 import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
@@ -26,7 +26,8 @@ export default function StaffManagement() {
     email: '',
     full_name: '',
     role: 'staff',
-    is_active: true
+    is_active: true,
+    password: ''
   })
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function StaffManagement() {
 
   const handleAddStaff = () => {
     setEditingStaff(null)
-    setFormData({ email: '', full_name: '', role: 'staff', is_active: true })
+    setFormData({ email: '', full_name: '', role: 'staff', is_active: true, password: '' })
     setShowModal(true)
   }
 
@@ -69,7 +70,8 @@ export default function StaffManagement() {
       email: member.email,
       full_name: member.full_name,
       role: member.role,
-      is_active: member.is_active
+      is_active: member.is_active,
+      password: ''
     })
     setShowModal(true)
   }
@@ -105,25 +107,43 @@ export default function StaffManagement() {
 
         if (error) throw error
       } else {
-        // Create new staff member (this would require creating a Supabase user first)
-        // For now, we'll just insert into staff table
-        const { error } = await supabase
+        // Create new staff member - create auth user first
+        const tempPassword = formData.password || Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+        
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: formData.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: formData.full_name,
+            role: formData.role
+          }
+        })
+
+        if (authError) throw authError
+
+        // The trigger should automatically create the staff record
+        // But let's also create it manually to ensure it's linked
+        const { error: staffError } = await supabaseAdmin
           .from('staff')
           .insert({
+            user_id: authData.user.id,
             email: formData.email,
             full_name: formData.full_name,
             role: formData.role,
             is_active: formData.is_active
           })
 
-        if (error) throw error
+        if (staffError) throw staffError
+
+        alert(`Staff member created! Temporary password: ${tempPassword}\nPlease ask them to change it after first login.`)
       }
 
       setShowModal(false)
       fetchStaff()
     } catch (error: any) {
       console.error('Error saving staff:', error.message)
-      alert('Failed to save staff member')
+      alert(`Failed to save staff member: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -360,6 +380,20 @@ export default function StaffManagement() {
                   <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                 )}
               </div>
+
+              {!editingStaff && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Leave empty for auto-generated password"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave empty to auto-generate a secure password</p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
