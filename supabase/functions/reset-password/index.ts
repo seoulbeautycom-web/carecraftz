@@ -133,6 +133,42 @@ serve(async (req) => {
       )
     }
 
+    if (action === 'delete_user') {
+      // Get user by email
+      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers()
+      
+      if (userError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch users' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const user = users.find((u: any) => u.email === email)
+
+      if (!user) {
+        return new Response(
+          JSON.stringify({ error: 'User not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Delete user
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id)
+
+      if (deleteError) {
+        return new Response(
+          JSON.stringify({ error: deleteError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'User deleted successfully' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
