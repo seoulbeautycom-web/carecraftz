@@ -38,7 +38,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <img src="/cclogo.png" alt="CareCraftz" className="w-12 h-10 transition-transform duration-300 group-hover:rotate-12" />
+            <img src="/cclogo.png" alt="CareCraftz" className="w-12 h-12 transition-transform duration-300 group-hover:rotate-12" />
             <span className={`font-['Poppins',sans-serif] text-xl tracking-wide font-bold ${scrolled ? 'text-charcoal' : isAboutPage || isCraftPage ? 'text-white' : 'text-charcoal'}`}>
               Care<span className="font-bold">Craftz</span>
             </span>
