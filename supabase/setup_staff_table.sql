@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS staff (
   role TEXT NOT NULL DEFAULT 'staff', -- 'admin', 'manager', 'staff'
   permissions JSONB DEFAULT '{}',
   is_active BOOLEAN DEFAULT true,
+  last_signed_in TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

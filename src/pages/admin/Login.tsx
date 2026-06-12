@@ -15,18 +15,21 @@ export default function AdminLogin() {
     setError('')
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
 
-      // Check if user is admin (you can add custom claims or check user metadata)
-      await supabase.auth.getUser()
+      // Update last_signed_in timestamp in staff table
+      if (data.user) {
+        await supabase
+          .from('staff')
+          .update({ last_signed_in: new Date().toISOString() })
+          .eq('email', email)
+      }
       
-      // For now, allow any authenticated user to access admin
-      // Later we can add role-based access control
       navigate('/admin/dashboard')
     } catch (err: any) {
       setError(err.message || 'Login failed')

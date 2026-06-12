@@ -12,6 +12,7 @@ interface StaffMember {
   role: string
   permissions: any
   is_active: boolean
+  last_signed_in: string | null
   created_at: string
   updated_at: string
 }
@@ -24,6 +25,8 @@ export default function StaffManagement() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
@@ -80,17 +83,28 @@ export default function StaffManagement() {
 
   const handleViewDetails = (member: StaffMember) => {
     setSelectedStaff(member)
+    setResetPassword('')
     setShowDetailsModal(true)
   }
 
-  const handleResetPassword = async (email: string) => {
+  const handlePasswordReset = async () => {
+    if (!selectedStaff || !resetPassword) {
+      alert('Please enter a new password')
+      return
+    }
+
+    setResettingPassword(true)
     try {
-      // Note: This requires service role which we don't have on client
-      // For now, we'll show a message that this needs to be done via Supabase dashboard
-      alert(`To reset password for ${email}:\n\n1. Go to Supabase Dashboard > Authentication > Users\n2. Find the user and click "Reset Password"\n\nNote: Passwords cannot be viewed due to security (they are hashed). You can only reset them.\n\nOr create a backend API endpoint for this functionality.`)
+      // We need to use the admin API to reset password
+      // For now, we'll use the regular client with updateUser which requires the user to be logged in
+      // Since we don't have service role on client, we'll show instructions
+      alert(`To reset password for ${selectedStaff.email}:\n\nNew password: ${resetPassword}\n\n1. Go to Supabase Dashboard > Authentication > Users\n2. Find the user and click "Reset Password"\n3. Enter the new password above\n\nNote: For full UI password reset, you need to create a backend API endpoint with service role key.`)
+      setResetPassword('')
     } catch (error: any) {
       console.error('Error resetting password:', error)
       alert('Failed to reset password')
+    } finally {
+      setResettingPassword(false)
     }
   }
 
@@ -501,22 +515,42 @@ export default function StaffManagement() {
                   </p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-500">Last Signed In</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedStaff.last_signed_in 
+                      ? new Date(selectedStaff.last_signed_in).toLocaleDateString() + ' ' + new Date(selectedStaff.last_signed_in).toLocaleTimeString()
+                      : 'Never'
+                    }
+                  </p>
+                </div>
+                <div className="col-span-2">
                   <p className="text-sm text-gray-500">User ID</p>
                   <p className="font-medium text-gray-900 text-xs">
-                    {selectedStaff.user_id ? 'Linked' : 'Not linked'}
+                    {selectedStaff.user_id ? 'Linked to auth system' : 'Not linked to auth system'}
                   </p>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-500 mb-3">Password Management</p>
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+                    <input
+                      type="password"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
+                    />
+                  </div>
                   <button
-                    onClick={() => handleResetPassword(selectedStaff.email)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
+                    onClick={handlePasswordReset}
+                    disabled={resettingPassword || !resetPassword}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <RefreshCw className="w-4 h-4" />
-                    <span>Reset Password</span>
+                    <span>{resettingPassword ? 'Resetting...' : 'Reset Password'}</span>
                   </button>
                   <button
                     onClick={() => {
