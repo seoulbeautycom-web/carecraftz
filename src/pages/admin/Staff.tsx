@@ -160,16 +160,44 @@ export default function StaffManagement() {
           .eq('id', editingStaff.id)
 
         if (error) throw error
+        alert('Staff member updated successfully')
       } else {
-        // Create new staff member - just create staff record without user_id initially
-        // The user will be linked when they sign up via the trigger
+        // Create auth user first via Edge Function
+        if (!formData.password) {
+          throw new Error('Password is required for new staff member')
+        }
+
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const response = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            action: 'create_user',
+            email: formData.email,
+            password: formData.password
+          })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create auth user')
+        }
+
+        console.log('Auth user created:', data.user)
+
+        // Create staff record with user_id
         const { data: staffData, error: staffError } = await supabase
           .from('staff')
           .insert({
             email: formData.email,
             full_name: formData.full_name,
             role: formData.role,
-            is_active: formData.is_active
+            is_active: formData.is_active,
+            user_id: data.user.id
           })
           .select()
           .single()
@@ -180,7 +208,7 @@ export default function StaffManagement() {
         }
 
         console.log('Staff record created:', staffData.id)
-        alert(`Staff member created! They can sign up at /admin/login with their email.`)
+        alert('Staff member added successfully!')
       }
 
       setShowModal(false)
