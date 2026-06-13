@@ -256,7 +256,7 @@ export default function Products() {
   })
 
   // Get unique categories for filter dropdown
-  const categories = [...new Set(products.map(p => p.category).filter(Boolean))]
+  const categories = [...new Set(products.map(p => p.category).filter((c): c is string => !!c))]
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
