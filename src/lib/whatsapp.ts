@@ -1,12 +1,15 @@
 import { supabase } from './supabase'
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL + '/functions/v1'
+const USE_WASENDER = true // Set to true to use WASenderAPI
 
-export async function sendWhatsAppOTP(phone: string): Promise<{ success: boolean; error?: string }> {
+export async function sendWhatsAppOTP(phone: string): Promise<{ success: boolean; error?: string; testOtp?: string }> {
   try {
     const { data: { session } } = await supabase.auth.getSession()
     
-    const response = await fetch(`${FUNCTIONS_URL}/whatsapp-otp`, {
+    const functionName = USE_WASENDER ? 'whatsapp-otp-wasender' : 'whatsapp-otp'
+    
+    const response = await fetch(`${FUNCTIONS_URL}/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +37,9 @@ export async function verifyWhatsAppOTP(phone: string, code: string): Promise<{
   try {
     const { data: { session } } = await supabase.auth.getSession()
     
-    const response = await fetch(`${FUNCTIONS_URL}/whatsapp-otp`, {
+    const functionName = USE_WASENDER ? 'whatsapp-otp-wasender' : 'whatsapp-otp'
+    
+    const response = await fetch(`${FUNCTIONS_URL}/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,13 +63,15 @@ export async function sendWhatsAppMessage(phone: string, body: string): Promise<
   try {
     const { data: { session } } = await supabase.auth.getSession()
     
-    const response = await fetch(`${FUNCTIONS_URL}/whatsapp`, {
+    const functionName = USE_WASENDER ? 'whatsapp-wasender' : 'whatsapp'
+    
+    const response = await fetch(`${FUNCTIONS_URL}/${functionName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token || ''}`,
       },
-      body: JSON.stringify({ to: phone, body }),
+      body: JSON.stringify({ to: phone, message: body }),
     })
 
     const result = await response.json()
