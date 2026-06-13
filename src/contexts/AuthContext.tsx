@@ -84,6 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     })
     return { error }
@@ -97,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}/profile`,
       },
     })
     return { error }

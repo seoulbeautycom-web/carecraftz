@@ -18,6 +18,7 @@ import FutureLaunches from './pages/FutureLaunches'
 import Craft from './pages/Craft'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
+import AuthCallback from './pages/auth/AuthCallback'
 import Profile from './pages/Profile'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
@@ -95,6 +96,7 @@ function App() {
             } />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
