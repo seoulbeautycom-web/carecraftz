@@ -48,10 +48,20 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.5, duration: 0.8 }}
-            className="text-lg text-charcoal/60 max-w-md mx-auto lg:mx-0 leading-relaxed mb-12"
+            className="text-lg text-charcoal/60 max-w-md mx-auto lg:mx-0 leading-relaxed mb-6"
           >
             Each bar is made by hand in small batches, infused with the nourishing
             essence of Moringa — nature's gift to your skin.
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="text-sm text-sage-dark max-w-md mx-auto lg:mx-0 leading-relaxed mb-12 bg-sage/10 px-4 py-3 rounded-lg"
+          >
+            <strong>CareCraftz</strong> is your online destination for premium handmade skincare products. 
+            Browse our collection, add items to your cart, and securely checkout — all in one seamless shopping experience.
           </motion.p>
 
           <motion.div

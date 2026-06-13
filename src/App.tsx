@@ -23,6 +23,7 @@ import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import WhatsAppButton from './components/WhatsAppButton'
+import CartDrawer from './components/CartDrawer'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import StaffManagement from './pages/admin/Staff'
@@ -49,6 +50,7 @@ function App() {
                 </main>
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </SoapProvider>
             } />
             <Route path="/seoul-beauty" element={
@@ -57,6 +59,7 @@ function App() {
                 <SeoulBeauty />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/about" element={
@@ -65,6 +68,7 @@ function App() {
                 <AboutUs />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/about-us" element={
@@ -73,6 +77,7 @@ function App() {
                 <AboutUs />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/shop" element={
@@ -81,12 +86,14 @@ function App() {
                 <Shop />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/product/:id" element={
               <>
                 <ProductDetail />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/future-launches" element={
@@ -95,6 +102,7 @@ function App() {
                 <FutureLaunches />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/craft" element={
@@ -103,6 +111,7 @@ function App() {
                 <Craft />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/signin" element={
@@ -111,6 +120,7 @@ function App() {
                 <SignIn />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/signup" element={
@@ -119,6 +129,7 @@ function App() {
                 <SignUp />
                 <Footer />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/auth/callback" element={<AuthCallback />} />
@@ -127,12 +138,14 @@ function App() {
               <>
                 <Privacy />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/terms" element={
               <>
                 <Terms />
                 <WhatsAppButton />
+                <CartDrawer />
               </>
             } />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
