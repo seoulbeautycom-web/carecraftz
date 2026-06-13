@@ -128,37 +128,37 @@ export default function Products() {
     setIsSubmitting(true)
 
     try {
-      // Upload new images first
-      const uploadedImageUrls = await uploadImages()
-
-      // Reorder images so primary is first
-      const reorderedImages = [...uploadedImageUrls]
-      if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
-        const [primary] = reorderedImages.splice(primaryImageIndex, 1)
-        reorderedImages.unshift(primary)
-      }
-
-      const productData = {
-        name: formData.name.trim(),
-        description: formData.description.trim() || null,
-        price: parseFloat(formData.price),
-        compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
-        inventory: parseInt(formData.inventory),
-        low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
-        category: formData.category.trim() || null,
-        location: formData.location,
-        delivery_charge: parseFloat(formData.delivery_charge) || 0,
-        sku: formData.sku.trim() || null,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        discount_percent: parseInt(formData.discount_percent) || 0,
-        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        is_active: formData.is_active,
-        is_featured: formData.is_featured,
-        images: reorderedImages
-      }
-
       if (editingProduct) {
-        // Update existing product
+        // === UPDATE EXISTING PRODUCT ===
+        // Upload images using existing product ID
+        const uploadedImageUrls = await uploadImages(editingProduct.id)
+
+        // Reorder images so primary is first
+        const reorderedImages = [...uploadedImageUrls]
+        if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
+          const [primary] = reorderedImages.splice(primaryImageIndex, 1)
+          reorderedImages.unshift(primary)
+        }
+
+        const productData = {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+          price: parseFloat(formData.price),
+          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          inventory: parseInt(formData.inventory),
+          low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
+          category: formData.category.trim() || null,
+          location: formData.location,
+          delivery_charge: parseFloat(formData.delivery_charge) || 0,
+          sku: formData.sku.trim() || null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          discount_percent: parseInt(formData.discount_percent) || 0,
+          tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          is_active: formData.is_active,
+          is_featured: formData.is_featured,
+          images: reorderedImages
+        }
+
         const { error } = await supabase
           .from('products')
           .update(productData)
@@ -172,15 +172,42 @@ export default function Products() {
 
         alert('Product updated successfully!')
       } else {
-        // Create new product
-        const { error } = await supabase
+        // === CREATE NEW PRODUCT ===
+        // First create product without images to get the ID
+        const productData = {
+          name: formData.name.trim(),
+          description: formData.description.trim() || null,
+          price: parseFloat(formData.price),
+          compare_at_price: formData.compare_at_price ? parseFloat(formData.compare_at_price) : null,
+          inventory: parseInt(formData.inventory),
+          low_stock_threshold: parseInt(formData.low_stock_threshold) || 10,
+          category: formData.category.trim() || null,
+          location: formData.location,
+          delivery_charge: parseFloat(formData.delivery_charge) || 0,
+          sku: formData.sku.trim() || null,
+          weight: formData.weight ? parseFloat(formData.weight) : null,
+          discount_percent: parseInt(formData.discount_percent) || 0,
+          tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          is_active: formData.is_active,
+          is_featured: formData.is_featured,
+          images: [] // Empty initially, will update after upload
+        }
+
+        const { data: newProduct, error: createError } = await supabase
           .from('products')
           .insert(productData)
+          .select('id')
+          .single()
 
-        if (error) {
-          console.error('Error creating product:', error)
-          alert('Failed to create product: ' + error.message)
+        if (createError || !newProduct) {
+          console.error('Error creating product:', createError)
+          alert('Failed to create product: ' + (createError?.message || 'Unknown error'))
           return
+        }
+
+        // Now upload images using the new product ID
+        if (selectedFiles.length > 0) {
+          await uploadImagesForNewProduct(newProduct.id)
         }
 
         alert('Product created successfully!')
@@ -238,7 +265,7 @@ export default function Products() {
     }
   }
 
-  const uploadImages = async (): Promise<string[]> => {
+  const uploadImages = async (productId: string): Promise<string[]> => {
     if (selectedFiles.length === 0) return formData.images
 
     const uploadedUrls: string[] = [...formData.images]
@@ -248,9 +275,10 @@ export default function Products() {
       const file = selectedFiles[i]
       const fileExt = file.name.split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `products/${fileName}`
+      // Organize by product ID: products/{productId}/{filename}
+      const filePath = `products/${productId}/${fileName}`
 
-      setUploadProgress(Math.round((i / totalFiles) * 100))
+      setUploadProgress(Math.round(((i + 1) / totalFiles) * 100))
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
@@ -275,6 +303,31 @@ export default function Products() {
     setUploadProgress(0)
     setSelectedFiles([])
     return uploadedUrls
+  }
+
+  // Upload images for new product (after product is created)
+  const uploadImagesForNewProduct = async (productId: string) => {
+    if (selectedFiles.length === 0) return
+
+    const uploadedUrls = await uploadImages(productId)
+
+    // Reorder images so primary is first
+    const reorderedImages = [...uploadedUrls]
+    if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
+      const [primary] = reorderedImages.splice(primaryImageIndex, 1)
+      reorderedImages.unshift(primary)
+    }
+
+    // Update product with image URLs
+    const { error } = await supabase
+      .from('products')
+      .update({ images: reorderedImages })
+      .eq('id', productId)
+
+    if (error) {
+      console.error('Error updating product with images:', error)
+      alert('Product created but failed to save images: ' + error.message)
+    }
   }
 
   const resetForm = () => {
