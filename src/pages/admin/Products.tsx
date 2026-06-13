@@ -458,7 +458,7 @@ export default function Products() {
         return
       }
 
-      alert(deleteImages ? 'Product and images deleted!' : 'Product deleted! Images moved to Company Gallery.')
+      alert('Product and images deleted!')
       setDeleteModal({ show: false, product: null })
       fetchProducts()
     } catch (error: any) {
@@ -1101,16 +1101,6 @@ export default function Products() {
                     </div>
                   )}
 
-                  {/* Gallery Button */}
-                  <button
-                    type="button"
-                    onClick={openGalleryModal}
-                    className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    <ImageIcon className="w-5 h-5" />
-                    Browse Company Gallery
-                  </button>
-
                   {/* File Input */}
                   <div className="relative">
                     <input
@@ -1196,27 +1186,18 @@ export default function Products() {
               <p className="text-gray-600 mb-6">
                 Are you sure you want to delete <strong>{deleteModal.product.name}</strong>?
                 This product has {deleteModal.product.images.length} image(s).
+                <br /><br />
+                <span className="text-red-500 font-medium">This action cannot be undone.</span>
               </p>
 
               <div className="space-y-3 mb-6">
                 <button
-                  onClick={() => handleDeleteProduct(false)}
-                  className="w-full flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
-                >
-                  <ImageIcon className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <p className="font-medium text-gray-900">Keep Images</p>
-                    <p className="text-sm text-gray-500">Move images to Company Gallery for reuse</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleDeleteProduct(true)}
+                  onClick={handleDeleteProduct}
                   className="w-full flex items-center gap-3 p-4 border-2 border-red-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors text-left"
                 >
                   <Trash2 className="w-6 h-6 text-red-600" />
                   <div>
-                    <p className="font-medium text-gray-900">Delete Everything</p>
+                    <p className="font-medium text-gray-900">Delete Product</p>
                     <p className="text-sm text-gray-500">Permanently delete product and all images</p>
                   </div>
                 </button>
@@ -1228,61 +1209,6 @@ export default function Products() {
               >
                 Cancel
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Company Gallery Modal */}
-        {galleryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900">Company Product Gallery</h2>
-                <button
-                  onClick={() => setGalleryModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6">
-                {galleryImages.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">No images in gallery yet.</p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Images from deleted products will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
-                    {galleryImages.map((url, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectGalleryImage(url)}
-                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors"
-                      >
-                        <img
-                          src={url}
-                          alt={`Gallery ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setGalleryModal(false)}
-                  className="w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
             </div>
           </div>
         )}
