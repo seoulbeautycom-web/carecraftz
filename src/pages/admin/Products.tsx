@@ -90,14 +90,10 @@ export default function Products() {
     try {
       setLoading(true)
 
-      // Fetch products with full audit trail (creator/updater staff info)
+      // Fetch products with audit fields
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select(`
-          *,
-          creator:created_by(full_name, email),
-          updater:updated_by(full_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (productsError) {
@@ -106,7 +102,24 @@ export default function Products() {
         return
       }
 
-      setProducts(productsData || [])
+      // Fetch staff to map creator/updater names
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('user_id, full_name, email')
+
+      const staffMap: Record<string, { full_name: string; email: string }> = {}
+      staffData?.forEach(staff => {
+        staffMap[staff.user_id] = { full_name: staff.full_name, email: staff.email }
+      })
+
+      // Map products with creator/updater info
+      const productsWithAudit = (productsData || []).map(product => ({
+        ...product,
+        creator: product.created_by ? staffMap[product.created_by] : null,
+        updater: product.updated_by ? staffMap[product.updated_by] : null
+      }))
+
+      setProducts(productsWithAudit)
     } catch (error: any) {
       console.error('Error fetching products:', error)
       alert('Failed to load products: ' + (error.message || 'Unknown error'))

@@ -1,0 +1,41 @@
+--- a/src/pages/admin/Products.tsx
++++ b/src/pages/admin/Products.tsx
+@@ -91,13 +91,31 @@ export default function Products() {
+     try {
+       setLoading(true)
+ 
+-      // Fetch products with audit fields
++      // Fetch products - using simple select to avoid schema cache issues
+       const { data: productsData, error: productsError } = await supabase
+         .from('products')
+         .select('*')
+         .order('created_at', { ascending: false })
+ 
+       if (productsError) {
+         console.error('Error fetching products:', productsError)
+         alert('Failed to load products: ' + productsError.message)
+         return
+       }
+ 
+-      setProducts(productsData || [])
++      // Fetch staff separately for audit mapping
++      const { data: staffData } = await supabase
++        .from('staff')
++        .select('user_id, full_name, email')
++
++      const staffMap: Record<string, { full_name: string; email: string }> = {}
++      staffData?.forEach(staff => {
++        staffMap[staff.user_id] = { full_name: staff.full_name, email: staff.email }
++      })
++
++      // Map products with creator/updater info
++      const productsWithAudit = (productsData || []).map(product => ({
++        ...product,
++        creator: product.created_by ? staffMap[product.created_by] : null,
++        updater: product.updated_by ? staffMap[product.updated_by] : null
++      }))
++
++      setProducts(productsWithAudit)
+     } catch (error: any) {
+       console.error('Error fetching products:', error)
+       alert('Failed to load products: ' + (error.message || 'Unknown error'))
