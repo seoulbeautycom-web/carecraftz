@@ -64,9 +64,6 @@ export default function Products() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; product: Product | null }>({ show: false, product: null })
-  const [galleryModal, setGalleryModal] = useState(false)
-  const [galleryImages, setGalleryImages] = useState<string[]>([])
-  const [gallerySelectedImages, setGallerySelectedImages] = useState<string[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -162,12 +159,9 @@ export default function Products() {
         // === UPDATE EXISTING PRODUCT ===
         // Upload images using existing product ID
         const uploadedImageUrls = await uploadImages(editingProduct.id)
-        
-        // Move gallery images to product bucket (if any were selected)
-        const movedGalleryUrls = await moveGalleryImagesToProduct(editingProduct.id)
 
         // Reorder images so primary is first
-        const reorderedImages = [...uploadedImageUrls, ...movedGalleryUrls]
+        const reorderedImages = uploadedImageUrls
         if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
           const [primary] = reorderedImages.splice(primaryImageIndex, 1)
           reorderedImages.unshift(primary)
@@ -366,70 +360,6 @@ export default function Products() {
     }
   }
 
-  // Move gallery images to product bucket (when selected from company gallery)
-  const moveGalleryImagesToProduct = async (productId: string): Promise<string[]> => {
-    if (gallerySelectedImages.length === 0) return []
-
-    const movedUrls: string[] = []
-
-    for (const imageUrl of gallerySelectedImages) {
-      try {
-        // Extract filename from gallery URL
-        const urlParts = imageUrl.split('/')
-        const fileName = urlParts[urlParts.length - 1]
-
-        console.log(`Moving gallery image ${fileName} to product ${productId}...`)
-
-        // Download from company-product-gallery
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from('company-product-gallery')
-          .download(fileName)
-
-        if (downloadError || !fileData) {
-          console.error('Download from gallery error:', downloadError)
-          continue
-        }
-
-        // Upload to product-images bucket under product folder
-        const newPath = `products/${productId}/${fileName}`
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(newPath, fileData, {
-            contentType: fileData.type,
-            upsert: true
-          })
-
-        if (uploadError) {
-          console.error('Upload to product-images error:', uploadError)
-          continue
-        }
-
-        // Delete from company-product-gallery (since we moved it)
-        await supabase.storage
-          .from('company-product-gallery')
-          .remove([fileName])
-
-        // Remove from company_gallery_images table
-        await supabase
-          .from('company_gallery_images')
-          .delete()
-          .eq('name', fileName)
-
-        // Add the new URL to the list
-        const newUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-images/${newPath}`
-        movedUrls.push(newUrl)
-        console.log(`Successfully moved ${fileName} to product ${productId}`)
-
-      } catch (err) {
-        console.error('Error moving gallery image to product:', err)
-      }
-    }
-
-    // Clear the gallery selection after moving
-    setGallerySelectedImages([])
-    return movedUrls
-  }
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -490,87 +420,15 @@ export default function Products() {
     setDeleteModal({ show: true, product })
   }
 
-  const handleDeleteProduct = async (deleteImages: boolean) => {
+  const handleDeleteProduct = async () => {
     if (!deleteModal.product) return
 
     const productId = deleteModal.product.id
     const productImages = deleteModal.product.images || []
 
     try {
-      // If keeping images, MOVE them to company gallery (not copy)
-      if (!deleteImages && productImages.length > 0) {
-        const movedImages: string[] = []
-        
-        for (const imageUrl of productImages) {
-          try {
-            // Extract filename from URL
-            const urlParts = imageUrl.split('/')
-            const fileName = urlParts[urlParts.length - 1]
-            const sourcePath = `products/${productId}/${fileName}`
-            
-            console.log(`Moving ${sourcePath} from product-images to company-product-gallery...`)
-
-            // Download from product-images bucket
-            const { data: fileData, error: downloadError } = await supabase.storage
-              .from('product-images')
-              .download(sourcePath)
-
-            if (downloadError) {
-              console.error('Download error:', downloadError)
-              continue
-            }
-
-            if (!fileData) {
-              console.error('No file data downloaded')
-              continue
-            }
-
-            // Upload to company-product-gallery (flat structure - no folders)
-            const { error: uploadError } = await supabase.storage
-              .from('company-product-gallery')
-              .upload(fileName, fileData, {
-                contentType: fileData.type,
-                upsert: true
-              })
-
-            if (uploadError) {
-              console.error('Upload to gallery error:', uploadError)
-              continue
-            }
-
-            // Add to gallery metadata table
-            const { error: insertError } = await supabase.from('company_gallery_images').insert({
-              name: fileName,
-              url: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
-              tags: ['from-deleted-product', productId],
-              created_by: currentUserId
-            })
-
-            if (insertError) {
-              console.error('Insert to gallery table error:', insertError)
-              continue
-            }
-
-            // Delete from product-images bucket (since we moved it)
-            await supabase.storage
-              .from('product-images')
-              .remove([sourcePath])
-
-            movedImages.push(fileName)
-            console.log(`Successfully moved ${fileName} to gallery`)
-
-          } catch (err) {
-            console.error('Error moving image to gallery:', err)
-          }
-        }
-        
-        if (movedImages.length > 0) {
-          console.log(`Moved ${movedImages.length} images to company gallery`)
-        }
-      }
-
-      // Delete product images from product-images bucket if requested
-      if (deleteImages && productImages.length > 0) {
+      // Delete product images from product-images bucket
+      if (productImages.length > 0) {
         for (const imageUrl of productImages) {
           try {
             const urlParts = imageUrl.split('/')
@@ -607,49 +465,6 @@ export default function Products() {
       console.error('Error deleting product:', error)
       alert('Failed to delete product: ' + (error.message || 'Unknown error'))
     }
-  }
-
-  // Gallery functions
-  const fetchGalleryImages = async () => {
-    try {
-      // List files from company gallery bucket
-      const { data, error } = await supabase.storage
-        .from('company-product-gallery')
-        .list('', { limit: 100 })
-
-      if (error) {
-        console.error('Error fetching gallery:', error)
-        return
-      }
-
-      const imageUrls = (data || [])
-        .filter(file => file.name.match(/\.(jpg|jpeg|png|webp|gif)$/i))
-        .map(file => {
-          const { data: { publicUrl } } = supabase.storage
-            .from('company-product-gallery')
-            .getPublicUrl(file.name)
-          return publicUrl
-        })
-
-      setGalleryImages(imageUrls)
-    } catch (error) {
-      console.error('Error loading gallery:', error)
-    }
-  }
-
-  const openGalleryModal = () => {
-    fetchGalleryImages()
-    setGalleryModal(true)
-  }
-
-  const selectGalleryImage = (imageUrl: string) => {
-    // Track that this image came from gallery (needs to be moved on save)
-    setGallerySelectedImages(prev => [...prev, imageUrl])
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, imageUrl]
-    }))
-    setGalleryModal(false)
   }
 
   const handleToggleActive = async (product: Product) => {
