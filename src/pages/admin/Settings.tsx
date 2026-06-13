@@ -9,7 +9,12 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle,
-  Server
+  Server,
+  Activity,
+  FileText,
+  Shield,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
@@ -24,10 +29,29 @@ interface StorageStats {
   staffCount: number
 }
 
+interface AuditLog {
+  id: string
+  table_name: string
+  record_id: string
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'UPLOAD' | 'DELETE_IMAGE'
+  old_data: any
+  new_data: any
+  performed_by_name: string
+  performed_by_email: string
+  performed_at: string
+}
+
+interface RLSPolicy {
+  table: string
+  policy: string
+  enabled: boolean
+}
+
 export default function Settings() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'security'>('overview')
   const [stats, setStats] = useState<StorageStats>({
     totalStorage: 1, // Supabase free tier: 1GB
     usedStorage: 0,
@@ -38,11 +62,21 @@ export default function Settings() {
     databaseSize: 'Unknown',
     staffCount: 0
   })
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditExpanded, setAuditExpanded] = useState<Record<string, boolean>>({})
+  const [rlsPolicies, setRlsPolicies] = useState<RLSPolicy[]>([])
 
   useEffect(() => {
     checkAuth()
     fetchStorageStats()
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs()
+    }
+  }, [activeTab])
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -103,6 +137,44 @@ export default function Settings() {
     }
   }
 
+  const fetchAuditLogs = async () => {
+    try {
+      setAuditLoading(true)
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('performed_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Error fetching audit logs:', error)
+        return
+      }
+
+      setAuditLogs(data || [])
+    } catch (error) {
+      console.error('Error fetching audit logs:', error)
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const toggleAuditExpand = (id: string) => {
+    setAuditExpanded(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
+
+  const getActionColor = (action: string) => {
+    switch (action) {
+      case 'CREATE': return 'bg-green-100 text-green-800'
+      case 'UPDATE': return 'bg-blue-100 text-blue-800'
+      case 'DELETE': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   const handleRefresh = () => {
     setRefreshing(true)
     fetchStorageStats()
@@ -134,13 +206,44 @@ export default function Settings() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'overview' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <HardDrive className="w-4 h-4" />
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'audit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            Audit Logs
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'security' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Security
+          </button>
+        </div>
+
         {/* Loading State */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
             <span className="ml-3 text-gray-600">Loading stats...</span>
           </div>
-        ) : (
+        ) : activeTab === 'overview' ? (
         <>
         {/* Storage Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

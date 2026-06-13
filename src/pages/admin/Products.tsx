@@ -90,10 +90,14 @@ export default function Products() {
     try {
       setLoading(true)
 
-      // Fetch products (audit relations temporarily disabled until schema updates)
+      // Fetch products with full audit trail (creator/updater staff info)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          creator:created_by(full_name, email),
+          updater:updated_by(full_name, email)
+        `)
         .order('created_at', { ascending: false })
 
       if (productsError) {
