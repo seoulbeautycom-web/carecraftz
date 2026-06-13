@@ -161,9 +161,12 @@ export default function Products() {
         // === UPDATE EXISTING PRODUCT ===
         // Upload images using existing product ID
         const uploadedImageUrls = await uploadImages(editingProduct.id)
+        
+        // Move gallery images to product bucket (if any were selected)
+        const movedGalleryUrls = await moveGalleryImagesToProduct(editingProduct.id)
 
         // Reorder images so primary is first
-        const reorderedImages = [...uploadedImageUrls]
+        const reorderedImages = [...uploadedImageUrls, ...movedGalleryUrls]
         if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
           const [primary] = reorderedImages.splice(primaryImageIndex, 1)
           reorderedImages.unshift(primary)
@@ -429,36 +432,75 @@ export default function Products() {
     const productImages = deleteModal.product.images || []
 
     try {
-      // If keeping images, move them to company gallery
+      // If keeping images, MOVE them to company gallery (not copy)
       if (!deleteImages && productImages.length > 0) {
+        const movedImages: string[] = []
+        
         for (const imageUrl of productImages) {
           try {
             // Extract filename from URL
             const urlParts = imageUrl.split('/')
             const fileName = urlParts[urlParts.length - 1]
+            const sourcePath = `products/${productId}/${fileName}`
+            
+            console.log(`Moving ${sourcePath} from product-images to company-product-gallery...`)
 
-            // Copy to company gallery (flat structure)
-            const { error: copyError } = await supabase.storage
-              .from('company-product-gallery')
-              .copy(
-                `products/${productId}/${fileName}`,
-                `${fileName}`
-              )
+            // Download from product-images bucket
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('product-images')
+              .download(sourcePath)
 
-            if (copyError) {
-              console.log('Image may already exist in gallery or copy failed:', copyError)
-            } else {
-              // Add to gallery metadata table
-              await supabase.from('company_gallery_images').insert({
-                name: fileName,
-                url: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
-                tags: ['from-deleted-product'],
-                created_by: currentUserId
-              })
+            if (downloadError) {
+              console.error('Download error:', downloadError)
+              continue
             }
+
+            if (!fileData) {
+              console.error('No file data downloaded')
+              continue
+            }
+
+            // Upload to company-product-gallery (flat structure - no folders)
+            const { error: uploadError } = await supabase.storage
+              .from('company-product-gallery')
+              .upload(fileName, fileData, {
+                contentType: fileData.type,
+                upsert: true
+              })
+
+            if (uploadError) {
+              console.error('Upload to gallery error:', uploadError)
+              continue
+            }
+
+            // Add to gallery metadata table
+            const { error: insertError } = await supabase.from('company_gallery_images').insert({
+              name: fileName,
+              url: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
+              tags: ['from-deleted-product', productId],
+              created_by: currentUserId
+            })
+
+            if (insertError) {
+              console.error('Insert to gallery table error:', insertError)
+              continue
+            }
+
+            // Delete from product-images bucket (since we moved it)
+            await supabase.storage
+              .from('product-images')
+              .remove([sourcePath])
+
+            movedImages.push(fileName)
+            console.log(`Successfully moved ${fileName} to gallery`)
+
           } catch (err) {
             console.error('Error moving image to gallery:', err)
           }
+        }
+        
+        if (movedImages.length > 0) {
+          console.log(`Moved ${movedImages.length} images to company gallery`)
         }
       }
 
@@ -473,6 +515,8 @@ export default function Products() {
             await supabase.storage
               .from('product-images')
               .remove([filePath])
+            
+            console.log(`Deleted ${fileName} from product-images`)
           } catch (err) {
             console.error('Error deleting image:', err)
           }
@@ -534,6 +578,8 @@ export default function Products() {
   }
 
   const selectGalleryImage = (imageUrl: string) => {
+    // Track that this image came from gallery (needs to be moved on save)
+    setGallerySelectedImages(prev => [...prev, imageUrl])
     setFormData(prev => ({
       ...prev,
       images: [...prev.images, imageUrl]
