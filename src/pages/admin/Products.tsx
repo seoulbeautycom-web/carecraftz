@@ -24,6 +24,10 @@ interface Product {
   tags: string[]
   created_at: string
   updated_at: string
+  created_by: string | null
+  updated_by: string | null
+  creator?: { full_name: string; email: string }
+  updater?: { full_name: string; email: string }
 }
 
 export default function Products() {
@@ -58,6 +62,8 @@ export default function Products() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [staffMap, setStaffMap] = useState<Record<string, { full_name: string; email: string }>>({})
 
   useEffect(() => {
     checkAuth()
@@ -69,6 +75,8 @@ export default function Products() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         navigate('/admin/login')
+      } else {
+        setCurrentUserId(session.user.id)
       }
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -79,18 +87,35 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+
+      // Fetch products with staff info for audit
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          creator:created_by(full_name, email),
+          updater:updated_by(full_name, email)
+        `)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        console.error('Error fetching products:', error)
-        alert('Failed to load products: ' + error.message)
+      if (productsError) {
+        console.error('Error fetching products:', productsError)
+        alert('Failed to load products: ' + productsError.message)
         return
       }
 
-      setProducts(data || [])
+      // Also fetch staff map for fallback lookups
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('user_id, full_name, email')
+
+      const staffLookup: Record<string, { full_name: string; email: string }> = {}
+      staffData?.forEach(staff => {
+        staffLookup[staff.user_id] = { full_name: staff.full_name, email: staff.email }
+      })
+      setStaffMap(staffLookup)
+
+      setProducts(productsData || [])
     } catch (error: any) {
       console.error('Error fetching products:', error)
       alert('Failed to load products: ' + (error.message || 'Unknown error'))
@@ -156,7 +181,8 @@ export default function Products() {
           tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
           is_active: formData.is_active,
           is_featured: formData.is_featured,
-          images: reorderedImages
+          images: reorderedImages,
+          updated_by: currentUserId // AUDIT: Who updated
         }
 
         const { error } = await supabase
@@ -190,7 +216,9 @@ export default function Products() {
           tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
           is_active: formData.is_active,
           is_featured: formData.is_featured,
-          images: [] // Empty initially, will update after upload
+          images: [], // Empty initially, will update after upload
+          created_by: currentUserId, // AUDIT: Who created
+          updated_by: currentUserId  // AUDIT: Who last updated
         }
 
         const { data: newProduct, error: createError } = await supabase
@@ -668,6 +696,30 @@ export default function Products() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                  </div>
+
+                  {/* Audit Trail */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-400 space-y-1">
+                    <div className="flex items-center gap-1">
+                      <span>Created:</span>
+                      <span className="font-medium">
+                        {new Date(product.created_at).toLocaleDateString()}
+                      </span>
+                      {product.creator?.full_name && (
+                        <span className="text-gray-500">by {product.creator.full_name}</span>
+                      )}
+                    </div>
+                    {product.updated_at !== product.created_at && (
+                      <div className="flex items-center gap-1">
+                        <span>Updated:</span>
+                        <span className="font-medium">
+                          {new Date(product.updated_at).toLocaleDateString()}
+                        </span>
+                        {product.updater?.full_name && product.updater.full_name !== product.creator?.full_name && (
+                          <span className="text-gray-500">by {product.updater.full_name}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
