@@ -98,8 +98,8 @@ export default function ProductDetail() {
     )
   }
 
-  const hasDiscount = product.compare_at_price && product.compare_at_price > product.price
-  const discountPercent = hasDiscount
+  const hasDiscount = product.compare_at_price !== null && product.compare_at_price > product.price
+  const discountPercent = hasDiscount && product.compare_at_price
     ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
     : 0
 

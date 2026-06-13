@@ -66,7 +66,7 @@ function useInView(threshold = 0.15) {
 
 export default function Shop() {
   const navigate = useNavigate()
-  const { addToCart, setIsCartOpen } = useCart()
+  const { addToCart } = useCart()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [activeTab, setActiveTab] = useState('best sellers')
