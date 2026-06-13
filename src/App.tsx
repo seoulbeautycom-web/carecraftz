@@ -48,6 +48,7 @@ function App() {
                   <ShopSection />
                 </main>
                 <Footer />
+                <WhatsAppButton />
               </SoapProvider>
             } />
             <Route path="/seoul-beauty" element={
@@ -55,6 +56,7 @@ function App() {
                 <Navbar />
                 <SeoulBeauty />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/about" element={
@@ -62,6 +64,7 @@ function App() {
                 <Navbar />
                 <AboutUs />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/about-us" element={
@@ -69,6 +72,7 @@ function App() {
                 <Navbar />
                 <AboutUs />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/shop" element={
@@ -76,11 +80,13 @@ function App() {
                 <Navbar />
                 <Shop />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/product/:id" element={
               <>
                 <ProductDetail />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/future-launches" element={
@@ -88,6 +94,7 @@ function App() {
                 <Navbar />
                 <FutureLaunches />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/craft" element={
@@ -95,6 +102,7 @@ function App() {
                 <Navbar />
                 <Craft />
                 <Footer />
+                <WhatsAppButton />
               </>
             } />
             <Route path="/signin" element={
@@ -115,8 +123,18 @@ function App() {
             } />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={
+              <>
+                <Privacy />
+                <WhatsAppButton />
+              </>
+            } />
+            <Route path="/terms" element={
+              <>
+                <Terms />
+                <WhatsAppButton />
+              </>
+            } />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={
