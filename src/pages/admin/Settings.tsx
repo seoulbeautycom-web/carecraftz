@@ -56,17 +56,17 @@ export default function Settings() {
       setLoading(true)
 
       // Count product images
-      const { data: productImages, error: productError } = await supabase.storage
+      const { data: productImages } = await supabase.storage
         .from('product-images')
         .list('products', { limit: 1000 })
 
       // Count gallery images
-      const { data: galleryImages, error: galleryError } = await supabase.storage
+      const { data: galleryImages } = await supabase.storage
         .from('company-product-gallery')
         .list('', { limit: 1000 })
 
       // Count staff
-      const { count: staffCount, error: staffError } = await supabase
+      const { count: staffCount } = await supabase
         .from('staff')
         .select('*', { count: 'exact', head: true })
 
@@ -134,6 +134,14 @@ export default function Settings() {
           </button>
         </div>
 
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+            <span className="ml-3 text-gray-600">Loading stats...</span>
+          </div>
+        ) : (
+        <>
         {/* Storage Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Storage Usage Card */}
@@ -267,7 +275,7 @@ export default function Settings() {
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-2">Supabase Project</h3>
               <p className="text-gray-600 text-sm">
-                URL: {import.meta.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL}
+                URL: {import.meta.env.VITE_SUPABASE_URL}
               </p>
             </div>
 
@@ -287,6 +295,8 @@ export default function Settings() {
             </p>
           </div>
         </div>
+        </>
+        )}
       </div>
     </AdminLayout>
   )

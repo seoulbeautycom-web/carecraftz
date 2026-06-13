@@ -63,7 +63,6 @@ export default function Products() {
   const [primaryImageIndex, setPrimaryImageIndex] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<string>('')
-  const [staffMap, setStaffMap] = useState<Record<string, { full_name: string; email: string }>>({})
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; product: Product | null }>({ show: false, product: null })
   const [galleryModal, setGalleryModal] = useState(false)
   const [galleryImages, setGalleryImages] = useState<string[]>([])
@@ -106,17 +105,6 @@ export default function Products() {
         alert('Failed to load products: ' + productsError.message)
         return
       }
-
-      // Also fetch staff map for fallback lookups
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('user_id, full_name, email')
-
-      const staffLookup: Record<string, { full_name: string; email: string }> = {}
-      staffData?.forEach(staff => {
-        staffLookup[staff.user_id] = { full_name: staff.full_name, email: staff.email }
-      })
-      setStaffMap(staffLookup)
 
       setProducts(productsData || [])
     } catch (error: any) {
@@ -450,7 +438,7 @@ export default function Products() {
               // Add to gallery metadata table
               await supabase.from('company_gallery_images').insert({
                 name: fileName,
-                url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
+                url: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
                 tags: ['from-deleted-product'],
                 created_by: currentUserId
               })
