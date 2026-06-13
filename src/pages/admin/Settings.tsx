@@ -82,32 +82,74 @@ export default function Settings() {
     try {
       setLoading(true)
 
-      const { data: productImages } = await supabase.storage
-        .from('product-images')
-        .list('products', { limit: 1000 })
+      // Count product images by querying products table (more accurate than storage)
+      const { data: productsData } = await supabase
+        .from('products')
+        .select('images')
 
-      const { data: galleryImages } = await supabase.storage
-        .from('company-product-gallery')
-        .list('', { limit: 1000 })
+      const productImagesCount = productsData?.reduce((acc, product) => {
+        return acc + (product.images?.length || 0)
+      }, 0) || 0
 
+      // Count gallery images from table
+      const { data: galleryData } = await supabase
+        .from('company_gallery_images')
+        .select('*')
+
+      const galleryImagesCount = galleryData?.length || 0
+
+      // Count staff
       const { count: staffCount } = await supabase
         .from('staff')
         .select('*', { count: 'exact', head: true })
 
-      const productCount = productImages?.reduce((acc, folder) => acc + (folder.name ? 1 : 0), 0) || 0
-      const galleryCount = galleryImages?.length || 0
-      
-      const avgImageSizeMB = 0.2
-      const estimatedUsedMB = (productCount + galleryCount) * avgImageSizeMB
-      const totalMB = 1024
+      // Also try to get actual storage metrics from Supabase
+      let storageUsed = 0
+      try {
+        // List all files in product-images bucket
+        const { data: allProductFiles } = await supabase.storage
+          .from('product-images')
+          .list('products', { limit: 1000 })
+
+        // Recursively count files in subfolders
+        let productFileCount = 0
+        if (allProductFiles) {
+          for (const folder of allProductFiles) {
+            if (folder.id) { // It's a folder
+              const { data: folderFiles } = await supabase.storage
+                .from('product-images')
+                .list(`products/${folder.name}`, { limit: 1000 })
+              productFileCount += folderFiles?.length || 0
+            }
+          }
+        }
+
+        // List gallery files
+        const { data: galleryFiles } = await supabase.storage
+          .from('company-product-gallery')
+          .list('', { limit: 1000 })
+
+        const totalFiles = productFileCount + (galleryFiles?.length || 0)
+        const avgImageSizeMB = 0.2
+        storageUsed = (totalFiles * avgImageSizeMB) / 1024 // Convert to GB
+      } catch (storageError) {
+        console.log('Storage metrics estimation failed, using database counts')
+        // Fallback: estimate from database counts
+        const avgImageSizeMB = 0.2
+        storageUsed = ((productImagesCount + galleryImagesCount) * avgImageSizeMB) / 1024
+      }
+
+      const totalStorage = 1 // 1GB free tier
+      const freeStorage = Math.max(0, totalStorage - storageUsed)
+      const percentUsed = Math.min(100, Math.round((storageUsed / totalStorage) * 100))
 
       setStats({
-        totalStorage: 1,
-        usedStorage: Math.round(estimatedUsedMB / 1024 * 100) / 100,
-        freeStorage: Math.round((totalMB - estimatedUsedMB) / 1024 * 100) / 100,
-        percentUsed: Math.round((estimatedUsedMB / totalMB) * 100),
-        productImagesCount: productCount,
-        galleryImagesCount: galleryCount,
+        totalStorage,
+        usedStorage: Math.round(storageUsed * 100) / 100,
+        freeStorage: Math.round(freeStorage * 100) / 100,
+        percentUsed,
+        productImagesCount,
+        galleryImagesCount,
         databaseSize: 'Unknown',
         staffCount: staffCount || 0
       })

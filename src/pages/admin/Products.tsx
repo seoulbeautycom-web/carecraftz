@@ -66,6 +66,7 @@ export default function Products() {
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; product: Product | null }>({ show: false, product: null })
   const [galleryModal, setGalleryModal] = useState(false)
   const [galleryImages, setGalleryImages] = useState<string[]>([])
+  const [gallerySelectedImages, setGallerySelectedImages] = useState<string[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -363,6 +364,70 @@ export default function Products() {
       console.error('Error updating product with images:', error)
       alert('Product created but failed to save images: ' + error.message)
     }
+  }
+
+  // Move gallery images to product bucket (when selected from company gallery)
+  const moveGalleryImagesToProduct = async (productId: string): Promise<string[]> => {
+    if (gallerySelectedImages.length === 0) return []
+
+    const movedUrls: string[] = []
+
+    for (const imageUrl of gallerySelectedImages) {
+      try {
+        // Extract filename from gallery URL
+        const urlParts = imageUrl.split('/')
+        const fileName = urlParts[urlParts.length - 1]
+
+        console.log(`Moving gallery image ${fileName} to product ${productId}...`)
+
+        // Download from company-product-gallery
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('company-product-gallery')
+          .download(fileName)
+
+        if (downloadError || !fileData) {
+          console.error('Download from gallery error:', downloadError)
+          continue
+        }
+
+        // Upload to product-images bucket under product folder
+        const newPath = `products/${productId}/${fileName}`
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(newPath, fileData, {
+            contentType: fileData.type,
+            upsert: true
+          })
+
+        if (uploadError) {
+          console.error('Upload to product-images error:', uploadError)
+          continue
+        }
+
+        // Delete from company-product-gallery (since we moved it)
+        await supabase.storage
+          .from('company-product-gallery')
+          .remove([fileName])
+
+        // Remove from company_gallery_images table
+        await supabase
+          .from('company_gallery_images')
+          .delete()
+          .eq('name', fileName)
+
+        // Add the new URL to the list
+        const newUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-images/${newPath}`
+        movedUrls.push(newUrl)
+        console.log(`Successfully moved ${fileName} to product ${productId}`)
+
+      } catch (err) {
+        console.error('Error moving gallery image to product:', err)
+      }
+    }
+
+    // Clear the gallery selection after moving
+    setGallerySelectedImages([])
+    return movedUrls
   }
 
   const resetForm = () => {
