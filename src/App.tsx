@@ -16,6 +16,7 @@ import Craft from './pages/Craft'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import StaffManagement from './pages/admin/Staff'
+import Products from './pages/admin/Products'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -88,6 +89,11 @@ function App() {
         <Route path="/admin/staff" element={
           <ProtectedRoute>
             <StaffManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/products" element={
+          <ProtectedRoute>
+            <Products />
           </ProtectedRoute>
         } />
       </Routes>
