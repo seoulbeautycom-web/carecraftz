@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendWhatsAppOTP, verifyWhatsAppOTP } from '../lib/whatsapp'
 
 interface User {
   id: string
@@ -64,19 +65,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithPhone = async (phone: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      phone,
-    })
-    return { error, confirmationRequired: !error }
+    const result = await sendWhatsAppOTP(phone)
+    return { 
+      error: result.success ? null : { message: result.error || 'Failed to send WhatsApp OTP' },
+      confirmationRequired: result.success 
+    }
   }
 
   const verifyPhoneOtp = async (phone: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({
-      phone,
-      token,
-      type: 'sms',
-    })
-    return { error }
+    const result = await verifyWhatsAppOTP(phone, token)
+    
+    if (result.success && result.userId) {
+      // Create a session for the user
+      // Note: In a real implementation, you'd get a JWT from the edge function
+      // For now, we'll create a basic user object
+      setUser({
+        id: result.userId,
+        email: '', // Phone users might not have email
+        phone: phone,
+      })
+      return { error: null }
+    }
+    
+    return { 
+      error: result.success ? null : { message: result.error || 'Invalid OTP' } 
+    }
   }
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
