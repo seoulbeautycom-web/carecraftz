@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Pause, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useCart } from '../contexts/CartContext'
+import CartDrawer from '../components/CartDrawer'
 
 const HERO_BG_IMAGE = 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260516_101925_8e509c31-4e75-4ae1-b164-2605265b2d47.png&w=1280&q=85'
 
@@ -62,6 +65,8 @@ function useInView(threshold = 0.15) {
 }
 
 export default function Shop() {
+  const navigate = useNavigate()
+  const { addToCart, setIsCartOpen } = useCart()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [activeTab, setActiveTab] = useState('best sellers')
@@ -69,6 +74,7 @@ export default function Shop() {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [addedToCart, setAddedToCart] = useState<string | null>(null)
 
   const [heroRef, heroVisible] = useInView(0.15)
   const [bestSellersRef, bestSellersVisible] = useInView(0.15)
@@ -142,6 +148,7 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-white">
+      <CartDrawer />
       {/* Hero Section */}
       <section ref={heroRef as any} className="relative w-full min-h-screen flex flex-col lg:flex-row pt-16">
         {/* Hero Left */}
@@ -260,29 +267,59 @@ export default function Shop() {
                   }`}
                   style={{ transitionDelay: `${200 + index * 80}ms` }}
                 >
-                  <div className="px-4 h-12 flex flex-col justify-center">
-                    <span className="text-xs font-medium tracking-wider uppercase">{product.tag1 || ''}</span>
-                    {product.tag2 && (
-                      <span className="text-xs text-gray-500 uppercase mt-0.5">{product.tag2}</span>
-                    )}
-                  </div>
-                  <div className="mx-4 aspect-[3/4] rounded-lg overflow-hidden bg-[#F9F4F0] group">
-                    <img
-                      src={product.images?.[0] || '/placeholder-product.png'}
-                      alt={product.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="p-4 text-center">
-                    <p className="text-sm mb-2">{product.name}</p>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm">€{product.price.toFixed(2).replace('.', ',')}</span>
-                      {product.compare_at_price && product.compare_at_price > product.price && (
-                        <span className="text-sm text-gray-400 line-through">
-                          €{product.compare_at_price.toFixed(2).replace('.', ',')}
-                        </span>
+                  {/* Clickable product card */}
+                  <button
+                    onClick={() => navigate(`/product/${product.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="px-4 h-12 flex flex-col justify-center">
+                      <span className="text-xs font-medium tracking-wider uppercase">{product.tag1 || ''}</span>
+                      {product.tag2 && (
+                        <span className="text-xs text-gray-500 uppercase mt-0.5">{product.tag2}</span>
                       )}
                     </div>
+                    <div className="mx-4 aspect-[3/4] rounded-lg overflow-hidden bg-[#F9F4F0] group">
+                      <img
+                        src={product.images?.[0] || '/placeholder-product.png'}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4 text-center">
+                      <p className="text-sm mb-2">{product.name}</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-sm">€{product.price.toFixed(2).replace('.', ',')}</span>
+                        {product.compare_at_price && product.compare_at_price > product.price && (
+                          <span className="text-sm text-gray-400 line-through">
+                            €{product.compare_at_price.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Add to Cart button */}
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCart({
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          image: product.images?.[0] || '',
+                        })
+                        setAddedToCart(product.id)
+                        setTimeout(() => setAddedToCart(null), 1500)
+                      }}
+                      className={`w-full py-2 rounded-full text-sm font-medium transition-colors ${
+                        addedToCart === product.id
+                          ? 'bg-green-500 text-white'
+                          : 'bg-black text-white hover:bg-gray-800'
+                      }`}
+                    >
+                      {addedToCart === product.id ? 'Added!' : 'Add to Cart'}
+                    </button>
                   </div>
                 </div>
               ))

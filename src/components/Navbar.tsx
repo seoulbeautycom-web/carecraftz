@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, ShoppingCart } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, ShoppingCart, User } from 'lucide-react'
+import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { totalItems, setIsCartOpen } = useCart()
+  const { user } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
@@ -78,9 +83,36 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button className={`font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}>
+            {/* Cart Button */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className={`relative font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}
+            >
               <ShoppingCart className="w-5 h-5" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
             </button>
+
+            {/* Profile / Sign In Button */}
+            {user ? (
+              <button
+                onClick={() => navigate('/profile')}
+                className={`font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}
+              >
+                <User className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/signin')}
+                className={`font-['Poppins',sans-serif] text-sm font-bold px-4 py-2 rounded-full transition-colors duration-300 ${scrolled ? 'bg-black text-white hover:bg-gray-800' : isAboutPage || isCraftPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-gray-800'}`}
+              >
+                Sign In
+              </button>
+            )}
+
             <Link
               to="/shop"
               className="relative inline-flex items-center justify-center px-5 py-2 bg-forest text-ivory text-sm font-bold rounded-full overflow-hidden group"

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SoapProvider } from './context/SoapContext'
+import { CartProvider } from './contexts/CartContext'
+import { AuthProvider } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
 import FlyingSoap from './components/FlyingSoap'
 import HeroSection from './components/HeroSection'
@@ -11,8 +13,12 @@ import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
 import Shop from './pages/Shop'
+import ProductDetail from './pages/ProductDetail'
 import FutureLaunches from './pages/FutureLaunches'
 import Craft from './pages/Craft'
+import SignIn from './pages/auth/SignIn'
+import SignUp from './pages/auth/SignUp'
+import Profile from './pages/Profile'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import StaffManagement from './pages/admin/Staff'
@@ -23,86 +29,98 @@ import ProtectedRoute from './components/ProtectedRoute'
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={
-          <SoapProvider>
-            <Navbar />
-            <FlyingSoap />
-            <main>
-              <HeroSection />
-              <UnwrapSection />
-              <CraftSection />
-              <HandsSection />
-              <ShopSection />
-            </main>
-            <Footer />
-          </SoapProvider>
-        } />
-        <Route path="/seoul-beauty" element={
-          <>
-            <Navbar />
-            <SeoulBeauty />
-            <Footer />
-          </>
-        } />
-        <Route path="/about" element={
-          <>
-            <Navbar />
-            <AboutUs />
-            <Footer />
-          </>
-        } />
-        <Route path="/about-us" element={
-          <>
-            <Navbar />
-            <AboutUs />
-            <Footer />
-          </>
-        } />
-        <Route path="/shop" element={
-          <>
-            <Navbar />
-            <Shop />
-            <Footer />
-          </>
-        } />
-        <Route path="/future-launches" element={
-          <>
-            <Navbar />
-            <FutureLaunches />
-            <Footer />
-          </>
-        } />
-        <Route path="/craft" element={
-          <>
-            <Navbar />
-            <Craft />
-            <Footer />
-          </>
-        } />
-        <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/staff" element={
-          <ProtectedRoute>
-            <StaffManagement />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/products" element={
-          <ProtectedRoute>
-            <Products />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin/settings" element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } />
-      </Routes>
+      <AuthProvider>
+        <CartProvider>
+          <Routes>
+            <Route path="/" element={
+              <SoapProvider>
+                <Navbar />
+                <FlyingSoap />
+                <main>
+                  <HeroSection />
+                  <UnwrapSection />
+                  <CraftSection />
+                  <HandsSection />
+                  <ShopSection />
+                </main>
+                <Footer />
+              </SoapProvider>
+            } />
+            <Route path="/seoul-beauty" element={
+              <>
+                <Navbar />
+                <SeoulBeauty />
+                <Footer />
+              </>
+            } />
+            <Route path="/about" element={
+              <>
+                <Navbar />
+                <AboutUs />
+                <Footer />
+              </>
+            } />
+            <Route path="/about-us" element={
+              <>
+                <Navbar />
+                <AboutUs />
+                <Footer />
+              </>
+            } />
+            <Route path="/shop" element={
+              <>
+                <Navbar />
+                <Shop />
+                <Footer />
+              </>
+            } />
+            <Route path="/product/:id" element={
+              <>
+                <ProductDetail />
+              </>
+            } />
+            <Route path="/future-launches" element={
+              <>
+                <Navbar />
+                <FutureLaunches />
+                <Footer />
+              </>
+            } />
+            <Route path="/craft" element={
+              <>
+                <Navbar />
+                <Craft />
+                <Footer />
+              </>
+            } />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/staff" element={
+              <ProtectedRoute>
+                <StaffManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/products" element={
+              <ProtectedRoute>
+                <Products />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
