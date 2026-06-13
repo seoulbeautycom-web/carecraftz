@@ -16,54 +16,86 @@ CREATE TABLE IF NOT EXISTS staff (
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Allow authenticated users to read staff
-CREATE POLICY "Allow authenticated users to read staff"
-ON staff FOR SELECT
-TO authenticated
-USING (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'staff' AND policyname = 'Allow authenticated users to read staff'
+  ) THEN
+    CREATE POLICY "Allow authenticated users to read staff"
+    ON staff FOR SELECT
+    TO authenticated
+    USING (true);
+  END IF;
+END $$;
 
 -- Policy: Allow admins to insert staff
-CREATE POLICY "Allow admins to insert staff"
-ON staff FOR INSERT
-TO authenticated
-WITH CHECK (
-  auth.jwt()->>'role' = 'admin' OR
-  NOT EXISTS (SELECT 1 FROM staff LIMIT 1) OR
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'staff' AND policyname = 'Allow admins to insert staff'
+  ) THEN
+    CREATE POLICY "Allow admins to insert staff"
+    ON staff FOR INSERT
+    TO authenticated
+    WITH CHECK (
+      auth.jwt()->>'role' = 'admin' OR
+      NOT EXISTS (SELECT 1 FROM staff LIMIT 1) OR
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role = 'admin'
+      )
+    );
+  END IF;
+END $$;
 
 -- Policy: Allow admins to update staff
-CREATE POLICY "Allow admins to update staff"
-ON staff FOR UPDATE
-TO authenticated
-USING (
-  auth.jwt()->>'role' = 'admin' OR
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  )
-)
-WITH CHECK (
-  auth.jwt()->>'role' = 'admin' OR
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'staff' AND policyname = 'Allow admins to update staff'
+  ) THEN
+    CREATE POLICY "Allow admins to update staff"
+    ON staff FOR UPDATE
+    TO authenticated
+    USING (
+      auth.jwt()->>'role' = 'admin' OR
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role = 'admin'
+      )
+    )
+    WITH CHECK (
+      auth.jwt()->>'role' = 'admin' OR
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role = 'admin'
+      )
+    );
+  END IF;
+END $$;
 
 -- Policy: Allow admins to delete staff
-CREATE POLICY "Allow admins to delete staff"
-ON staff FOR DELETE
-TO authenticated
-USING (
-  auth.jwt()->>'role' = 'admin' OR
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role = 'admin'
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'staff' AND policyname = 'Allow admins to delete staff'
+  ) THEN
+    CREATE POLICY "Allow admins to delete staff"
+    ON staff FOR DELETE
+    TO authenticated
+    USING (
+      auth.jwt()->>'role' = 'admin' OR
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role = 'admin'
+      )
+    );
+  END IF;
+END $$;
 
 -- Create updated_at trigger function (if not exists)
 CREATE OR REPLACE FUNCTION update_updated_at_column()

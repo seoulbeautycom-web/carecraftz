@@ -18,27 +18,43 @@ CREATE TABLE IF NOT EXISTS products (
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Allow anyone to read active products (for storefront)
-CREATE POLICY "Allow public to view active products"
-ON products FOR SELECT
-TO anon, authenticated
-USING (is_active = true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'products' AND policyname = 'Allow public to view active products'
+  ) THEN
+    CREATE POLICY "Allow public to view active products"
+    ON products FOR SELECT
+    TO anon, authenticated
+    USING (is_active = true);
+  END IF;
+END $$;
 
 -- Policy: Allow admins to manage all products
-CREATE POLICY "Allow admins full access to products"
-ON products FOR ALL
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM staff 
-    WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies 
+    WHERE tablename = 'products' AND policyname = 'Allow admins full access to products'
+  ) THEN
+    CREATE POLICY "Allow admins full access to products"
+    ON products FOR ALL
+    TO authenticated
+    USING (
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
+      )
+    )
+    WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM staff 
+        WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
+      )
+    );
+  END IF;
+END $$;
 
 -- Create trigger for products updated_at
 CREATE TRIGGER update_products_updated_at
