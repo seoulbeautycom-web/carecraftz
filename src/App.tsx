@@ -20,6 +20,9 @@ import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 import AuthCallback from './pages/auth/AuthCallback'
 import Profile from './pages/Profile'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
+import WhatsAppButton from './components/WhatsAppButton'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import StaffManagement from './pages/admin/Staff'
@@ -94,10 +97,26 @@ function App() {
                 <Footer />
               </>
             } />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
+            <Route path="/signin" element={
+              <>
+                <Navbar />
+                <SignIn />
+                <Footer />
+                <WhatsAppButton />
+              </>
+            } />
+            <Route path="/signup" element={
+              <>
+                <Navbar />
+                <SignUp />
+                <Footer />
+                <WhatsAppButton />
+              </>
+            } />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={

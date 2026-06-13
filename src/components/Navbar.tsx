@@ -86,13 +86,16 @@ export default function Navbar() {
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className={`relative font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}
+              className={`relative font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 ${scrolled ? 'text-charcoal hover:bg-gray-100 hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:bg-white/20 hover:text-white' : 'text-charcoal hover:bg-gray-100 hover:text-forest'}`}
+              aria-label="Shopping Cart"
             >
               <ShoppingCart className="w-5 h-5" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs rounded-full flex items-center justify-center font-bold">
+              {totalItems > 0 ? (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-black text-white text-xs rounded-full flex items-center justify-center font-bold animate-bounce">
                   {totalItems > 9 ? '9+' : totalItems}
                 </span>
+              ) : (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-gray-400 rounded-full" />
               )}
             </button>
 

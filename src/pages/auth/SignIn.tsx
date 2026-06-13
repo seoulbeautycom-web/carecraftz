@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { Mail, Lock, Phone, Chrome, Apple, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Mail, Lock, Phone, Chrome, Apple, Eye, EyeOff } from 'lucide-react'
 
 export default function SignIn() {
   const navigate = useNavigate()
@@ -63,22 +63,7 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F4F0] flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </button>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-[#F9F4F0] flex flex-col pt-16">
       <main className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-sm p-8">
