@@ -64,6 +64,9 @@ export default function Products() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [staffMap, setStaffMap] = useState<Record<string, { full_name: string; email: string }>>({})
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; product: Product | null }>({ show: false, product: null })
+  const [galleryModal, setGalleryModal] = useState(false)
+  const [galleryImages, setGalleryImages] = useState<string[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -414,16 +417,72 @@ export default function Products() {
     setShowModal(true)
   }
 
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-      return
-    }
+  const handleDeleteClick = (product: Product) => {
+    setDeleteModal({ show: true, product })
+  }
+
+  const handleDeleteProduct = async (deleteImages: boolean) => {
+    if (!deleteModal.product) return
+
+    const productId = deleteModal.product.id
+    const productImages = deleteModal.product.images || []
 
     try {
+      // If keeping images, move them to company gallery
+      if (!deleteImages && productImages.length > 0) {
+        for (const imageUrl of productImages) {
+          try {
+            // Extract filename from URL
+            const urlParts = imageUrl.split('/')
+            const fileName = urlParts[urlParts.length - 1]
+
+            // Copy to company gallery (flat structure)
+            const { error: copyError } = await supabase.storage
+              .from('company-product-gallery')
+              .copy(
+                `products/${productId}/${fileName}`,
+                `${fileName}`
+              )
+
+            if (copyError) {
+              console.log('Image may already exist in gallery or copy failed:', copyError)
+            } else {
+              // Add to gallery metadata table
+              await supabase.from('company_gallery_images').insert({
+                name: fileName,
+                url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/company-product-gallery/${fileName}`,
+                tags: ['from-deleted-product'],
+                created_by: currentUserId
+              })
+            }
+          } catch (err) {
+            console.error('Error moving image to gallery:', err)
+          }
+        }
+      }
+
+      // Delete product images from product-images bucket if requested
+      if (deleteImages && productImages.length > 0) {
+        for (const imageUrl of productImages) {
+          try {
+            const urlParts = imageUrl.split('/')
+            const fileName = urlParts[urlParts.length - 1]
+            const filePath = `products/${productId}/${fileName}`
+
+            await supabase.storage
+              .from('product-images')
+              .remove([filePath])
+          } catch (err) {
+            console.error('Error deleting image:', err)
+          }
+        }
+      }
+
+      // Delete the product
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', id)
+        .eq('id', productId)
 
       if (error) {
         console.error('Error deleting product:', error)
@@ -431,12 +490,54 @@ export default function Products() {
         return
       }
 
-      alert('Product deleted successfully!')
+      alert(deleteImages ? 'Product and images deleted!' : 'Product deleted! Images moved to Company Gallery.')
+      setDeleteModal({ show: false, product: null })
       fetchProducts()
     } catch (error: any) {
       console.error('Error deleting product:', error)
       alert('Failed to delete product: ' + (error.message || 'Unknown error'))
     }
+  }
+
+  // Gallery functions
+  const fetchGalleryImages = async () => {
+    try {
+      // List files from company gallery bucket
+      const { data, error } = await supabase.storage
+        .from('company-product-gallery')
+        .list('', { limit: 100 })
+
+      if (error) {
+        console.error('Error fetching gallery:', error)
+        return
+      }
+
+      const imageUrls = (data || [])
+        .filter(file => file.name.match(/\.(jpg|jpeg|png|webp|gif)$/i))
+        .map(file => {
+          const { data: { publicUrl } } = supabase.storage
+            .from('company-product-gallery')
+            .getPublicUrl(file.name)
+          return publicUrl
+        })
+
+      setGalleryImages(imageUrls)
+    } catch (error) {
+      console.error('Error loading gallery:', error)
+    }
+  }
+
+  const openGalleryModal = () => {
+    fetchGalleryImages()
+    setGalleryModal(true)
+  }
+
+  const selectGalleryImage = (imageUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, imageUrl]
+    }))
+    setGalleryModal(false)
   }
 
   const handleToggleActive = async (product: Product) => {
@@ -691,7 +792,7 @@ export default function Products() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteProduct(product.id)}
+                      onClick={() => handleDeleteClick(product)}
                       className="flex items-center justify-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1071,6 +1172,16 @@ export default function Products() {
                     </div>
                   )}
 
+                  {/* Gallery Button */}
+                  <button
+                    type="button"
+                    onClick={openGalleryModal}
+                    className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                    Browse Company Gallery
+                  </button>
+
                   {/* File Input */}
                   <div className="relative">
                     <input
@@ -1140,6 +1251,109 @@ export default function Products() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Modal with Options */}
+        {deleteModal.show && deleteModal.product && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center gap-3 mb-4 text-red-600">
+                <Trash2 className="w-8 h-8" />
+                <h2 className="text-xl font-semibold">Delete Product?</h2>
+              </div>
+              
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{deleteModal.product.name}</strong>?
+                This product has {deleteModal.product.images.length} image(s).
+              </p>
+
+              <div className="space-y-3 mb-6">
+                <button
+                  onClick={() => handleDeleteProduct(false)}
+                  className="w-full flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                >
+                  <ImageIcon className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Keep Images</p>
+                    <p className="text-sm text-gray-500">Move images to Company Gallery for reuse</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteProduct(true)}
+                  className="w-full flex items-center gap-3 p-4 border-2 border-red-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors text-left"
+                >
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Delete Everything</p>
+                    <p className="text-sm text-gray-500">Permanently delete product and all images</p>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setDeleteModal({ show: false, product: null })}
+                className="w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Company Gallery Modal */}
+        {galleryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Company Product Gallery</h2>
+                <button
+                  onClick={() => setGalleryModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                {galleryImages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No images in gallery yet.</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Images from deleted products will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
+                    {galleryImages.map((url, index) => (
+                      <button
+                        key={index}
+                        onClick={() => selectGalleryImage(url)}
+                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors"
+                      >
+                        <img
+                          src={url}
+                          alt={`Gallery ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setGalleryModal(false)}
+                  className="w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}

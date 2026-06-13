@@ -17,6 +17,7 @@ import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
+import Settings from './pages/admin/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -94,6 +95,11 @@ function App() {
         <Route path="/admin/products" element={
           <ProtectedRoute>
             <Products />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         } />
       </Routes>
