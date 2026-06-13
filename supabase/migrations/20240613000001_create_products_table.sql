@@ -57,6 +57,7 @@ BEGIN
 END $$;
 
 -- Create trigger for products updated_at
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
 CREATE TRIGGER update_products_updated_at
 BEFORE UPDATE ON products
 FOR EACH ROW

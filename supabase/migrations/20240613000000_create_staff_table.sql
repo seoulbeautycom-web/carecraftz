@@ -107,6 +107,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for staff updated_at
+DROP TRIGGER IF EXISTS update_staff_updated_at ON staff;
 CREATE TRIGGER update_staff_updated_at
 BEFORE UPDATE ON staff
 FOR EACH ROW
