@@ -90,14 +90,10 @@ export default function Products() {
     try {
       setLoading(true)
 
-      // Fetch products with staff info for audit
+      // Fetch products (audit relations temporarily disabled until schema updates)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select(`
-          *,
-          creator:created_by(full_name, email),
-          updater:updated_by(full_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (productsError) {
@@ -794,9 +790,11 @@ export default function Products() {
                       <span className="font-medium">
                         {new Date(product.created_at).toLocaleDateString()}
                       </span>
-                      {product.creator?.full_name && (
+                      {product.creator?.full_name ? (
                         <span className="text-gray-500">by {product.creator.full_name}</span>
-                      )}
+                      ) : product.created_by ? (
+                        <span className="text-gray-500">by staff</span>
+                      ) : null}
                     </div>
                     {product.updated_at !== product.created_at && (
                       <div className="flex items-center gap-1">
