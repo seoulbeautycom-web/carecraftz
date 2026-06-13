@@ -9,6 +9,7 @@ import UnwrapSection from './components/UnwrapSection'
 import CraftSection from './components/CraftSection'
 import HandsSection from './components/HandsSection'
 import ShopSection from './components/ShopSection'
+import BrandStory from './components/BrandStory'
 import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
@@ -43,6 +44,7 @@ function App() {
                 <FlyingSoap />
                 <main>
                   <HeroSection />
+                  <BrandStory />
                   <UnwrapSection />
                   <CraftSection />
                   <HandsSection />
