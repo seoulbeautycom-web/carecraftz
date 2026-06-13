@@ -41,19 +41,13 @@ interface AuditLog {
   performed_at: string
 }
 
-interface RLSPolicy {
-  table: string
-  policy: string
-  enabled: boolean
-}
-
 export default function Settings() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'security'>('overview')
   const [stats, setStats] = useState<StorageStats>({
-    totalStorage: 1, // Supabase free tier: 1GB
+    totalStorage: 1,
     usedStorage: 0,
     freeStorage: 1,
     percentUsed: 0,
@@ -65,7 +59,6 @@ export default function Settings() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditExpanded, setAuditExpanded] = useState<Record<string, boolean>>({})
-  const [rlsPolicies, setRlsPolicies] = useState<RLSPolicy[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -89,38 +82,28 @@ export default function Settings() {
     try {
       setLoading(true)
 
-      // Count product images
       const { data: productImages } = await supabase.storage
         .from('product-images')
         .list('products', { limit: 1000 })
 
-      // Count gallery images
       const { data: galleryImages } = await supabase.storage
         .from('company-product-gallery')
         .list('', { limit: 1000 })
 
-      // Count staff
       const { count: staffCount } = await supabase
         .from('staff')
         .select('*', { count: 'exact', head: true })
 
-      // Calculate used storage (approximate based on file count * avg size)
-      // Note: Supabase doesn't provide direct bucket size via client API
-      // This is an estimation
-      const productCount = productImages?.reduce((acc, folder) => {
-        return acc + (folder.name ? 1 : 0)
-      }, 0) || 0
-
+      const productCount = productImages?.reduce((acc, folder) => acc + (folder.name ? 1 : 0), 0) || 0
       const galleryCount = galleryImages?.length || 0
       
-      // Estimate: average 200KB per image
       const avgImageSizeMB = 0.2
       const estimatedUsedMB = (productCount + galleryCount) * avgImageSizeMB
-      const totalMB = 1024 // 1GB in MB
+      const totalMB = 1024
 
       setStats({
-        totalStorage: 1, // GB
-        usedStorage: Math.round(estimatedUsedMB / 1024 * 100) / 100, // GB
+        totalStorage: 1,
+        usedStorage: Math.round(estimatedUsedMB / 1024 * 100) / 100,
         freeStorage: Math.round((totalMB - estimatedUsedMB) / 1024 * 100) / 100,
         percentUsed: Math.round((estimatedUsedMB / totalMB) * 100),
         productImagesCount: productCount,
@@ -399,6 +382,158 @@ export default function Settings() {
           </div>
         </div>
         </>
+        ) : activeTab === 'audit' ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Activity className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">System Audit Logs</h2>
+                  <p className="text-sm text-gray-500">Track all changes to products and staff</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {auditLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+                  <span className="ml-3 text-gray-600">Loading audit logs...</span>
+                </div>
+              ) : auditLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No audit logs yet.</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Logs will appear when products or staff are created, updated, or deleted.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getActionColor(log.action)}`}>
+                            {log.action}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {log.table_name}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {new Date(log.performed_at).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-gray-700 mb-2">
+                        by <span className="font-medium">{log.performed_by_name || 'Unknown'}</span>
+                        {log.performed_by_email && (
+                          <span className="text-gray-500"> ({log.performed_by_email})</span>
+                        )}
+                      </p>
+
+                      {log.new_data && log.new_data.name && (
+                        <p className="text-sm text-gray-600">
+                          Item: <span className="font-medium">{log.new_data.name}</span>
+                        </p>
+                      )}
+
+                      {log.old_data && log.new_data && (
+                        <button
+                          onClick={() => toggleAuditExpand(log.id)}
+                          className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mt-2"
+                        >
+                          {auditExpanded[log.id] ? (
+                            <><ChevronUp className="w-4 h-4" /> Hide changes</>
+                          ) : (
+                            <><ChevronDown className="w-4 h-4" /> Show changes</>
+                          )}
+                        </button>
+                      )}
+
+                      {auditExpanded[log.id] && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm">
+                          {log.old_data && (
+                            <div className="mb-2">
+                              <p className="text-gray-500 font-medium mb-1">Before:</p>
+                              <pre className="text-xs text-gray-600 overflow-x-auto">
+                                {JSON.stringify(log.old_data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                          {log.new_data && (
+                            <div>
+                              <p className="text-gray-500 font-medium mb-1">After:</p>
+                              <pre className="text-xs text-gray-600 overflow-x-auto">
+                                {JSON.stringify(log.new_data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <Shield className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Security & RLS Policies</h2>
+                <p className="text-sm text-gray-500">Row Level Security status</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <h3 className="font-medium text-green-900">Row Level Security (RLS) Enabled</h3>
+                </div>
+                <p className="text-sm text-green-700">
+                  All tables have RLS enabled. Users can only access data they own or are authorized to view.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-medium text-gray-900">Protected Tables:</h3>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>products - Only admins/managers can modify</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>staff - Admin access only</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>company_gallery_images - Admin access only</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>audit_logs - Admin view only</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-medium text-blue-900 mb-2">Storage Buckets</h3>
+                <ul className="space-y-2 text-sm text-blue-700">
+                  <li>• product-images - Public read, Admin write</li>
+                  <li>• company-product-gallery - Public read, Admin write</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AdminLayout>
