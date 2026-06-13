@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Pause, Play } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const HERO_BG_IMAGE = 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260516_101925_8e509c31-4e75-4ae1-b164-2605265b2d47.png&w=1280&q=85'
 
@@ -9,56 +10,16 @@ const HERO_VIDEOS = [
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260518_182440_671605c8-2ed8-4507-a4cb-a62a8f61316f.mp4',
 ]
 
-const PRODUCTS = [
-  {
-    category: 'ILLUMINATE',
-    name: 'Illuminating cleansing gel',
-    price: '€36,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_193822_8c95f5ed-b142-454f-ab87-59ad1f09e758.png&w=1280&q=85',
-  },
-  {
-    category: 'UNIFY',
-    subcategory: 'TIGHTEN PORES',
-    name: 'Unifying serum spray',
-    price: '€34,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_194048_278bf3cc-7d1f-43c1-9dc7-73d8fcd9949c.png&w=1280&q=85',
-  },
-  {
-    category: 'NATURAL GLOW',
-    name: 'Super glow set',
-    price: '€92,00',
-    oldPrice: '€99,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_194058_d89610de-05f8-45e4-8196-0680296c565a.png&w=1280&q=85',
-  },
-  {
-    category: 'PROTECT',
-    subcategory: 'ILLUMINATE',
-    name: 'Radiance day oil',
-    price: '€59,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_194112_1763cbb2-3171-4ad3-9f38-1b738b8f1bb6.png&w=1280&q=85',
-  },
-  {
-    category: 'HYDRATE',
-    subcategory: 'NOURISH',
-    name: 'Deep moisture cream',
-    price: '€48,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_193822_8c95f5ed-b142-454f-ab87-59ad1f09e758.png&w=1280&q=85',
-  },
-  {
-    category: 'RENEW',
-    name: 'Night repair elixir',
-    price: '€72,00',
-    oldPrice: '€79,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_194048_278bf3cc-7d1f-43c1-9dc7-73d8fcd9949c.png&w=1280&q=85',
-  },
-  {
-    category: 'SMOOTH',
-    subcategory: 'REFINE',
-    name: 'Gentle exfoliating toner',
-    price: '€42,00',
-    image: 'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260518_194058_d89610de-05f8-45e4-8196-0680296c565a.png&w=1280&q=85',
-  },
-]
+interface Product {
+  id: string
+  name: string
+  price: number
+  compare_at_price: number | null
+  images: string[]
+  tag1: string | null
+  tag2: string | null
+  is_active: boolean
+}
 
 const CATEGORIES = [
   {
@@ -106,10 +67,38 @@ export default function Shop() {
   const [activeTab, setActiveTab] = useState('best sellers')
   const [scrollProgress, setScrollProgress] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [heroRef, heroVisible] = useInView(0.15)
   const [bestSellersRef, bestSellersVisible] = useInView(0.15)
   const [categoriesRef, categoriesVisible] = useInView(0.15)
+
+  // Fetch products from Supabase
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching products:', error)
+          return
+        }
+
+        setProducts(data || [])
+      } catch (error) {
+        console.error('Error fetching products:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
 
   // Auto-advance hero videos
   useEffect(() => {
@@ -258,38 +247,46 @@ export default function Shop() {
             ref={carouselRef}
             className="flex overflow-x-auto scrollbar-hide gap-0 pb-4"
           >
-            {PRODUCTS.map((product, index) => (
-              <div
-                key={index}
-                className={`flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] lg:w-[calc(25%-1px)] border border-gray-200 -ml-[1px] first:ml-0 transition-all duration-500 ${
-                  bestSellersVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
-                }`}
-                style={{ transitionDelay: `${200 + index * 80}ms` }}
-              >
-                <div className="px-4 h-12 flex flex-col justify-center">
-                  <span className="text-xs font-medium tracking-wider uppercase">{product.category}</span>
-                  {product.subcategory && (
-                    <span className="text-xs text-gray-500 uppercase mt-0.5">{product.subcategory}</span>
-                  )}
-                </div>
-                <div className="mx-4 aspect-[3/4] rounded-lg overflow-hidden bg-[#F9F4F0] group">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="p-4 text-center">
-                  <p className="text-sm mb-2">{product.name}</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm">{product.price}</span>
-                    {product.oldPrice && (
-                      <span className="text-sm text-gray-400 line-through">{product.oldPrice}</span>
+            {loading ? (
+              <div className="flex-shrink-0 w-full py-12 text-center text-gray-500">Loading products...</div>
+            ) : products.length === 0 ? (
+              <div className="flex-shrink-0 w-full py-12 text-center text-gray-500">No products available</div>
+            ) : (
+              products.map((product, index) => (
+                <div
+                  key={product.id}
+                  className={`flex-shrink-0 w-[260px] sm:w-[280px] md:w-[300px] lg:w-[calc(25%-1px)] border border-gray-200 -ml-[1px] first:ml-0 transition-all duration-500 ${
+                    bestSellersVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                  }`}
+                  style={{ transitionDelay: `${200 + index * 80}ms` }}
+                >
+                  <div className="px-4 h-12 flex flex-col justify-center">
+                    <span className="text-xs font-medium tracking-wider uppercase">{product.tag1 || ''}</span>
+                    {product.tag2 && (
+                      <span className="text-xs text-gray-500 uppercase mt-0.5">{product.tag2}</span>
                     )}
                   </div>
+                  <div className="mx-4 aspect-[3/4] rounded-lg overflow-hidden bg-[#F9F4F0] group">
+                    <img
+                      src={product.images?.[0] || '/placeholder-product.png'}
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-4 text-center">
+                    <p className="text-sm mb-2">{product.name}</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm">€{product.price.toFixed(2).replace('.', ',')}</span>
+                      {product.compare_at_price && product.compare_at_price > product.price && (
+                        <span className="text-sm text-gray-400 line-through">
+                          €{product.compare_at_price.toFixed(2).replace('.', ',')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           {/* Scroll Progress Bar */}

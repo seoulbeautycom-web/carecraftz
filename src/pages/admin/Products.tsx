@@ -22,6 +22,8 @@ interface Product {
   weight: number | null
   discount_percent: number
   tags: string[]
+  tag1: string | null
+  tag2: string | null
   created_at: string
   updated_at: string
   created_by: string | null
@@ -52,6 +54,8 @@ export default function Products() {
     weight: '',
     discount_percent: '0',
     tags: '',
+    tag1: '',
+    tag2: '',
     is_active: true,
     is_featured: false,
     images: [] as string[]
@@ -181,6 +185,8 @@ export default function Products() {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           discount_percent: parseInt(formData.discount_percent) || 0,
           tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          tag1: formData.tag1.trim() || null,
+          tag2: formData.tag2.trim() || null,
           is_active: formData.is_active,
           is_featured: formData.is_featured,
           images: reorderedImages,
@@ -216,6 +222,8 @@ export default function Products() {
           weight: formData.weight ? parseFloat(formData.weight) : null,
           discount_percent: parseInt(formData.discount_percent) || 0,
           tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          tag1: formData.tag1.trim() || null,
+          tag2: formData.tag2.trim() || null,
           is_active: formData.is_active,
           is_featured: formData.is_featured,
           images: [], // Empty initially, will update after upload
@@ -375,6 +383,8 @@ export default function Products() {
       weight: '',
       discount_percent: '0',
       tags: '',
+      tag1: '',
+      tag2: '',
       is_active: true,
       is_featured: false,
       images: []
@@ -406,6 +416,8 @@ export default function Products() {
       weight: product.weight?.toString() || '',
       discount_percent: product.discount_percent?.toString() || '0',
       tags: product.tags?.join(', ') || '',
+      tag1: product.tag1 || '',
+      tag2: product.tag2 || '',
       is_active: product.is_active,
       is_featured: product.is_featured,
       images: product.images || []
@@ -999,6 +1011,35 @@ export default function Products() {
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g., new, trending, sale"
+                    />
+                  </div>
+                </div>
+
+                {/* Tag 1 and Tag 2 for Shop Display */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tag 1 (Primary)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.tag1}
+                      onChange={(e) => setFormData({ ...formData, tag1: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., ILLUMINATE, UNIFY"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tag 2 (Secondary)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.tag2}
+                      onChange={(e) => setFormData({ ...formData, tag2: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., TIGHTEN PORES, NOURISH"
                     />
                   </div>
                 </div>
