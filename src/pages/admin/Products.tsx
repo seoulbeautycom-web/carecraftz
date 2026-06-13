@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Package, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, DollarSign, Boxes, Tag, Upload, X, Star, MapPin, Truck, Percent, AlertTriangle } from 'lucide-react'
+import { Package, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, DollarSign, Boxes, Tag, Star, MapPin, Truck, Percent, AlertTriangle } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
 interface Product {
@@ -54,7 +54,6 @@ export default function Products() {
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadingImages, setUploadingImages] = useState(false)
   const [locationFilter, setLocationFilter] = useState('')
 
   useEffect(() => {
