@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Package, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, DollarSign, Boxes, Tag, Star, MapPin, Truck, Percent, AlertTriangle } from 'lucide-react'
+import { Package, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, DollarSign, Boxes, Tag, Star, MapPin, Truck, Percent, AlertTriangle, Upload, X } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
 interface Product {
@@ -55,6 +55,9 @@ export default function Products() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [locationFilter, setLocationFilter] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [primaryImageIndex, setPrimaryImageIndex] = useState(0)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   useEffect(() => {
     checkAuth()
@@ -125,6 +128,16 @@ export default function Products() {
     setIsSubmitting(true)
 
     try {
+      // Upload new images first
+      const uploadedImageUrls = await uploadImages()
+
+      // Reorder images so primary is first
+      const reorderedImages = [...uploadedImageUrls]
+      if (primaryImageIndex > 0 && primaryImageIndex < reorderedImages.length) {
+        const [primary] = reorderedImages.splice(primaryImageIndex, 1)
+        reorderedImages.unshift(primary)
+      }
+
       const productData = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
@@ -141,7 +154,7 @@ export default function Products() {
         tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         is_active: formData.is_active,
         is_featured: formData.is_featured,
-        images: formData.images
+        images: reorderedImages
       }
 
       if (editingProduct) {
@@ -185,6 +198,85 @@ export default function Products() {
     }
   }
 
+  // Image upload functions
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Validate file types and sizes
+    const validFiles = files.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        alert(`Invalid file type: ${file.name}. Only images allowed.`)
+        return false
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`File too large: ${file.name}. Max 5MB.`)
+        return false
+      }
+      return true
+    })
+
+    setSelectedFiles(prev => [...prev, ...validFiles])
+  }
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    if (primaryImageIndex === index && selectedFiles.length > 1) {
+      setPrimaryImageIndex(0)
+    } else if (primaryImageIndex > index) {
+      setPrimaryImageIndex(prev => prev - 1)
+    }
+  }
+
+  const removeExistingImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
+    if (primaryImageIndex === index && formData.images.length > 1) {
+      setPrimaryImageIndex(0)
+    }
+  }
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (selectedFiles.length === 0) return formData.images
+
+    const uploadedUrls: string[] = [...formData.images]
+    const totalFiles = selectedFiles.length
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `products/${fileName}`
+
+      setUploadProgress(Math.round((i / totalFiles) * 100))
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError)
+        alert(`Failed to upload ${file.name}: ${uploadError.message}`)
+        continue
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath)
+
+      uploadedUrls.push(publicUrl)
+    }
+
+    setUploadProgress(0)
+    setSelectedFiles([])
+    return uploadedUrls
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -210,6 +302,8 @@ export default function Products() {
   const handleAddProduct = () => {
     setEditingProduct(null)
     resetForm()
+    setPrimaryImageIndex(0)
+    setSelectedFiles([])
     setShowModal(true)
   }
 
@@ -233,6 +327,8 @@ export default function Products() {
       is_featured: product.is_featured,
       images: product.images || []
     })
+    setPrimaryImageIndex(0)
+    setSelectedFiles([])
     setFormErrors({})
     setShowModal(true)
   }
@@ -772,19 +868,119 @@ export default function Products() {
                   </div>
                 </div>
 
-                {/* Image URLs (simple text input for now) */}
+                {/* Image Upload Section */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Image URLs (one per line)
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Images
                   </label>
-                  <textarea
-                    value={formData.images.join('\n')}
-                    onChange={(e) => setFormData({ ...formData, images: e.target.value.split('\n').filter(url => url.trim()) })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                    placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter image URLs, one per line</p>
+
+                  {/* Existing Images */}
+                  {formData.images.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-500 mb-2">Current Images (click star to set primary):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.images.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={url}
+                              alt={`Product ${index + 1}`}
+                              className={`w-20 h-20 object-cover rounded-lg border-2 ${
+                                primaryImageIndex === index ? 'border-yellow-500' : 'border-gray-200'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPrimaryImageIndex(index)}
+                              className={`absolute top-1 left-1 p-1 rounded ${
+                                primaryImageIndex === index ? 'bg-yellow-500 text-white' : 'bg-white/80 text-gray-600'
+                              }`}
+                              title="Set as primary"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeExistingImage(index)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition"
+                              title="Remove image"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Files to Upload */}
+                  {selectedFiles.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-500 mb-2">New Images to Upload:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedFiles.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`New ${index + 1}`}
+                              className={`w-20 h-20 object-cover rounded-lg border-2 ${
+                                primaryImageIndex === (formData.images.length + index) ? 'border-yellow-500' : 'border-gray-200'
+                              }`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPrimaryImageIndex(formData.images.length + index)}
+                              className={`absolute top-1 left-1 p-1 rounded ${
+                                primaryImageIndex === (formData.images.length + index) ? 'bg-yellow-500 text-white' : 'bg-white/80 text-gray-600'
+                              }`}
+                              title="Set as primary"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSelectedFile(index)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition"
+                              title="Remove"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                            <span className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/50 text-white text-center rounded truncate px-1">
+                              {file.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload Progress */}
+                  {uploadProgress > 0 && (
+                    <div className="mb-4">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Uploading... {uploadProgress}%</p>
+                    </div>
+                  )}
+
+                  {/* File Input */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                      <Upload className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm text-gray-600">Click to upload images (max 5MB each)</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Supported: JPG, PNG, WebP, GIF. First image is primary by default.</p>
                 </div>
 
                 {/* Status Checkboxes */}
