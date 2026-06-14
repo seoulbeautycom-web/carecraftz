@@ -30,7 +30,7 @@ export default function AdminLogin() {
           .eq('email', email)
       }
       
-      navigate('/admin/dashboard')
+      navigate('/dashboard')
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {
