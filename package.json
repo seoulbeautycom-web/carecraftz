@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:admin": "vite --config vite.config.admin.ts",
     "build": "tsc -b && vite build",
-    "build:admin": "tsc -b && vite build --config vite.config.admin.ts && cp vercel-admin.json dist-admin/vercel.json",
+    "build:admin": "tsc -b && vite build --config vite.config.admin.ts && ren dist-admin\\admin.html index.html",
     "build:all": "npm run build && npm run build:admin",
     "lint": "eslint .",
     "preview": "vite preview"
