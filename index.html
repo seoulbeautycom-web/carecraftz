@@ -94,34 +94,101 @@
 
     <div id="root"></div>
     
-    <!-- NOSCRIPT: Content for crawlers/search engines -->
-    <noscript>
-      <h1>CareCraftz — Premium E-Commerce Skincare Platform</h1>
-      <p>
-        CareCraftz is a premium e-commerce skincare platform dedicated to bringing you 
-        the finest handmade and Korean-inspired beauty products. Founded on decades of expertise in 
-        skincare formulation, health, and wellness in Dubai, our mission is to help people achieve healthy, 
-        radiant skin through the power of natural ingredients.
+    <!-- ROUTE-SPECIFIC SEO CONTENT FOR GOOGLE CRAWLERS -->
+    <script>
+      // Show correct SEO content based on URL path
+      (function() {
+        const path = window.location.pathname;
+        const seoContent = document.getElementById('seo-content');
+        const privacySeo = document.getElementById('seo-privacy');
+        const termsSeo = document.getElementById('seo-terms');
+        
+        if (seoContent) seoContent.style.display = 'none';
+        if (privacySeo) privacySeo.style.display = 'none';
+        if (termsSeo) termsSeo.style.display = 'none';
+        
+        if (path === '/privacy' || path === '/privacy/') {
+          if (privacySeo) privacySeo.style.display = 'block';
+        } else if (path === '/terms' || path === '/terms/') {
+          if (termsSeo) termsSeo.style.display = 'block';
+        } else {
+          if (seoContent) seoContent.style.display = 'block';
+        }
+      })();
+    </script>
+    
+    <!-- PRIVACY PAGE SEO CONTENT -->
+    <div id="seo-privacy" style="display: none; padding: 40px 20px; max-width: 800px; margin: 0 auto; font-family: system-ui, sans-serif; line-height: 1.6; color: #333;">
+      <h1 style="font-size: 32px; margin-bottom: 20px; color: #1F331F;">Privacy Policy - CareCraftz</h1>
+      <p style="font-size: 16px; margin-bottom: 20px;">Last updated: June 14, 2026</p>
+      
+      <p style="font-size: 16px; margin-bottom: 20px;">
+        CareCraftz (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) respects your privacy and is committed to protecting your personal data. 
+        This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website 
+        and use our services.
       </p>
-      <h2>Platform Features</h2>
-      <ul>
-        <li><strong>Secure Authentication:</strong> Sign up and log in securely with email, phone, or Google Sign-In</li>
-        <li><strong>Shopping Cart:</strong> Browse products, add to cart, manage quantities</li>
-        <li><strong>Order Management:</strong> Track orders, view purchase history, manage account</li>
-        <li><strong>Secure Checkout:</strong> Complete purchases through encrypted checkout</li>
+      
+      <h2 style="font-size: 24px; margin-top: 30px; margin-bottom: 15px; color: #1F331F;">Information We Collect</h2>
+      <ul style="font-size: 15px; padding-left: 25px; margin-bottom: 20px;">
+        <li style="margin-bottom: 8px;"><strong>Personal Information:</strong> Name, email address, phone number, billing and shipping address</li>
+        <li style="margin-bottom: 8px;"><strong>Payment Information:</strong> Credit card details (processed securely by our payment providers)</li>
+        <li style="margin-bottom: 8px;"><strong>Order Information:</strong> Products purchased, order history, preferences</li>
+        <li style="margin-bottom: 8px;"><strong>Usage Data:</strong> IP address, browser type, pages visited, time spent on pages</li>
+        <li><strong>Device Information:</strong> Device type, operating system, unique device identifiers</li>
       </ul>
-      <h2>Our Expertise</h2>
-      <p>
-        Our skincare research is conducted in Dubai by a team of dedicated experts with decades of 
-        experience in dermatology, cosmetic chemistry, and skincare formulation. We combine 
-        Korean beauty innovations with traditional natural ingredients including Moringa, 
-        herbal extracts, and plant-based actives.
+      
+      <h2 style="font-size: 24px; margin-top: 30px; margin-bottom: 15px; color: #1F331F;">How We Use Your Information</h2>
+      <ul style="font-size: 15px; padding-left: 25px; margin-bottom: 20px;">
+        <li style="margin-bottom: 8px;">Process and fulfill your orders</li>
+        <li style="margin-bottom: 8px;">Send order confirmations and shipping updates</li>
+        <li style="margin-bottom: 8px;">Provide customer support</li>
+        <li style="margin-bottom: 8px;">Send marketing communications (with your consent)</li>
+        <li style="margin-bottom: 8px;">Improve our products and services</li>
+        <li style="margin-bottom: 8px;">Prevent fraud and ensure security</li>
+        <li>Comply with legal obligations</li>
+      </ul>
+      
+      <p style="font-size: 14px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee;">
+        <a href="/" style="color: #1F331F;">Back to Home</a> | 
+        <a href="/terms" style="color: #1F331F;">Terms of Service</a>
       </p>
-      <p>
-        <a href="/privacy">Privacy Policy</a> | 
-        <a href="/terms">Terms of Service</a>
+    </div>
+    
+    <!-- TERMS PAGE SEO CONTENT -->
+    <div id="seo-terms" style="display: none; padding: 40px 20px; max-width: 800px; margin: 0 auto; font-family: system-ui, sans-serif; line-height: 1.6; color: #333;">
+      <h1 style="font-size: 32px; margin-bottom: 20px; color: #1F331F;">Terms of Service - CareCraftz</h1>
+      <p style="font-size: 16px; margin-bottom: 20px;">Last updated: June 14, 2026</p>
+      
+      <p style="font-size: 16px; margin-bottom: 20px;">
+        Welcome to CareCraftz. These Terms of Service (&quot;Terms&quot;) govern your use of our website and services. 
+        By accessing or using our platform, you agree to be bound by these Terms.
       </p>
-    </noscript>
+      
+      <h2 style="font-size: 24px; margin-top: 30px; margin-bottom: 15px; color: #1F331F;">Our Services</h2>
+      <p style="font-size: 15px; margin-bottom: 15px;">
+        CareCraftz provides an e-commerce platform for purchasing handmade and Korean-inspired skincare products. 
+        Our services include product browsing, shopping cart functionality, secure checkout, order tracking, 
+        and account management with Google Sign-In integration.
+      </p>
+      
+      <h2 style="font-size: 24px; margin-top: 30px; margin-bottom: 15px; color: #1F331F;">User Accounts</h2>
+      <p style="font-size: 15px; margin-bottom: 15px;">
+        To access certain features, you may need to create an account. You can register using your email, 
+        phone number, or Google Sign-In. You are responsible for maintaining the confidentiality of your 
+        account credentials.
+      </p>
+      
+      <h2 style="font-size: 24px; margin-top: 30px; margin-bottom: 15px; color: #1F331F;">Purchases and Payments</h2>
+      <p style="font-size: 15px; margin-bottom: 15px;">
+        All purchases are subject to product availability. We reserve the right to refuse or cancel orders 
+        at any time. Payments are processed securely through our payment providers.
+      </p>
+      
+      <p style="font-size: 14px; margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee;">
+        <a href="/" style="color: #1F331F;">Back to Home</a> | 
+        <a href="/privacy" style="color: #1F331F;">Privacy Policy</a>
+      </p>
+    </div>
     
     <script type="module" src="/src/main.tsx"></script>
   </body>
