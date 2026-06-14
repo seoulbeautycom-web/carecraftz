@@ -533,7 +533,7 @@ export default function Settings() {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'security' ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-green-100 rounded-lg">
@@ -710,6 +710,10 @@ export default function Settings() {
                 and your website is tracking user interactions successfully.
               </p>
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Select a tab to view settings</p>
           </div>
         )}
       </div>
