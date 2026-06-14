@@ -11,7 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Store
+  Store,
+  Star,
+  FileText,
+  Globe
 } from 'lucide-react'
 
 interface AdminLayoutProps {
@@ -22,6 +25,9 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: ShoppingCart, label: 'Orders', path: '/orders' },
   { icon: Package, label: 'Products', path: '/products' },
+  { icon: Star, label: 'Reviews', path: '/reviews' },
+  { icon: FileText, label: 'Content', path: '/content' },
+  { icon: Globe, label: 'Social Media', path: '/social' },
   { icon: Users, label: 'Staff', path: '/staff' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },

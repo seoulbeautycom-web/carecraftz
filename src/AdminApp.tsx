@@ -8,6 +8,9 @@ import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
 import Settings from './pages/admin/Settings'
 import Analytics from './pages/admin/Analytics'
+import Reviews from './pages/admin/Reviews'
+import BlogPosts from './pages/admin/BlogPosts'
+import SocialMedia from './pages/admin/SocialMedia'
 
 /**
  * Admin Portal App - Separate from customer-facing site
@@ -51,6 +54,21 @@ function AdminApp() {
           <Route path="/analytics" element={
             <ProtectedRoute>
               <Analytics />
+            </ProtectedRoute>
+          } />
+          <Route path="/reviews" element={
+            <ProtectedRoute>
+              <Reviews />
+            </ProtectedRoute>
+          } />
+          <Route path="/content" element={
+            <ProtectedRoute>
+              <BlogPosts />
+            </ProtectedRoute>
+          } />
+          <Route path="/social" element={
+            <ProtectedRoute>
+              <SocialMedia />
             </ProtectedRoute>
           } />
           
