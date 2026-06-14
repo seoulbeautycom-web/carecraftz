@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:admin": "vite --config vite.config.admin.ts",
     "build": "tsc -b && vite build",
+    "build:admin": "tsc -b && vite build --config vite.config.admin.ts",
+    "build:all": "npm run build && npm run build:admin",
     "lint": "eslint .",
     "preview": "vite preview"
   },

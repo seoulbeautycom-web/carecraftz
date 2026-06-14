@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SoapProvider } from './context/SoapContext'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
@@ -26,13 +26,6 @@ import Terms from './pages/Terms'
 import Checkout from './pages/Checkout'
 import WhatsAppButton from './components/WhatsAppButton'
 import CartDrawer from './components/CartDrawer'
-import AdminLogin from './pages/admin/Login'
-import AdminDashboard from './pages/admin/Dashboard'
-import AdminOrders from './pages/admin/Orders'
-import StaffManagement from './pages/admin/Staff'
-import Products from './pages/admin/Products'
-import Settings from './pages/admin/Settings'
-import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
@@ -153,33 +146,7 @@ function App() {
               </>
             } />
             <Route path="/checkout" element={<Checkout />} />
-            <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/orders" element={
-              <ProtectedRoute>
-                <AdminOrders />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/staff" element={
-              <ProtectedRoute>
-                <StaffManagement />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/products" element={
-              <ProtectedRoute>
-                <Products />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/settings" element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
+            {/* Admin routes removed - use admin.carecraftz.com */}
           </Routes>
         </CartProvider>
       </AuthProvider>
