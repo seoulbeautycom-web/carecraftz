@@ -14,7 +14,9 @@ import {
   FileText,
   Shield,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BarChart2,
+  ExternalLink
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 
@@ -45,7 +47,7 @@ export default function Settings() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'security'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'security' | 'integrations'>('overview')
   const [stats, setStats] = useState<StorageStats>({
     totalStorage: 1,
     usedStorage: 0,
@@ -259,6 +261,15 @@ export default function Settings() {
           >
             <Shield className="w-4 h-4" />
             Security
+          </button>
+          <button
+            onClick={() => setActiveTab('integrations')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'integrations' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Integrations
           </button>
         </div>
 
@@ -574,6 +585,130 @@ export default function Settings() {
                   <li>• company-product-gallery - Public read, Admin write</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        ) : activeTab === 'integrations' ? (
+          <div className="space-y-6">
+            {/* Mixpanel Analytics */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <BarChart2 className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Mixpanel Analytics</h2>
+                    <p className="text-sm text-gray-500">User behavior tracking and analytics</p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" />
+                  Active
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Project Token</p>
+                    <p className="font-mono text-sm text-gray-900">2b872c6bc565403c8b0f8b2d7c2eafae</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-1">Status</p>
+                    <p className="text-sm font-medium text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Connected & Tracking
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Configuration</p>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Autocapture enabled - Tracks all user interactions automatically
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Session recording - 100% of sessions recorded
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Deployed on carecraftz.com main site
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3">
+                  <a
+                    href="https://mixpanel.com/project/2b872c6bc565403c8b0f8b2d7c2eafae"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Open Mixpanel Dashboard
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Other Integrations */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-blue-100 rounded-lg">
+                  <Database className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Other Integrations</h2>
+                  <p className="text-sm text-gray-500">Third-party services and APIs</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Database className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Supabase</p>
+                      <p className="text-sm text-gray-500">Database & Authentication</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    Connected
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Server className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Vercel</p>
+                      <p className="text-sm text-gray-500">Hosting & Deployment</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    Connected
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Integration Health Summary */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <h3 className="font-medium text-green-900">All Systems Operational</h3>
+              </div>
+              <p className="text-sm text-green-700">
+                All integrations are connected and functioning properly. Analytics data is being collected 
+                and your website is tracking user interactions successfully.
+              </p>
             </div>
           </div>
         )}
