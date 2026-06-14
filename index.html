@@ -97,23 +97,26 @@
     
     <!-- ROUTE-SPECIFIC SEO CONTENT FOR GOOGLE CRAWLERS -->
     <script>
-      // Show correct SEO content based on URL path
+      // Show/hide SEO content based on URL path
+      // Note: Content is VISIBLE by default so Google can crawl it
+      // This script only hides irrelevant pages for user experience
       (function() {
         const path = window.location.pathname;
-        const seoContent = document.getElementById('seo-content');
         const privacySeo = document.getElementById('seo-privacy');
         const termsSeo = document.getElementById('seo-terms');
         
-        if (seoContent) seoContent.style.display = 'none';
-        if (privacySeo) privacySeo.style.display = 'none';
-        if (termsSeo) termsSeo.style.display = 'none';
-        
+        // Only hide privacy/terms content if we're NOT on those pages
+        // Homepage content (#seo-content) stays visible for Google
         if (path === '/privacy' || path === '/privacy/') {
-          if (privacySeo) privacySeo.style.display = 'block';
+          // On privacy page: hide terms, show privacy (homepage content stays for SEO)
+          if (termsSeo) termsSeo.style.display = 'none';
         } else if (path === '/terms' || path === '/terms/') {
-          if (termsSeo) termsSeo.style.display = 'block';
+          // On terms page: hide privacy, show terms (homepage content stays for SEO)
+          if (privacySeo) privacySeo.style.display = 'none';
         } else {
-          if (seoContent) seoContent.style.display = 'block';
+          // On homepage: hide privacy/terms, keep main content visible
+          if (privacySeo) privacySeo.style.display = 'none';
+          if (termsSeo) termsSeo.style.display = 'none';
         }
       })();
     </script>
