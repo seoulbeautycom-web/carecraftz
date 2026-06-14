@@ -7,6 +7,7 @@ import AdminOrders from './pages/admin/Orders'
 import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
 import Settings from './pages/admin/Settings'
+import Analytics from './pages/admin/Analytics'
 
 /**
  * Admin Portal App - Separate from customer-facing site
@@ -45,6 +46,11 @@ function AdminApp() {
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <Analytics />
             </ProtectedRoute>
           } />
           
