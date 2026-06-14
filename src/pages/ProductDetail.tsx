@@ -24,7 +24,7 @@ interface Product {
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { addToCart, setIsCartOpen } = useCart()
+  const { addToCart } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
