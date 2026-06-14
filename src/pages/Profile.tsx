@@ -376,12 +376,12 @@ export default function Profile() {
                                   <div className="flex justify-between items-center">
                                     <span className="font-semibold">Total</span>
                                     <div className="text-right">
-                                      {order.totals?.pkr?.total > 0 && (
+                                      {order.totals?.pkr && order.totals.pkr.total > 0 && (
                                         <p className="text-green-700 font-bold">
                                           {formatCurrency(order.totals.pkr.total, 'PKR')}
                                         </p>
                                       )}
-                                      {order.totals?.aed?.total > 0 && (
+                                      {order.totals?.aed && order.totals.aed.total > 0 && (
                                         <p className="text-blue-700 font-bold">
                                           {formatCurrency(order.totals.aed.total, 'AED')}
                                         </p>

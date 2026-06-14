@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Search, Filter, CheckCircle, Package, Send, Home, AlertCircle, CheckSquare, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { ShoppingCart, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 
@@ -46,7 +45,6 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function AdminOrders() {
-  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -276,12 +274,12 @@ export default function AdminOrders() {
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-3">Order Total</h4>
                         <div className="space-y-1 text-sm">
-                          {order.totals?.pkr?.total > 0 && (
+                          {order.totals?.pkr && order.totals.pkr.total > 0 && (
                             <p className="text-green-700 font-medium">
                               {formatCurrency(order.totals.pkr.total, 'PKR')}
                             </p>
                           )}
-                          {order.totals?.aed?.total > 0 && (
+                          {order.totals?.aed && order.totals.aed.total > 0 && (
                             <p className="text-blue-700 font-medium">
                               {formatCurrency(order.totals.aed.total, 'AED')}
                             </p>
