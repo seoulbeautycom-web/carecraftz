@@ -23,6 +23,7 @@ import AuthCallback from './pages/auth/AuthCallback'
 import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import Checkout from './pages/Checkout'
 import WhatsAppButton from './components/WhatsAppButton'
 import CartDrawer from './components/CartDrawer'
 import AdminLogin from './pages/admin/Login'
@@ -150,6 +151,7 @@ function App() {
                 <CartDrawer />
               </>
             } />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={

@@ -59,11 +59,16 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return
+    const location = product.location as 'Pakistan' | 'UAE'
+    const currency = location === 'Pakistan' ? 'PKR' : 'AED'
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.images?.[0] || '',
+      location: location || 'UAE',
+      delivery_charge: product.delivery_charge || 0,
+      currency: currency
     })
     setAddedToCart(true)
     setTimeout(() => setAddedToCart(false), 2000)
@@ -71,7 +76,7 @@ export default function ProductDetail() {
 
   const handleBuyNow = () => {
     handleAddToCart()
-    setIsCartOpen(true)
+    navigate('/checkout')
   }
 
   if (loading) {

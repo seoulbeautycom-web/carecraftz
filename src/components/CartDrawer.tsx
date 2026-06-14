@@ -3,8 +3,14 @@ import { X, Plus, Minus, ShoppingBag, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function CartDrawer() {
-  const { items, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, totalPrice, clearCart } = useCart()
+  const { items, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, grandTotalByCurrency, clearCart } = useCart()
   const navigate = useNavigate()
+
+  const formatCurrency = (amount: number, currency: 'PKR' | 'AED') => {
+    return currency === 'PKR' 
+      ? `₨ ${amount.toLocaleString('en-PK')}`
+      : `AED ${amount.toLocaleString('en-AE')}`
+  }
 
   if (!isCartOpen) return null
 
@@ -60,7 +66,10 @@ export default function CartDrawer() {
                   <div className="flex-1">
                     <h3 className="font-medium text-sm">{item.name}</h3>
                     <p className="text-gray-600 text-sm">
-                      €{item.price.toFixed(2).replace('.', ',')}
+                      {formatCurrency(item.price * item.quantity, item.currency)}
+                      <span className="text-xs text-gray-400 block">
+                        + Delivery: {formatCurrency(item.delivery_charge * item.quantity, item.currency)}
+                      </span>
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
@@ -100,9 +109,23 @@ export default function CartDrawer() {
         {/* Footer */}
         {items.length > 0 && (
           <div className="border-t border-gray-100 p-6 space-y-4">
-            <div className="flex justify-between text-lg font-medium">
-              <span>Total</span>
-              <span>€{totalPrice.toFixed(2).replace('.', ',')}</span>
+            <div className="space-y-1">
+              {grandTotalByCurrency.PKR > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total (PKR)</span>
+                  <span className="text-lg font-medium text-green-700">
+                    {formatCurrency(grandTotalByCurrency.PKR, 'PKR')}
+                  </span>
+                </div>
+              )}
+              {grandTotalByCurrency.AED > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total (AED)</span>
+                  <span className="text-lg font-medium text-blue-700">
+                    {formatCurrency(grandTotalByCurrency.AED, 'AED')}
+                  </span>
+                </div>
+              )}
             </div>
             <button
               onClick={() => navigate('/checkout')}

@@ -22,6 +22,8 @@ interface Product {
   tag1: string | null
   tag2: string | null
   is_active: boolean
+  location?: string
+  delivery_charge?: number
 }
 
 const CATEGORIES = [
@@ -303,11 +305,16 @@ export default function Shop() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        const location = product.location as 'Pakistan' | 'UAE' || 'UAE'
+                        const currency = location === 'Pakistan' ? 'PKR' : 'AED'
                         addToCart({
                           id: product.id,
                           name: product.name,
                           price: product.price,
                           image: product.images?.[0] || '',
+                          location: location,
+                          delivery_charge: product.delivery_charge || 0,
+                          currency: currency
                         })
                         setAddedToCart(product.id)
                         setTimeout(() => setAddedToCart(null), 1500)

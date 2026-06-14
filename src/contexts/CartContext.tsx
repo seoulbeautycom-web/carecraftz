@@ -6,16 +6,21 @@ interface CartItem {
   price: number
   image: string
   quantity: number
+  location: 'Pakistan' | 'UAE'
+  delivery_charge: number
+  currency: 'PKR' | 'AED'
 }
 
 interface CartContextType {
   items: CartItem[]
-  addToCart: (product: { id: string; name: string; price: number; image: string }) => void
+  addToCart: (product: { id: string; name: string; price: number; image: string; location?: 'Pakistan' | 'UAE'; delivery_charge?: number; currency?: 'PKR' | 'AED' }) => void
   removeFromCart: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
   totalItems: number
-  totalPrice: number
+  totalPriceByCurrency: { PKR: number; AED: number }
+  deliveryChargesByCurrency: { PKR: number; AED: number }
+  grandTotalByCurrency: { PKR: number; AED: number }
   isCartOpen: boolean
   setIsCartOpen: (open: boolean) => void
 }
@@ -33,7 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('cart', JSON.stringify(items))
   }, [items])
 
-  const addToCart = (product: { id: string; name: string; price: number; image: string }) => {
+  const addToCart = (product: { id: string; name: string; price: number; image: string; location?: 'Pakistan' | 'UAE'; delivery_charge?: number; currency?: 'PKR' | 'AED' }) => {
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {
@@ -43,7 +48,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             : item
         )
       }
-      return [...prev, { ...product, quantity: 1 }]
+      const newItem: CartItem = {
+        ...product,
+        quantity: 1,
+        location: product.location || 'UAE',
+        delivery_charge: product.delivery_charge || 0,
+        currency: product.currency || 'AED'
+      }
+      return [...prev, newItem]
     })
   }
 
@@ -66,7 +78,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  
+  // Calculate totals by currency
+  const totals = items.reduce(
+    (acc, item) => {
+      const itemTotal = item.price * item.quantity
+      const deliveryTotal = item.delivery_charge * item.quantity
+      
+      if (item.currency === 'PKR') {
+        acc.price.PKR += itemTotal
+        acc.delivery.PKR += deliveryTotal
+      } else {
+        acc.price.AED += itemTotal
+        acc.delivery.AED += deliveryTotal
+      }
+      return acc
+    },
+    { price: { PKR: 0, AED: 0 }, delivery: { PKR: 0, AED: 0 } }
+  )
+  
+  const totalPriceByCurrency = totals.price
+  const deliveryChargesByCurrency = totals.delivery
+  const grandTotalByCurrency = {
+    PKR: totals.price.PKR + totals.delivery.PKR,
+    AED: totals.price.AED + totals.delivery.AED
+  }
 
   return (
     <CartContext.Provider
@@ -77,7 +113,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         clearCart,
         totalItems,
-        totalPrice,
+        totalPriceByCurrency,
+        deliveryChargesByCurrency,
+        grandTotalByCurrency,
         isCartOpen,
         setIsCartOpen,
       }}
