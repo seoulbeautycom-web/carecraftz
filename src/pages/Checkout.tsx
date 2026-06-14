@@ -39,9 +39,9 @@ export default function Checkout() {
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [orderId, setOrderId] = useState('')
 
-  // Group items by currency
+  // Group items by currency (fallback to AED for legacy items without currency)
   const pkrItems = items.filter(item => item.currency === 'PKR')
-  const aedItems = items.filter(item => item.currency === 'AED')
+  const aedItems = items.filter(item => item.currency === 'AED' || !item.currency)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -73,9 +73,9 @@ export default function Checkout() {
             name: item.name,
             price: item.price,
             quantity: item.quantity,
-            currency: item.currency,
-            delivery_charge: item.delivery_charge,
-            location: item.location
+            currency: item.currency || 'AED',
+            delivery_charge: item.delivery_charge || 0,
+            location: item.location || 'UAE'
           })),
           totals: {
             pkr: {
@@ -365,7 +365,7 @@ export default function Checkout() {
                         </div>
                         <div className="text-right">
                           <p className="font-bold">{formatCurrency(item.price * item.quantity, 'PKR')}</p>
-                          <p className="text-xs text-gray-500">Delivery: {formatCurrency(item.delivery_charge * item.quantity, 'PKR')}</p>
+                          <p className="text-xs text-gray-500">Delivery: {formatCurrency((item.delivery_charge || 0) * item.quantity, 'PKR')}</p>
                         </div>
                       </div>
                     ))}
@@ -392,7 +392,7 @@ export default function Checkout() {
                         </div>
                         <div className="text-right">
                           <p className="font-bold">{formatCurrency(item.price * item.quantity, 'AED')}</p>
-                          <p className="text-xs text-gray-500">Delivery: {formatCurrency(item.delivery_charge * item.quantity, 'AED')}</p>
+                          <p className="text-xs text-gray-500">Delivery: {formatCurrency((item.delivery_charge || 0) * item.quantity, 'AED')}</p>
                         </div>
                       </div>
                     ))}
