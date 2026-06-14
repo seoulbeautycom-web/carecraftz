@@ -19,12 +19,12 @@ interface AdminLayoutProps {
 }
 
 const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-  { icon: ShoppingCart, label: 'Orders', path: '/admin/orders' },
-  { icon: Package, label: 'Products', path: '/admin/products' },
-  { icon: Users, label: 'Staff', path: '/admin/staff' },
-  { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
-  { icon: Settings, label: 'Settings', path: '/admin/settings' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: ShoppingCart, label: 'Orders', path: '/orders' },
+  { icon: Package, label: 'Products', path: '/products' },
+  { icon: Users, label: 'Staff', path: '/staff' },
+  { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { icon: Settings, label: 'Settings', path: '/settings' },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
-      navigate('/admin/login')
+      navigate('/login')
     } else {
       setUserEmail(session.user.email || '')
     }
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/admin/login')
+    navigate('/login')
   }
 
   if (loading) {
@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       >
         {/* Logo Area */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-          <Link to="/admin/dashboard" className="flex items-center gap-3">
+          <Link to="/dashboard" className="flex items-center gap-3">
             <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center flex-shrink-0">
               <Store className="w-5 h-5 text-white" />
             </div>

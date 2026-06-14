@@ -41,9 +41,9 @@ export default function AdminDashboard() {
   ]
 
   const quickActions = [
-    { title: 'Manage Staff', description: 'Add, edit, or remove staff members', icon: Users, path: '/admin/staff', color: 'bg-purple-50 text-purple-600' },
-    { title: 'Manage Products', description: 'Add new products and manage inventory', icon: Package, path: '/admin/products', color: 'bg-green-50 text-green-600' },
-    { title: 'View Orders', description: 'Process and track customer orders', icon: ShoppingCart, path: '/admin/orders', color: 'bg-blue-50 text-blue-600' },
+    { title: 'Manage Staff', description: 'Add, edit, or remove staff members', icon: Users, path: '/staff', color: 'bg-purple-50 text-purple-600' },
+    { title: 'Manage Products', description: 'Add new products and manage inventory', icon: Package, path: '/products', color: 'bg-green-50 text-green-600' },
+    { title: 'View Orders', description: 'Process and track customer orders', icon: ShoppingCart, path: '/orders', color: 'bg-blue-50 text-blue-600' },
   ]
 
   const getColorClasses = (color: string) => {
