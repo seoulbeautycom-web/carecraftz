@@ -28,6 +28,7 @@ import WhatsAppButton from './components/WhatsAppButton'
 import CartDrawer from './components/CartDrawer'
 import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
+import AdminOrders from './pages/admin/Orders'
 import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
 import Settings from './pages/admin/Settings'
@@ -157,6 +158,11 @@ function App() {
             <Route path="/admin/dashboard" element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/orders" element={
+              <ProtectedRoute>
+                <AdminOrders />
               </ProtectedRoute>
             } />
             <Route path="/admin/staff" element={

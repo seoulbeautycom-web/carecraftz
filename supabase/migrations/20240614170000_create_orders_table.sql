@@ -1,6 +1,7 @@
 -- Create orders table for checkout system
 CREATE TABLE IF NOT EXISTS orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_code TEXT UNIQUE,
     user_id UUID REFERENCES auth.users(id),
     customer_email TEXT NOT NULL,
     customer_phone TEXT,
@@ -8,7 +9,7 @@ CREATE TABLE IF NOT EXISTS orders (
     items JSONB NOT NULL,
     totals JSONB NOT NULL,
     payment_method TEXT NOT NULL DEFAULT 'cod',
-    status TEXT NOT NULL DEFAULT 'pending',
+    status TEXT NOT NULL DEFAULT 'Order Received',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, CreditCard, Truck, Shield, MapPin, Phone, Mail, User } from 'lucide-react'
+import { ArrowLeft, CreditCard, Truck, Shield, MapPin, Phone, Mail, User, CheckCircle, Package, Send, Home, AlertCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
@@ -23,13 +23,46 @@ export default function Checkout() {
   const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart } = useCart()
   const { user } = useAuth()
   
+  // Determine required country from cart items
+  const hasPKRItems = items.some(item => item.currency === 'PKR')
+  const hasAEDItems = items.some(item => item.currency === 'AED' || !item.currency)
+  const requiredCountry = hasPKRItems && !hasAEDItems ? 'Pakistan' : 
+                          hasAEDItems && !hasPKRItems ? 'UAE' : 
+                          hasPKRItems && hasAEDItems ? 'mixed' : 'UAE'
+  
+  // Fetch user profile data for prefilling
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (data) {
+          setForm(prev => ({
+            ...prev,
+            fullName: data.full_name || prev.fullName,
+            email: user.email || prev.email,
+            phone: data.phone || prev.phone,
+            address: data.address || prev.address,
+            city: data.city || prev.city,
+            country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : (data.country || prev.country)
+          }))
+        }
+      }
+    }
+    fetchUserProfile()
+  }, [user, requiredCountry])
+
   const [form, setForm] = useState<OrderForm>({
     fullName: '',
     email: user?.email || '',
     phone: '',
     address: '',
     city: '',
-    country: 'UAE',
+    country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : 'UAE',
     postalCode: '',
     paymentMethod: 'cod'
   })
@@ -43,9 +76,56 @@ export default function Checkout() {
   const pkrItems = items.filter(item => item.currency === 'PKR')
   const aedItems = items.filter(item => item.currency === 'AED' || !item.currency)
 
+  // Fetch user profile data for prefilling
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        if (data) {
+          setForm(prev => ({
+            ...prev,
+            fullName: data.full_name || prev.fullName,
+            email: user.email || prev.email,
+            phone: data.phone || prev.phone,
+            address: data.address || prev.address,
+            city: data.city || prev.city,
+            country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : (data.country || prev.country)
+          }))
+        }
+      }
+    }
+    fetchUserProfile()
+  }, [user, requiredCountry])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
+  }
+
+  // Generate custom order ID (CC####)
+  const generateOrderId = async () => {
+    const prefix = 'CC'
+    const randomNum = Math.floor(1000 + Math.random() * 9000) // 1000-9999
+    const customId = `${prefix}${randomNum}`
+    
+    // Check if ID exists
+    const { data } = await supabase
+      .from('orders')
+      .select('order_code')
+      .eq('order_code', customId)
+      .single()
+    
+    if (data) {
+      // If exists, generate new one
+      return generateOrderId()
+    }
+    
+    return customId
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,10 +134,14 @@ export default function Checkout() {
     setError('')
 
     try {
+      // Generate custom order code
+      const orderCode = await generateOrderId()
+
       // Create order in database
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
+          order_code: orderCode,
           user_id: user?.id || null,
           customer_email: form.email,
           customer_phone: form.phone,
@@ -90,14 +174,14 @@ export default function Checkout() {
             }
           },
           payment_method: form.paymentMethod,
-          status: 'pending'
+          status: 'Order Received'
         })
         .select()
         .single()
 
       if (orderError) throw orderError
 
-      setOrderId(order.id)
+      setOrderId(order.order_code)
       setOrderSuccess(true)
       clearCart()
     } catch (err) {
@@ -132,23 +216,82 @@ export default function Checkout() {
   }
 
   if (orderSuccess) {
+    const orderSteps = [
+      { id: 1, name: 'Order Received', icon: CheckCircle, status: 'completed', description: 'Your order has been received' },
+      { id: 2, name: 'Order Confirmed', icon: AlertCircle, status: 'pending', description: 'Waiting for confirmation' },
+      { id: 3, name: 'Being Packaged', icon: Package, status: 'pending', description: 'Items being prepared' },
+      { id: 4, name: 'Dispatched', icon: Send, status: 'pending', description: 'Out for delivery' },
+      { id: 5, name: 'Delivered', icon: Home, status: 'pending', description: 'Order completed' }
+    ]
+
     return (
       <>
         <Navbar />
-        <div className="min-h-screen bg-[#F5F5F0] py-20">
-          <div className="max-w-2xl mx-auto px-6 text-center">
-            <div className="bg-white rounded-2xl p-12 shadow-sm">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="min-h-screen bg-[#F5F5F0] py-12">
+          <div className="max-w-3xl mx-auto px-6">
+            {/* Success Header */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm text-center mb-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-green-600" />
               </div>
-              <h1 className="text-2xl font-bold text-[#1F331F] mb-4">Order Placed Successfully!</h1>
-              <p className="text-gray-600 mb-2">Order ID: <span className="font-mono font-bold">{orderId}</span></p>
-              <p className="text-gray-600 mb-6">We'll send you a confirmation email shortly.</p>
+              <h1 className="text-2xl font-bold text-[#1F331F] mb-2">Order Placed Successfully!</h1>
+              <p className="text-gray-600 mb-1">Order ID: <span className="font-mono font-bold text-lg text-[#1F331F]">{orderId}</span></p>
+              <p className="text-gray-500 text-sm">We'll send you a confirmation email shortly.</p>
+            </div>
+
+            {/* Order Journey Roadmap */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+              <h2 className="text-lg font-bold text-[#1F331F] mb-6">Order Journey</h2>
+              <div className="relative">
+                {/* Progress Line */}
+                <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gray-200"></div>
+                
+                {/* Steps */}
+                <div className="space-y-6">
+                  {orderSteps.map((step) => (
+                    <div key={step.id} className="flex items-start gap-4 relative">
+                      {/* Step Icon */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+                        step.status === 'completed' 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        <step.icon className="w-5 h-5" />
+                      </div>
+                      
+                      {/* Step Content */}
+                      <div className="flex-1 pt-2">
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-semibold ${
+                            step.status === 'completed' ? 'text-[#1F331F]' : 'text-gray-500'
+                          }`}>
+                            {step.name}
+                          </h3>
+                          {step.status === 'completed' && (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
               <button
                 onClick={() => navigate('/shop')}
-                className="bg-[#1F331F] text-white px-6 py-3 rounded-full hover:bg-[#1F331F]/90"
+                className="flex-1 bg-[#1F331F] text-white px-6 py-3 rounded-full hover:bg-[#1F331F]/90 font-medium"
               >
                 Continue Shopping
+              </button>
+              <button
+                onClick={() => navigate('/profile')}
+                className="flex-1 bg-white text-[#1F331F] border-2 border-[#1F331F] px-6 py-3 rounded-full hover:bg-gray-50 font-medium"
+              >
+                View My Orders
               </button>
             </div>
           </div>
@@ -268,29 +411,42 @@ export default function Checkout() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">Country</label>
-                    <select
-                      name="country"
-                      value={form.country}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                    >
-                      <option value="UAE">UAE</option>
-                      <option value="Pakistan">Pakistan</option>
-                    </select>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                      Country
+                      {requiredCountry !== 'mixed' && (
+                        <span className="text-xs text-gray-500 font-normal ml-2">(Locked based on products)</span>
+                      )}
+                    </label>
+                    {requiredCountry === 'mixed' ? (
+                      <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
+                        ⚠️ You have products from both UAE and Pakistan. Please order them separately.
+                      </div>
+                    ) : (
+                      <select
+                        name="country"
+                        value={form.country}
+                        onChange={handleInputChange}
+                        disabled={requiredCountry === 'Pakistan' || requiredCountry === 'UAE'}
+                        className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent ${
+                          (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? 'bg-gray-100 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <option value="UAE">UAE</option>
+                        <option value="Pakistan">Pakistan</option>
+                      </select>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Postal Code</label>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Postal Code <span className="text-gray-400 font-normal">(Optional)</span></label>
                   <input
                     type="text"
                     name="postalCode"
                     value={form.postalCode}
                     onChange={handleInputChange}
-                    required
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                    placeholder="Postal code"
+                    placeholder="Postal code (optional)"
                   />
                 </div>
 
