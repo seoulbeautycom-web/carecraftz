@@ -9,6 +9,9 @@ import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import FutureLaunches from './pages/FutureLaunches'
 import Craft from './pages/Craft'
+import Blog from './pages/Blog'
+import Refill from './pages/Refill'
+import Partners from './pages/Partners'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 import AuthCallback from './pages/auth/AuthCallback'
@@ -75,24 +78,11 @@ function App() {
                 <CartDrawer />
               </>
             } />
-            <Route path="/future-launches" element={
-              <>
-                <Navbar />
-                <FutureLaunches />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/craft" element={
-              <>
-                <Navbar />
-                <Craft />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
+            <Route path="/future-launches" element={<FutureLaunches />} />
+            <Route path="/craft" element={<Craft />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/refill" element={<Refill />} />
+            <Route path="/partners" element={<Partners />} />
             <Route path="/signin" element={
               <>
                 <Navbar />

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion, useScroll, useTransform, useMotionTemplate, useMotionValue, useAnimationFrame, animate } from 'framer-motion'
+import PageFrame from '../components/PageFrame'
 
 const VIDEO_SRC = 'https://d8j0ntlcm91z4.cloudfront.net/user_3BA1nJibL92zfZpAJB3BLBU6tQI/hf_20260520_114550_b72cc2b7-2267-4d9e-b19f-f3bb4b0c7084.mp4'
 const TARGET_RADIUS = 650
@@ -421,7 +422,7 @@ function StaySection() {
   )
 }
 
-export default function FutureLaunches() {
+function FutureLaunchesInner() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const { scrollYProgress } = useScroll({
@@ -651,5 +652,13 @@ export default function FutureLaunches() {
 
       <StaySection />
     </>
+  )
+}
+
+export default function FutureLaunches() {
+  return (
+    <PageFrame frameColor="#7EC8E3" showFooter={true} disableScroll={true}>
+      <FutureLaunchesInner />
+    </PageFrame>
   )
 }

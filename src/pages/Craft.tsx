@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import PageFrame from '../components/PageFrame'
 
 const PORTAL_BG = "https://res.cloudinary.com/dy5er7kv5/image/upload/q_auto/f_auto/v1779707217/image_1_vdzwae.png"
 const CURTAIN_LEFT = "https://res.cloudinary.com/dy5er7kv5/image/upload/q_auto/f_auto/v1779706559/curtain_left_znkmva.png"
@@ -115,7 +117,8 @@ function ArcCardSlider({ cards, rotationOffset, isMobile }: ArcCardSliderProps) 
   )
 }
 
-export default function Craft() {
+function CraftInner() {
+  const navigate = useNavigate()
   const [scrollProgress, setScrollProgress] = useState(0)
   const [curtainsOpen, setCurtainsOpen] = useState(false)
   const [uiVisible, setUiVisible] = useState(false)
@@ -412,9 +415,23 @@ export default function Craft() {
           <p style={{ fontFamily: 'Imprima, sans-serif', fontSize: isMobile ? 14 : 20, lineHeight: 1.6, letterSpacing: '-0.01em', maxWidth: isMobile ? 260 : 480, color: 'rgba(255,255,255,0.82)', textAlign: 'center', marginTop: isMobile ? '8vh' : '12vh' }}>
             Discover our collection of handcrafted organic soaps, each meticulously formulated with natural ingredients sourced from the UAE and Pakistan. Experience the difference of truly refined skincare.
           </p>
+          <button
+            onClick={() => navigate('/about')}
+            style={{ marginTop: isMobile ? '4vh' : '6vh', padding: '14px 36px', borderRadius: 40, background: 'white', color: '#1a0a10', fontFamily: 'Imprima, sans-serif', fontSize: isMobile ? 14 : 16, letterSpacing: '0.08em', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}
+          >
+            About Us →
+          </button>
         </div>
 
       </div>
     </div>
+  )
+}
+
+export default function Craft() {
+  return (
+    <PageFrame frameColor="#8DEBD1" showFooter={true}>
+      <CraftInner />
+    </PageFrame>
   )
 }
