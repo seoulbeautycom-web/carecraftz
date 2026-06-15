@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { 
   ChevronDown, 
   Bell,
@@ -10,10 +11,23 @@ import {
   Users,
   Shield,
   Edit2,
-  Trash2
+  Trash2,
+  Settings,
+  LogOut,
+  Eye
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+
+interface Order {
+  id: string
+  order_code: string
+  customer_email: string
+  status: string
+  created_at: string
+  time_ago?: string
+  shipping_address?: { full_name: string }
+}
 
 interface TeamMember {
   id: string
@@ -53,6 +67,7 @@ const ROLE_OPTIONS = [
 const AVATAR_COLORS = ['bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-pink-500', 'bg-amber-500', 'bg-indigo-500', 'bg-rose-500']
 
 export default function Staff() {
+  const navigate = useNavigate()
   const [staff, setStaff] = useState<TeamMember[]>([])
   const [invites, setInvites] = useState<PendingInvite[]>([])
   const [loading, setLoading] = useState(true)
@@ -71,10 +86,52 @@ export default function Staff() {
   const [sending, setSending] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
+  // Notification and profile states
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [allOrders, setAllOrders] = useState<Order[]>([])
+  const [newOrdersCount, setNewOrdersCount] = useState(0)
+
   useEffect(() => {
     fetchData()
     fetchUserName()
+    fetchOrdersForNotifications()
   }, [])
+
+  const fetchOrdersForNotifications = async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (data) {
+      const ordersWithTime = data.map((order: Order) => ({
+        ...order,
+        time_ago: getTimeAgo(order.created_at)
+      }))
+      setAllOrders(ordersWithTime)
+      
+      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const recentOrders = data.filter((o: Order) => new Date(o.created_at) > last24Hours)
+      setNewOrdersCount(recentOrders.length)
+    }
+  }
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
 
   const fetchUserName = async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -342,17 +399,95 @@ export default function Staff() {
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                <Bell className="w-5 h-5" />
-                {pendingInvitesCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {/* Notification Button with Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {newOrdersCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+                
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">New Orders</h3>
+                      <button onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {newOrdersCount === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500">No new orders in the last 24 hours</p>
+                        </div>
+                      ) : (
+                        allOrders.slice(0, 5).map((order) => (
+                          <div 
+                            key={order.id}
+                            onClick={() => { setShowNotifications(false); navigate('/orders'); }}
+                            className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-900">{order.order_code}</span>
+                              <span className="text-xs text-gray-500">{order.time_ago}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">{order.shipping_address?.full_name || order.customer_email}</p>
+                            <Eye className="w-3.5 h-3.5 text-gray-400" />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-3 border-t border-gray-100">
+                      <button 
+                        onClick={() => { setShowNotifications(false); navigate('/orders'); }}
+                        className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg"
+                      >
+                        View all orders
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  {userName.charAt(0)}
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
+
+              {/* Profile Button with Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {userName.charAt(0)}
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
+                    <div className="p-4 border-b border-gray-100">
+                      <p className="font-semibold text-gray-900">{userName}</p>
+                      <p className="text-sm text-gray-500">Store Owner</p>
+                    </div>
+                    <div className="p-2">
+                      <button 
+                        onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"
+                      >
+                        <Settings className="w-4 h-4" /> Settings
+                      </button>
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                      >
+                        <LogOut className="w-4 h-4" /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -6,14 +6,12 @@ import {
   Users,
   BarChart3,
   Settings,
-  LogOut,
   Store,
   ShoppingCart,
   Package,
   Star,
   FileText,
   Globe,
-  ChevronDown,
   Search
 } from 'lucide-react'
 
@@ -24,9 +22,9 @@ interface AdminLayoutProps {
 // All admin pages - styled to match reference design
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: ShoppingCart, label: 'Orders', path: '/orders', badge: 12 },
+  { icon: ShoppingCart, label: 'Orders', path: '/orders' },
   { icon: Package, label: 'Products', path: '/products' },
-  { icon: Star, label: 'Reviews', path: '/reviews', badge: 3 },
+  { icon: Star, label: 'Reviews', path: '/reviews' },
   { icon: FileText, label: 'Content', path: '/content' },
   { icon: Globe, label: 'Social', path: '/social' },
   { icon: Users, label: 'Staff', path: '/staff' },
@@ -44,8 +42,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [loading, setLoading] = useState(true)
-  const [userName, setUserName] = useState('Admin')
-  const [userEmail, setUserEmail] = useState('')
 
   useEffect(() => {
     checkAuth()
@@ -55,20 +51,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       navigate('/login')
-    } else {
-      setUserEmail(session.user.email || '')
-      const name = session.user.email?.split('@')[0] || 'Admin'
-      setUserName(name.charAt(0).toUpperCase() + name.slice(1))
     }
     setLoading(false)
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/login')
-    // Prevent unused var warning
-    void LogOut
-    void userEmail
   }
 
   if (loading) {
@@ -132,11 +116,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                       <Icon className="w-4 h-4" />
                       <span className="text-sm">{item.label}</span>
                     </div>
-                    {item.badge && (
-                      <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 </li>
               )
@@ -165,22 +144,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </button>
         </div>
 
-        {/* User Section */}
-        <div className="p-4 border-t border-slate-800">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full"
-          >
-            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-              {userName.charAt(0)}
-            </div>
-            <div className="text-left flex-1">
-              <p className="text-sm font-medium text-white">{userName}</p>
-              <p className="text-xs text-slate-500">Store Owner</p>
-            </div>
-            <ChevronDown className="w-4 h-4 text-slate-500" />
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}

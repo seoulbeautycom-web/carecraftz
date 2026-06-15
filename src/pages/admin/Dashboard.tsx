@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { 
   DollarSign, 
   ShoppingCart, 
   Users, 
   Package,
-  Search,
-  Plus,
   Bell,
   ChevronDown,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Settings,
+  LogOut,
+  X,
+  Eye
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
@@ -29,10 +32,15 @@ interface Order {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
+  const [allOrders, setAllOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('Admin')
   const [, setUserEmail] = useState('')
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [newOrdersCount, setNewOrdersCount] = useState(0)
 
   useEffect(() => {
     fetchOrders()
@@ -49,6 +57,26 @@ export default function AdminDashboard() {
   }
 
   const fetchOrders = async () => {
+    // Fetch all orders for counting
+    const { data: allData } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (allData) {
+      const ordersWithTime = allData.map((order: Order) => ({
+        ...order,
+        time_ago: getTimeAgo(order.created_at)
+      }))
+      setAllOrders(ordersWithTime)
+      
+      // Count orders from last 24 hours
+      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const recentOrders = allData.filter((o: Order) => new Date(o.created_at) > last24Hours)
+      setNewOrdersCount(recentOrders.length)
+    }
+    
+    // Fetch recent orders for dashboard display
     const { data } = await supabase
       .from('orders')
       .select('*')
@@ -56,7 +84,6 @@ export default function AdminDashboard() {
       .limit(5)
     
     if (data) {
-      // Add time ago for display
       const ordersWithTime = data.map((order: Order) => ({
         ...order,
         time_ago: getTimeAgo(order.created_at)
@@ -64,6 +91,16 @@ export default function AdminDashboard() {
       setOrders(ordersWithTime)
     }
     setLoading(false)
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
+  }
+
+  const handleViewOrder = (orderId: string) => {
+    setShowNotifications(false)
+    navigate(`/orders?id=${orderId}`)
   }
 
   const getTimeAgo = (dateString: string) => {
@@ -193,29 +230,113 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-500">Welcome back, {userName} — here's what's happening today.</p>
             </div>
             
-            {/* Right - Search & Actions */}
+            {/* Right - Actions */}
             <div className="flex items-center gap-4">
+              {/* Notification Button with Dropdown */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search anything..."
-                  className="pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
-                />
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {newOrdersCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">New Orders</h3>
+                      <button 
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {newOrdersCount === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                          <p className="text-sm text-gray-500">No new orders in the last 24 hours</p>
+                        </div>
+                      ) : (
+                        allOrders.slice(0, 5).map((order) => (
+                          <div 
+                            key={order.id}
+                            onClick={() => handleViewOrder(order.id)}
+                            className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-900">{order.order_code}</span>
+                              <span className="text-xs text-gray-500">{order.time_ago}</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-1">{order.customer_name || order.customer_email}</p>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                order.status === 'Order Completed' ? 'bg-emerald-100 text-emerald-700' :
+                                order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                                {order.status}
+                              </span>
+                              <Eye className="w-3.5 h-3.5 text-gray-400" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-3 border-t border-gray-100">
+                      <button 
+                        onClick={() => { setShowNotifications(false); navigate('/orders'); }}
+                        className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                      >
+                        View all orders
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                New
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                  {userName.charAt(0)}
-                </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+
+              {/* Profile Button with Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {userName.charAt(0)}
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Profile Dropdown */}
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
+                    <div className="p-4 border-b border-gray-100">
+                      <p className="font-semibold text-gray-900">{userName}</p>
+                      <p className="text-sm text-gray-500">Store Owner</p>
+                    </div>
+                    <div className="p-2">
+                      <button 
+                        onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
