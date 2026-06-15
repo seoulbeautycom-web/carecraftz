@@ -1,661 +1,288 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import { Users, Plus, Edit, Trash2, Shield, Mail, User, Search, Filter, MoreHorizontal, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import { 
+  Search, 
+  ChevronDown, 
+  Bell,
+  Plus,
+  Mail
+} from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
+import { supabase } from '../../lib/supabase'
 
-interface StaffMember {
+interface TeamMember {
   id: string
-  user_id: string
+  name: string
+  initials: string
+  avatarColor: string
   email: string
-  full_name: string
   role: string
-  permissions: any
-  is_active: boolean
-  last_signed_in: string | null
-  created_at: string
-  updated_at: string
+  roleColor: string
+  permissions: string
+  status: 'online' | 'offline'
+  lastActive: string
 }
 
-export default function StaffManagement() {
-  const navigate = useNavigate()
-  const [staff, setStaff] = useState<StaffMember[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null)
-  const [resetPassword, setResetPassword] = useState('')
-  const [resettingPassword, setResettingPassword] = useState(false)
-  const [showResetPassword, setShowResetPassword] = useState(false)
-  const [showCreatePassword, setShowCreatePassword] = useState(false)
-  const [formData, setFormData] = useState({
-    email: '',
-    full_name: '',
-    role: 'staff',
-    is_active: true,
-    password: ''
-  })
+interface PendingInvite {
+  id: string
+  email: string
+  role: string
+  invitedBy: string
+  date: string
+}
+
+export default function Staff() {
+  const [userName, setUserName] = useState('Admin')
 
   useEffect(() => {
-    checkAuth()
-    fetchStaff()
+    fetchUserName()
   }, [])
 
-  const checkAuth = async () => {
+  const fetchUserName = async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      navigate('/admin/login')
+    if (session?.user?.email) {
+      const name = session.user.email.split('@')[0]
+      setUserName(name.charAt(0).toUpperCase() + name.slice(1))
     }
   }
 
-  const fetchStaff = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('staff')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setStaff(data || [])
-    } catch (error: any) {
-      console.error('Error fetching staff:', error.message)
-    } finally {
-      setLoading(false)
+  // Sample team members
+  const teamMembers: TeamMember[] = [
+    {
+      id: '1',
+      name: 'Alex M.',
+      initials: 'AM',
+      avatarColor: 'bg-orange-500',
+      email: 'alex@petalandroot.co',
+      role: 'Owner',
+      roleColor: 'bg-amber-100 text-amber-700',
+      permissions: 'Full access',
+      status: 'online',
+      lastActive: 'Now'
+    },
+    {
+      id: '2',
+      name: 'Jordan Lee',
+      initials: 'JL',
+      avatarColor: 'bg-blue-500',
+      email: 'jordan@petalandroot.co',
+      role: 'Admin',
+      roleColor: 'bg-blue-100 text-blue-700',
+      permissions: 'Full access',
+      status: 'online',
+      lastActive: '2h ago'
+    },
+    {
+      id: '3',
+      name: 'Taylor W.',
+      initials: 'TW',
+      avatarColor: 'bg-purple-500',
+      email: 'taylor@petalandroot.co',
+      role: 'Editor',
+      roleColor: 'bg-purple-100 text-purple-700',
+      permissions: 'Products, Content',
+      status: 'offline',
+      lastActive: 'Yesterday'
+    },
+    {
+      id: '4',
+      name: 'Sam C.',
+      initials: 'SC',
+      avatarColor: 'bg-emerald-500',
+      email: 'sam@petalandroot.co',
+      role: 'Support',
+      roleColor: 'bg-emerald-100 text-emerald-700',
+      permissions: 'Orders, Customers',
+      status: 'offline',
+      lastActive: '3d ago'
+    },
+    {
+      id: '5',
+      name: 'Morgan B.',
+      initials: 'MB',
+      avatarColor: 'bg-pink-500',
+      email: 'morgan@petalandroot.co',
+      role: 'Analyst',
+      roleColor: 'bg-pink-100 text-pink-700',
+      permissions: 'Analytics only',
+      status: 'offline',
+      lastActive: '1w ago'
     }
-  }
+  ]
 
-  const handleAddStaff = () => {
-    setEditingStaff(null)
-    setFormData({ email: '', full_name: '', role: 'staff', is_active: true, password: '' })
-    setShowModal(true)
-  }
-
-  const handleEditStaff = (member: StaffMember) => {
-    setEditingStaff(member)
-    setFormData({
-      email: member.email,
-      full_name: member.full_name,
-      role: member.role,
-      is_active: member.is_active,
-      password: ''
-    })
-    setShowModal(true)
-  }
-
-  const handleViewDetails = (member: StaffMember) => {
-    setSelectedStaff(member)
-    setResetPassword('')
-    setShowDetailsModal(true)
-  }
-
-  const handlePasswordReset = async () => {
-    if (!selectedStaff || !resetPassword) {
-      alert('Please enter a new password')
-      return
+  // Sample pending invites
+  const pendingInvites: PendingInvite[] = [
+    {
+      id: '1',
+      email: 'riley@example.com',
+      role: 'Editor',
+      invitedBy: 'Admin',
+      date: 'Sent Jun 12, 2026'
     }
+  ]
 
-    setResettingPassword(true)
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      console.log('Attempting to reset password for:', selectedStaff.email)
-      console.log('Edge Function URL:', `${supabaseUrl}/functions/v1/user-management`)
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/user-management`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          action: 'reset_password',
-          email: selectedStaff.email,
-          newPassword: resetPassword
-        })
-      })
+  const stats = [
+    { label: 'Total Staff', value: 5, color: 'text-blue-600' },
+    { label: 'Online Now', value: 2, color: 'text-emerald-600' },
+    { label: 'Pending Invites', value: 1, color: 'text-amber-600' }
+  ]
 
-      console.log('Response status:', response.status)
-      const data = await response.json()
-      console.log('Response data:', data)
-
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      alert('Password reset successfully!')
-      setResetPassword('')
-    } catch (error: any) {
-      console.error('Error resetting password:', error)
-      alert(`Failed to reset password: ${error.message}\n\nMake sure the Edge Function is deployed in Supabase.`)
-    } finally {
-      setResettingPassword(false)
+  const getStatusIndicator = (status: string) => {
+    if (status === 'online') {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Online
+        </span>
+      )
     }
-  }
-
-  const handleDeleteStaff = async (id: string, email: string) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) return
-
-    try {
-      // Delete auth user via Edge Function
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      await fetch(`${supabaseUrl}/functions/v1/user-management`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          action: 'delete_user',
-          email: email
-        })
-      })
-
-      // Delete staff record
-      const { error } = await supabase.from('staff').delete().eq('id', id)
-      if (error) throw error
-      fetchStaff()
-    } catch (error: any) {
-      console.error('Error deleting staff:', error.message)
-      alert('Failed to delete staff member')
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    try {
-      if (editingStaff) {
-        // Update existing staff
-        const { error } = await supabase
-          .from('staff')
-          .update({
-            full_name: formData.full_name,
-            role: formData.role,
-            is_active: formData.is_active
-          })
-          .eq('id', editingStaff.id)
-
-        if (error) throw error
-        alert('Staff member updated successfully')
-      } else {
-        // Create auth user first via Edge Function
-        if (!formData.password) {
-          throw new Error('Password is required for new staff member')
-        }
-
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        console.log('Creating auth user for:', formData.email)
-        
-        const response = await fetch(`${supabaseUrl}/functions/v1/user-management`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            action: 'create_user',
-            email: formData.email,
-            password: formData.password
-          })
-        })
-
-        const data = await response.json()
-        console.log('Auth user response:', data)
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to create auth user')
-        }
-
-        console.log('Auth user created:', data.user)
-
-        // Create staff record with user_id
-        const { data: staffData, error: staffError } = await supabase
-          .from('staff')
-          .insert({
-            email: formData.email,
-            full_name: formData.full_name,
-            role: formData.role,
-            is_active: formData.is_active,
-            user_id: data.user.id
-          })
-          .select()
-          .single()
-
-        if (staffError) {
-          console.error('Staff error:', staffError)
-          throw new Error(`Failed to create staff record: ${staffError.message}`)
-        }
-
-        console.log('Staff record created:', staffData.id)
-        alert('Staff member added successfully!')
-      }
-
-      setShowModal(false)
-      fetchStaff()
-    } catch (error: any) {
-      console.error('Error saving staff:', error)
-      alert(`Failed to save staff member: ${error.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-700 border-purple-200'
-      case 'manager': return 'bg-blue-100 text-blue-700 border-blue-200'
-      default: return 'bg-gray-100 text-gray-700 border-gray-200'
-    }
-  }
-
-  const getStatusBadgeColor = (isActive: boolean) => {
-    return isActive 
-      ? 'bg-green-100 text-green-700 border-green-200' 
-      : 'bg-red-100 text-red-700 border-red-200'
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-gray-400">
+        <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+        Offline
+      </span>
+    )
   }
 
   return (
     <AdminLayout>
-      <div className="p-8">
-        {/* Header */}
-        <div className="mb-8">
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        {/* Top Navigation Bar */}
+        <div className="bg-white border-b border-gray-200 px-8 py-4">
           <div className="flex items-center justify-between">
+            {/* Left - Title */}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Staff</h1>
-              <p className="text-gray-600 mt-1">Manage your team members and their permissions</p>
+              <h1 className="text-xl font-semibold text-gray-900">Staff</h1>
+              <p className="text-sm text-gray-500">Manage your team and access permissions.</p>
             </div>
-            <button
-              onClick={handleAddStaff}
-              className="flex items-center gap-2 bg-green-700 text-white px-4 py-2.5 rounded-lg hover:bg-green-800 transition font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add staff</span>
-            </button>
-          </div>
-        </div>
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-purple-50 p-3 rounded-xl">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Staff</p>
-                <p className="text-2xl font-bold text-gray-900">{staff.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-green-50 p-3 rounded-xl">
-                <Shield className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Staff</p>
-                <p className="text-2xl font-bold text-gray-900">{staff.filter(s => s.is_active).length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-50 p-3 rounded-xl">
-                <User className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Admins</p>
-                <p className="text-2xl font-bold text-gray-900">{staff.filter(s => s.role === 'admin').length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Staff Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          {/* Table Header with Search */}
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            
+            {/* Right - Search & Actions */}
             <div className="flex items-center gap-4">
               <div className="relative">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search staff..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none w-64"
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Search anything..."
+                  className="pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700">
-                <Filter className="w-4 h-4" />
-                <span>Filter</span>
+              <button className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
+              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
+                <Plus className="w-4 h-4" />
+                New
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  {userName.charAt(0)}
+                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </div>
             </div>
           </div>
+        </div>
 
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading staff...</p>
+        <div className="p-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {stats.map((stat, index) => (
+              <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Team Members Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Team Members</h3>
+              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
+                <Plus className="w-4 h-4" />
+                Invite Staff
+              </button>
             </div>
-          ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Staff Member</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Member</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Role</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Permissions</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Last Active</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {staff.map((member) => (
-                    <tr 
-                      key={member.id} 
-                      className="hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(member)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                            <span className="text-white font-medium text-sm">
-                              {member.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </span>
+                <tbody>
+                  {teamMembers.map((member) => (
+                    <tr key={member.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 ${member.avatarColor} rounded-full flex items-center justify-center text-white text-sm font-medium`}>
+                            {member.initials}
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{member.full_name}</div>
-                            <div className="text-sm text-gray-500 flex items-center gap-1">
-                              <Mail className="w-3 h-3" />
-                              {member.email}
-                            </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                            <p className="text-xs text-gray-500">{member.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRoleBadgeColor(member.role)} capitalize`}>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${member.roleColor}`}>
                           {member.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusBadgeColor(member.is_active)}`}>
-                          {member.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(member.created_at).toLocaleDateString('en-US', { 
-                          year: 'numeric', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => handleEditStaff(member)}
-                            className="p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStaff(member.id, member.email)}
-                            className="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                          {member.permissions}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {getStatusIndicator(member.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-gray-500">{member.lastActive}</span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-
-              {staff.length === 0 && (
-                <div className="p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-gray-900 font-medium mb-1">No staff members yet</h3>
-                  <p className="text-gray-600 text-sm mb-4">Get started by adding your first team member</p>
-                  <button
-                    onClick={handleAddStaff}
-                    className="flex items-center gap-2 bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition font-medium mx-auto"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Add staff</span>
-                  </button>
-                </div>
-              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              {editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}
-            </h3>
-            <p className="text-gray-600 text-sm mb-6">
-              {editingStaff ? 'Update staff member details and permissions.' : 'Invite a new team member to your store.'}
-            </p>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-                <input
-                  type="text"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
-                  placeholder="John Doe"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  disabled={!!editingStaff}
-                  placeholder="john@example.com"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:text-gray-500"
-                />
-                {editingStaff && (
-                  <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
-                )}
-              </div>
-
-              {!editingStaff && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showCreatePassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Enter password"
-                      required
-                      className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCreatePassword(!showCreatePassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {/* Pending Invites Section */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Pending Invites</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {pendingInvites.map((invite) => (
+                <div key={invite.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{invite.email}</p>
+                      <p className="text-xs text-gray-500">Invited as {invite.role} · {invite.date}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                      Resend
+                    </button>
+                    <button className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      Revoke
                     </button>
                   </div>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                >
-                  <option value="staff">Staff - Can manage orders and products</option>
-                  <option value="manager">Manager - Can manage staff and view reports</option>
-                  <option value="admin">Admin - Full access to everything</option>
-                </select>
-              </div>
-
-              <div className="flex items-center py-2">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                />
-                <label htmlFor="is_active" className="ml-2.5 text-sm text-gray-700">
-                  Active account
-                </label>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2.5 bg-green-700 text-white rounded-lg hover:bg-green-800 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Saving...' : editingStaff ? 'Save Changes' : 'Add Staff'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Staff Details Modal */}
-      {showDetailsModal && selectedStaff && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Staff Details</h3>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-xl">
-                    {selectedStaff.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900">{selectedStaff.full_name}</h4>
-                  <p className="text-gray-600">{selectedStaff.email}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                <div>
-                  <p className="text-sm text-gray-500">Role</p>
-                  <p className="font-medium text-gray-900 capitalize">{selectedStaff.role}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Status</p>
-                  <p className={`font-medium ${selectedStaff.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedStaff.is_active ? 'Active' : 'Inactive'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="font-medium text-gray-900">
-                    {new Date(selectedStaff.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Last Signed In</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedStaff.last_signed_in 
-                      ? new Date(selectedStaff.last_signed_in).toLocaleDateString() + ' ' + new Date(selectedStaff.last_signed_in).toLocaleTimeString()
-                      : 'Never'
-                    }
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm text-gray-500">User ID</p>
-                  <p className="font-medium text-gray-900 text-xs">
-                    {selectedStaff.user_id ? 'Linked to auth system' : 'Not linked to auth system'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-500 mb-3">Password Management</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
-                    <div className="relative">
-                      <input
-                        type={showResetPassword ? 'text' : 'password'}
-                        value={resetPassword}
-                        onChange={(e) => setResetPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowResetPassword(!showResetPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handlePasswordReset}
-                    disabled={resettingPassword || !resetPassword}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>{resettingPassword ? 'Resetting...' : 'Reset Password'}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDetailsModal(false)
-                      handleEditStaff(selectedStaff)
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-700 text-white rounded-lg hover:bg-green-800 transition font-medium"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>Edit Staff Member</span>
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </div>
     </AdminLayout>
   )
 }
