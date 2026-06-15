@@ -152,7 +152,7 @@ export default function NewHomePage() {
           {/* ── SECTION 4: LIFESTYLE IMAGE ── */}
           <section className="relative mx-4 my-8 rounded-3xl overflow-hidden">
             <img
-              src="/herosec.png"
+              src="/sec2.png"
               alt="CareCraftz Natural Products"
               className="w-full object-cover block"
               style={{ height: '70vh' }}
