@@ -8,17 +8,25 @@ import {
   Settings,
   LogOut,
   Store,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Package,
+  Star,
+  FileText,
+  Globe
 } from 'lucide-react'
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-// Match reference design menu structure
+// All admin pages - styled to match reference design
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: ArrowRightLeft, label: 'Transactions', path: '/orders' },
+  { icon: Package, label: 'Products', path: '/products' },
+  { icon: Star, label: 'Reviews', path: '/reviews' },
+  { icon: FileText, label: 'Content', path: '/content' },
+  { icon: Globe, label: 'Social', path: '/social' },
   { icon: Users, label: 'Customers', path: '/staff' },
   { icon: BarChart3, label: 'Reports', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },
