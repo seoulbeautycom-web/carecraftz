@@ -13,7 +13,8 @@ import {
   Trash2,
   Settings,
   LogOut,
-  Eye
+  Eye,
+  EyeOff
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
@@ -72,6 +73,8 @@ export default function Staff() {
   // Add Staff form states
   const [newFullName, setNewFullName] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [newRole, setNewRole] = useState('staff')
   const [newIsActive, setNewIsActive] = useState(true)
   const [addError, setAddError] = useState('')
@@ -197,6 +200,8 @@ export default function Staff() {
   const resetAddForm = () => {
     setNewFullName('')
     setNewEmail('')
+    setNewPassword('')
+    setShowPassword(false)
     setNewRole('staff')
     setNewIsActive(true)
     setAddError('')
@@ -207,6 +212,8 @@ export default function Staff() {
     if (!newEmail.trim()) { setAddError('Email is required'); return }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(newEmail.trim())) { setAddError('Enter a valid email address'); return }
+    if (!newPassword.trim()) { setAddError('Password is required'); return }
+    if (newPassword.length < 6) { setAddError('Password must be at least 6 characters'); return }
 
     setAdding(true)
     setAddError('')
@@ -216,6 +223,7 @@ export default function Staff() {
         .insert({
           full_name: newFullName.trim(),
           email: newEmail.trim().toLowerCase(),
+          password: newPassword,
           role: newRole,
           is_active: newIsActive,
           permissions: {},
@@ -627,6 +635,26 @@ export default function Staff() {
                     placeholder="jane@carecraftz.com"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min. 6 characters"
+                      className="w-full px-4 py-2.5 pr-11 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 
                 <div>
