@@ -218,20 +218,35 @@ export default function Staff() {
     setAdding(true)
     setAddError('')
     try {
+      const insertPayload: Record<string, unknown> = {
+        full_name: newFullName.trim(),
+        email: newEmail.trim().toLowerCase(),
+        password: newPassword,
+        role: newRole,
+        is_active: newIsActive,
+        permissions: {},
+      }
+
       const { data, error } = await supabase
         .from('staff')
-        .insert({
-          full_name: newFullName.trim(),
-          email: newEmail.trim().toLowerCase(),
-          password: newPassword,
-          role: newRole,
-          is_active: newIsActive,
-          permissions: {},
-        })
+        .insert(insertPayload)
         .select()
         .single()
 
       if (error) {
+        // If password column doesn't exist yet, retry without it
+        if (error.message?.includes('password') && error.message?.includes('column')) {
+          const { data: data2, error: error2 } = await supabase
+            .from('staff')
+            .insert({ full_name: insertPayload.full_name, email: insertPayload.email, role: insertPayload.role, is_active: insertPayload.is_active, permissions: {} })
+            .select().single()
+          if (error2) { setAddError(error2.code === '23505' ? 'A staff member with this email already exists.' : error2.message); return }
+          const processed = processStaffMember(data2, staff.length)
+          setStaff(prev => [processed, ...prev])
+          setShowAddModal(false)
+          resetAddForm()
+          return
+        }
         if (error.code === '23505') {
           setAddError('A staff member with this email already exists.')
         } else {
@@ -602,7 +617,10 @@ export default function Staff() {
 
         {/* Add Staff Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowAddModal(false); resetAddForm() } }}
+          >
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Add Staff Member</h2>
@@ -728,7 +746,8 @@ export default function Staff() {
 
         {/* Edit Staff Modal */}
         {showEditModal && selectedStaff && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}>
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Edit Staff Member</h2>
@@ -801,7 +820,8 @@ export default function Staff() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedStaff && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}>
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
