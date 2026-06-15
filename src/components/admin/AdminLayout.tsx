@@ -8,11 +8,13 @@ import {
   Settings,
   LogOut,
   Store,
-  ArrowRightLeft,
+  ShoppingCart,
   Package,
   Star,
   FileText,
-  Globe
+  Globe,
+  ChevronDown,
+  Search
 } from 'lucide-react'
 
 interface AdminLayoutProps {
@@ -22,14 +24,20 @@ interface AdminLayoutProps {
 // All admin pages - styled to match reference design
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: ArrowRightLeft, label: 'Transactions', path: '/orders' },
+  { icon: ShoppingCart, label: 'Orders', path: '/orders', badge: 12 },
   { icon: Package, label: 'Products', path: '/products' },
-  { icon: Star, label: 'Reviews', path: '/reviews' },
+  { icon: Star, label: 'Reviews', path: '/reviews', badge: 3 },
   { icon: FileText, label: 'Content', path: '/content' },
   { icon: Globe, label: 'Social', path: '/social' },
-  { icon: Users, label: 'Customers', path: '/staff' },
-  { icon: BarChart3, label: 'Reports', path: '/analytics' },
+  { icon: Users, label: 'Staff', path: '/staff' },
+  { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },
+]
+
+const salesChannels = [
+  { name: 'Online Store', dot: 'bg-emerald-500' },
+  { name: 'Instagram Shop', dot: 'bg-orange-500' },
+  { name: 'Google Shopping', dot: 'bg-blue-500' },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -58,6 +66,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login')
+    // Prevent unused var warning
+    void LogOut
+    void userEmail
   }
 
   if (loading) {
@@ -72,63 +83,108 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1115] flex">
-      {/* Sidebar - Reference Design */}
-      <aside className="w-64 bg-[#1a1d2d] flex flex-col fixed h-screen">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar - Dark theme matching reference */}
+      <aside className="w-64 bg-slate-900 flex flex-col fixed h-screen">
         {/* Logo Area */}
-        <div className="p-6 border-b border-[#2a2d3d]">
+        <div className="p-5">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
-              <Store className="w-6 h-6 text-white" />
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Store className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-white text-lg">CareCraftz</span>
+            <div>
+              <span className="font-bold text-white text-base">CareCraftz</span>
+              <span className="block text-xs text-slate-500 -mt-0.5">by carecraftz.com</span>
+            </div>
           </Link>
         </div>
 
+        {/* Search */}
+        <div className="px-4 mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input 
+              type="text" 
+              placeholder="Search..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+            />
+          </div>
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 py-6 px-4">
-          <ul className="space-y-1">
+        <nav className="flex-1 py-2 px-3">
+          <ul className="space-y-0.5">
             {menuItems.map((item) => {
               const Icon = item.icon
-              const isActive = location.pathname === item.path || 
-                (item.path === '/orders' && location.pathname === '/dashboard' && item.label === 'Transactions')
+              const isActive = location.pathname === item.path
 
               return (
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
                       isActive
-                        ? 'bg-emerald-500 text-white font-medium'
-                        : 'text-slate-400 hover:text-white hover:bg-[#232638]'
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-sm">{item.label}</span>
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-4 h-4" />
+                      <span className="text-sm">{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 </li>
               )
             })}
           </ul>
+
+          {/* Sales Channels */}
+          <div className="mt-6 px-3">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Sales Channels</p>
+            <ul className="space-y-1">
+              {salesChannels.map((channel) => (
+                <li key={channel.name} className="flex items-center gap-2 text-sm text-slate-400 px-2 py-1">
+                  <span className={`w-2 h-2 rounded-full ${channel.dot}`}></span>
+                  {channel.name}
+                </li>
+              ))}
+            </ul>
+          </div>
         </nav>
 
+        {/* Help Center */}
+        <div className="px-4 py-2">
+          <button className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors px-2 py-2">
+            <span className="text-lg">?</span>
+            Help Center
+          </button>
+        </div>
+
         {/* User Section */}
-        <div className="p-4 border-t border-[#2a2d3d]">
+        <div className="p-4 border-t border-slate-800">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 text-slate-400 hover:text-white hover:bg-[#232638] rounded-xl transition-all"
+            className="flex items-center gap-3 w-full"
           >
-            <LogOut className="w-5 h-5" />
-            <div className="text-left">
-              <p className="text-sm font-medium text-white">{userName}</p>
-              <p className="text-xs text-slate-500">{userEmail}</p>
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {userName.charAt(0)}
             </div>
+            <div className="text-left flex-1">
+              <p className="text-sm font-medium text-white">{userName}</p>
+              <p className="text-xs text-slate-500">Store Owner</p>
+            </div>
+            <ChevronDown className="w-4 h-4 text-slate-500" />
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 overflow-auto bg-[#0f1115]">
+      <main className="flex-1 ml-64 overflow-auto bg-gray-50">
         {children}
       </main>
     </div>
