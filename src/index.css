@@ -213,3 +213,31 @@ body {
 .scroll-reveal { margin: 0; }
 .scroll-reveal-text { display: flex; flex-wrap: wrap; margin: 0; }
 .word { display: inline-block; white-space: pre; }
+
+/* Marquee animation for announcement bar */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+/* New homepage pink frame */
+.pink-frame {
+  background-color: #E8A4E0;
+  padding: 12px;
+  min-height: 100vh;
+}
+
+.pink-frame-inner {
+  background-color: #fbfcf4;
+  min-height: calc(100vh - 24px);
+  border-radius: 24px;
+  overflow: hidden;
+}

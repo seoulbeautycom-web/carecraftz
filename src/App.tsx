@@ -1,15 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { SoapProvider } from './context/SoapContext'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
-import FlyingSoap from './components/FlyingSoap'
-import HeroSection from './components/HeroSection'
-import UnwrapSection from './components/UnwrapSection'
-import CraftSection from './components/CraftSection'
-import HandsSection from './components/HandsSection'
-import ShopSection from './components/ShopSection'
-import BrandStory from './components/BrandStory'
 import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
@@ -26,6 +18,7 @@ import Terms from './pages/Terms'
 import Checkout from './pages/Checkout'
 import WhatsAppButton from './components/WhatsAppButton'
 import CartDrawer from './components/CartDrawer'
+import NewHomePage from './components/NewHomePage'
 
 function App() {
   return (
@@ -34,21 +27,11 @@ function App() {
         <CartProvider>
           <Routes>
             <Route path="/" element={
-              <SoapProvider>
-                <Navbar />
-                <FlyingSoap />
-                <main>
-                  <HeroSection />
-                  <BrandStory />
-                  <UnwrapSection />
-                  <CraftSection />
-                  <HandsSection />
-                  <ShopSection />
-                </main>
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </SoapProvider>
+              <AuthProvider>
+                <CartProvider>
+                  <NewHomePage />
+                </CartProvider>
+              </AuthProvider>
             } />
             <Route path="/seoul-beauty" element={
               <>
