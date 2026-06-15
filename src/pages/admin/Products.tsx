@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import ProductModal from '../../components/admin/ProductModal'
 
 interface Order {
   id: string
@@ -32,8 +33,13 @@ interface Order {
 interface Product {
   id: string
   name: string
+  subtitle?: string | null
   description: string | null
+  how_to_use?: string | null
+  ingredients?: string | null
   price: number
+  price_pkr?: number | null
+  price_aed?: number | null
   compare_at_price: number | null
   inventory: number
   low_stock_threshold: number
@@ -69,6 +75,8 @@ export default function Products() {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [newOrdersCount, setNewOrdersCount] = useState(0)
+  const [showProductModal, setShowProductModal] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
 
   useEffect(() => {
     fetchProducts()
@@ -544,7 +552,9 @@ export default function Products() {
                       Grid
                     </button>
                   </div>
-                  <button className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
+                  <button
+                    onClick={() => { setEditingProduct(undefined); setShowProductModal(true) }}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
                     <Plus className="w-4 h-4" />
                     Add Product
                   </button>
@@ -596,7 +606,12 @@ export default function Products() {
                                 <Package className="w-5 h-5 text-gray-400" />
                               )}
                             </div>
-                            <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                            <button
+                              onClick={() => { setEditingProduct(product); setShowProductModal(true) }}
+                              className="text-sm font-medium text-gray-900 hover:text-indigo-600 text-left transition-colors"
+                            >
+                              {product.name}
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -645,6 +660,14 @@ export default function Products() {
           </div>
         </div>
       </div>
+      {showProductModal && (
+        <ProductModal
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          product={editingProduct as any}
+          onClose={() => setShowProductModal(false)}
+          onSaved={() => { fetchProducts(); setShowProductModal(false) }}
+        />
+      )}
     </AdminLayout>
   )
 }

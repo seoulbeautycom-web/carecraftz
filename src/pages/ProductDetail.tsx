@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
-import { ShoppingCart, Star, ChevronLeft, Check } from 'lucide-react'
+import { ShoppingCart, Star, ChevronLeft, Check, Quote, ArrowRight } from 'lucide-react'
 import NewHeader from '../components/NewHeader'
 
 interface Product {
@@ -28,6 +28,40 @@ interface Product {
   currency: string | null
 }
 
+interface ProductSection {
+  id: string
+  section_type: 'manifesto' | 'breakdown'
+  sort_order: number
+  manifesto_title: string | null
+  manifesto_body: string | null
+  breakdown_title: string | null
+  breakdown_body: string | null
+  breakdown_image: string | null
+  breakdown_left_image: string | null
+}
+
+interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string | null
+  featured_image: string | null
+}
+
+interface BlogAssignment {
+  blog_posts: BlogPost | BlogPost[] | null
+}
+
+interface Review {
+  id: string
+  customer_name: string
+  rating: number
+  review_text: string
+  image_url: string | null
+  created_at: string
+  is_verified_purchase: boolean
+}
+
 const TABS = ['What It Is', 'How To Use', 'Ingredients'] as const
 type Tab = typeof TABS[number]
 
@@ -41,26 +75,32 @@ export default function ProductDetail() {
   const [addedToCart, setAddedToCart] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('What It Is')
   const [purchaseType, setPurchaseType] = useState<'one-time' | 'subscribe'>('one-time')
+  const [sections, setSections] = useState<ProductSection[]>([])
+  const [blogAssignment, setBlogAssignment] = useState<BlogAssignment | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
 
   useEffect(() => {
-    async function fetchProduct() {
+    async function fetchAll() {
       if (!id) return
       try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', id)
-          .eq('is_active', true)
-          .single()
-        if (error) { console.error('Error fetching product:', error); return }
-        setProduct(data)
+        const [productRes, sectionsRes, blogRes, reviewsRes] = await Promise.all([
+          supabase.from('products').select('*').eq('id', id).eq('is_active', true).single(),
+          supabase.from('product_sections').select('*').eq('product_id', id).order('sort_order'),
+          supabase.from('product_blog_assignments').select('blog_posts(id,title,slug,excerpt,featured_image)').eq('product_id', id).maybeSingle(),
+          supabase.from('reviews').select('*').eq('product_id', id).eq('is_approved', true).order('created_at', { ascending: false })
+        ])
+        if (productRes.error) { console.error('Product error:', productRes.error); return }
+        setProduct(productRes.data)
+        setSections(sectionsRes.data || [])
+        if (blogRes.data) setBlogAssignment(blogRes.data as BlogAssignment)
+        setReviews(reviewsRes.data || [])
       } catch (error) {
         console.error('Error:', error)
       } finally {
         setLoading(false)
       }
     }
-    fetchProduct()
+    fetchAll()
   }, [id])
 
   const handleAddToCart = () => {
@@ -308,6 +348,184 @@ export default function ProductDetail() {
 
             </div>
           </div>
+
+          {/* ══════════════════════════════════════════
+              PRODUCT SECTIONS (Manifesto + Breakdown)
+          ══════════════════════════════════════════ */}
+          {sections.length > 0 && sections.map((section) => {
+            if (section.section_type === 'manifesto') {
+              return (
+                <div key={section.id} className="mx-6 my-6">
+                  <div className="bg-[#eeecfe] rounded-[2rem] px-8 py-10 text-center max-w-6xl mx-auto">
+                    <h2 className="text-2xl md:text-3xl font-bold text-[#2b2b2b] mb-3">
+                      {section.manifesto_title || 'Multipurpose Manifesto'}
+                    </h2>
+                    <p className="text-[#696a67] text-sm md:text-base max-w-xl mx-auto">
+                      {section.manifesto_body || ''}
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+
+            if (section.section_type === 'breakdown') {
+              return (
+                <div key={section.id} className="mx-6 my-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0 max-w-6xl mx-auto rounded-[2rem] overflow-hidden" style={{ minHeight: '360px' }}>
+                    {/* Left: lifestyle image */}
+                    <div className="bg-[#f0ece0] flex items-center justify-center overflow-hidden">
+                      {section.breakdown_left_image ? (
+                        <img src={section.breakdown_left_image} alt="" className="w-full h-full object-cover" style={{ minHeight: '360px' }} />
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-[#696a67] p-12">
+                          <span className="text-6xl">🌿</span>
+                          <span className="text-sm">Product image</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Right: breakdown text on lavender blob */}
+                    <div className="bg-[#fbfcf4] flex items-end justify-end p-6 relative">
+                      <div className="bg-[#eeecfe] rounded-tl-[3rem] rounded-bl-[3rem] rounded-br-[3rem] p-8 md:p-10 w-full md:w-[85%] self-end">
+                        <h3 className="text-xl md:text-2xl font-bold text-[#2b2b2b] mb-3">
+                          {section.breakdown_title || 'The Breakdown'}
+                        </h3>
+                        <p className="text-[#696a67] text-sm leading-relaxed whitespace-pre-line">
+                          {section.breakdown_body || ''}
+                        </p>
+                        {section.breakdown_image && (
+                          <img src={section.breakdown_image} alt="Detail" className="mt-4 rounded-2xl w-full object-cover max-h-40" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+            return null
+          })}
+
+          {/* Placeholder if no sections yet */}
+          {sections.length === 0 && (
+            <div className="mx-6 my-6 space-y-6 max-w-6xl mx-auto">
+              {/* Manifesto placeholder */}
+              <div className="bg-[#eeecfe] rounded-[2rem] px-8 py-10 text-center opacity-40 border-2 border-dashed border-[#bbb8f0]">
+                <p className="text-sm text-[#696a67] font-medium">✏️ Manifesto section — add in admin</p>
+              </div>
+              {/* Breakdown placeholder */}
+              <div className="grid grid-cols-2 gap-0 rounded-[2rem] overflow-hidden border-2 border-dashed border-[#d4d4d4] opacity-40" style={{ minHeight: '300px' }}>
+                <div className="bg-[#f0ece0] flex items-center justify-center">
+                  <p className="text-sm text-[#696a67]">📸 Left image</p>
+                </div>
+                <div className="bg-[#fbfcf4] flex items-end p-6">
+                  <div className="bg-[#eeecfe] rounded-tl-[3rem] rounded-bl-[3rem] rounded-br-[3rem] p-8 w-full">
+                    <p className="text-sm text-[#696a67]">📝 Breakdown text — add in admin</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════
+              BLOG SECTION — assigned blog post
+          ══════════════════════════════════════════ */}
+          {(() => {
+            const bp = blogAssignment?.blog_posts
+            const post: BlogPost | null = Array.isArray(bp) ? (bp[0] ?? null) : (bp ?? null)
+            if (!post) return (
+              <div className="mx-6 my-6 max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden border-2 border-dashed border-[#d4d4d4] opacity-40" style={{ minHeight: '320px' }}>
+                  <div className="bg-[#eeecfe] flex items-center justify-center p-10 rounded-bl-[2rem]">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-[#2b2b2b] mb-2">Blog title here</p>
+                      <p className="text-sm text-[#696a67] mb-4">Assign a blog post in admin</p>
+                      <span className="text-xs uppercase tracking-widest font-bold text-[#2b2b2b]">READ THE BLOG →</span>
+                    </div>
+                  </div>
+                  <div className="bg-[#f0ece0] flex items-center justify-center">
+                    <span className="text-6xl">📖</span>
+                  </div>
+                </div>
+              </div>
+            )
+            return (
+              <div className="mx-6 my-6 max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden" style={{ minHeight: '320px' }}>
+                  {/* Left lavender blob */}
+                  <div className="bg-[#eeecfe] flex items-center p-10 md:p-12">
+                    <div>
+                      <h3 className="text-2xl md:text-3xl font-bold text-[#2b2b2b] mb-3 leading-tight">{post.title}</h3>
+                      {post.excerpt && <p className="text-[#696a67] text-sm mb-6 leading-relaxed">{post.excerpt}</p>}
+                      <button
+                        onClick={() => navigate(`/blog/${post.slug}`)}
+                        className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-[#2b2b2b] hover:gap-4 transition-all"
+                      >
+                        READ THE BLOG <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {/* Right: featured image */}
+                  <div className="bg-[#f0ece0] overflow-hidden flex items-center justify-center">
+                    {post.featured_image ? (
+                      <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover" style={{ minHeight: '320px' }} />
+                    ) : (
+                      <span className="text-6xl">📖</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* ══════════════════════════════════════════
+              REVIEWS SECTION
+          ══════════════════════════════════════════ */}
+          <div className="mx-6 my-8 max-w-6xl mx-auto pb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-[#2b2b2b]">Customer Reviews</h2>
+              {reviews.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-[#E8B800] text-[#E8B800]" />)}
+                  </div>
+                  <span className="text-sm text-[#696a67]">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
+
+            {reviews.length === 0 ? (
+              <div className="bg-[#f5f0e8] rounded-[2rem] p-12 text-center border-2 border-dashed border-[#d4d4d4]">
+                <p className="text-4xl mb-3">💬</p>
+                <p className="text-[#696a67] font-medium">No reviews yet — they'll appear here once approved in admin</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reviews.map((review) => (
+                  <div key={review.id} className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-100 flex flex-col gap-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-[#2b2b2b] text-sm">{review.customer_name}</p>
+                        {review.is_verified_purchase && (
+                          <span className="text-[10px] text-[#1db954] font-medium">✓ Verified Purchase</span>
+                        )}
+                      </div>
+                      <Quote className="w-5 h-5 text-[#eeecfe] flex-shrink-0" />
+                    </div>
+                    <div className="flex gap-0.5">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? 'fill-[#E8B800] text-[#E8B800]' : 'text-gray-200'}`} />
+                      ))}
+                    </div>
+                    <p className="text-[#696a67] text-sm leading-relaxed flex-1">{review.review_text}</p>
+                    {review.image_url && (
+                      <img src={review.image_url} alt="Review" className="rounded-xl w-full object-cover max-h-40" />
+                    )}
+                    <p className="text-[10px] text-[#696a67]">{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* Floating Cart Indicator */}
