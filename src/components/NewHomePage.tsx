@@ -259,6 +259,67 @@ export default function NewHomePage() {
             </div>
           </section>
 
+          {/* ── SECTION 6: MORINGA SOAP SPOTLIGHT ── */}
+          <section className="mx-4 my-8 rounded-3xl overflow-hidden bg-[#1a2e1a]">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[480px]">
+
+              {/* Left: Text Content */}
+              <div className="flex flex-col justify-center px-10 py-12 md:px-14">
+                {/* Tag */}
+                <span className="inline-block bg-[#c8f135] text-[#1a2e1a] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6 self-start">
+                  Featured Product
+                </span>
+
+                <h2 className="text-4xl font-bold text-white leading-tight mb-3">
+                  Moringa<br />
+                  <span className="text-[#c8f135]">Soap</span>
+                </h2>
+                <p className="text-[#a8c4a8] text-sm font-medium mb-6 tracking-wide uppercase">
+                  Nature's Touch, Made With Care
+                </p>
+
+                {/* Qualities */}
+                <ul className="space-y-3 mb-8">
+                  {[
+                    { icon: '🌿', label: 'Natural Ingredients', desc: 'Cold-pressed Moringa oil rich in antioxidants' },
+                    { icon: '✋', label: '100% Handmade', desc: 'Crafted in small batches for premium quality' },
+                    { icon: '💧', label: 'Deep Nourishing', desc: 'Restores moisture barrier, soothes dry skin' },
+                    { icon: '🌍', label: 'Eco Friendly', desc: 'Minimal packaging, zero harsh chemicals' },
+                  ].map((q) => (
+                    <li key={q.label} className="flex items-start gap-3">
+                      <span className="text-lg mt-0.5">{q.icon}</span>
+                      <div>
+                        <p className="text-white text-sm font-semibold">{q.label}</p>
+                        <p className="text-[#7a9e7a] text-xs">{q.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => navigate('/shop')}
+                  className="self-start bg-[#c8f135] hover:bg-[#b0d820] text-[#1a2e1a] text-sm font-bold uppercase tracking-wider px-7 py-3 rounded-full transition-colors"
+                >
+                  Shop Moringa Soap
+                </button>
+              </div>
+
+              {/* Right: Video */}
+              <div className="relative flex items-center justify-center bg-[#121f12] md:rounded-r-3xl overflow-hidden">
+                <video
+                  src="/moringa.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  style={{ minHeight: '380px', maxHeight: '520px' }}
+                />
+              </div>
+
+            </div>
+          </section>
+
           {/* ── SECTION 3: SHOP BESTSELLERS ── */}
           <section className="px-4 py-10 md:px-6">
             <h2 className="text-center text-2xl font-semibold text-[#2b2b2b] mb-8">
