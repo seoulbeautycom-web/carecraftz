@@ -415,6 +415,58 @@ export default function NewHomePage() {
             )}
           </section>
 
+          {/* ── SECTION 7: WE ARE ── */}
+          <section className="mx-4 my-8">
+            <div
+              className="relative rounded-[80px] overflow-hidden py-20 px-8"
+              style={{ backgroundColor: '#FFD6A5', fontFamily: "'Poppins', sans-serif" }}
+            >
+              {/* Decorative Clouds */}
+              <div className="absolute top-8 left-[10%] text-[#2b2b2b]/10 text-4xl">☁️</div>
+              <div className="absolute top-12 right-[15%] text-[#2b2b2b]/10 text-3xl">☁️</div>
+              <div className="absolute bottom-16 left-[20%] text-[#2b2b2b]/10 text-2xl">☁️</div>
+              <div className="absolute bottom-20 right-[25%] text-[#2b2b2b]/10 text-3xl">☁️</div>
+              <div className="absolute top-1/2 left-[5%] text-[#2b2b2b]/10 text-2xl">☁️</div>
+
+              {/* Decorative Illustrations */}
+              {/* Flying Bird Left */}
+              <div className="absolute left-8 md:left-16 top-1/2 -translate-y-1/2 w-24 h-24 md:w-36 md:h-36 opacity-90">
+                <svg viewBox="0 0 100 60" fill="none" className="w-full h-full">
+                  <path d="M70 20C65 15 55 18 50 25C45 18 35 15 30 20C25 25 30 35 40 38C35 40 20 42 10 38C15 45 30 48 45 45C50 55 60 52 65 45C70 50 80 48 85 42C90 38 88 30 80 28C85 22 78 18 70 20Z" fill="#2b2b2b"/>
+                  <circle cx="55" cy="26" r="2" fill="#FFD6A5"/>
+                  <path d="M75 22L85 18M75 24L85 26" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+
+              {/* Running Cat Right */}
+              <div className="absolute right-8 md:right-16 top-1/2 -translate-y-1/2 w-28 h-28 md:w-40 md:h-40 opacity-90">
+                <svg viewBox="0 0 100 70" fill="none" className="w-full h-full">
+                  <ellipse cx="45" cy="40" rx="25" ry="18" fill="#2b2b2b"/>
+                  <circle cx="70" cy="32" r="12" fill="#2b2b2b"/>
+                  <circle cx="72" cy="30" r="2" fill="#FFD6A5"/>
+                  <path d="M60 25L55 15M65 22L62 12M75 24L78 14M82 28L90 20" stroke="#2b2b2b" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M30 50L20 58M35 52L28 62M55 52L62 60M60 50L68 58" stroke="#2b2b2b" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M78 38C82 40 85 38 88 35" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M25 35C20 32 15 35 12 40" stroke="#2b2b2b" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+
+              {/* Center Content */}
+              <div className="relative z-10 text-center max-w-md mx-auto">
+                <h2 className="text-3xl md:text-4xl font-bold text-[#2b2b2b] mb-4">We Are</h2>
+                <p className="text-[#5a4a3a] text-base md:text-lg leading-relaxed mb-8">
+                  Vegan personal care for every body. Always ethical, low-waste, handmade & cruelty-free.
+                </p>
+                <button
+                  onClick={() => navigate('/about')}
+                  className="bg-[#FF9A7A] hover:bg-[#ff8560] text-[#2b2b2b] text-xs font-bold uppercase tracking-widest px-8 py-3.5 rounded-full transition-colors shadow-sm"
+                >
+                  About Us
+                </button>
+              </div>
+            </div>
+          </section>
+
           {/* Footer */}
           <footer className="bg-[#eeecfe] px-6 py-10 mt-8">
             <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
