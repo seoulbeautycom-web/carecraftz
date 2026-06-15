@@ -498,15 +498,15 @@ export default function NewHomePage() {
 
           {/* ── SECTION 8: SHOP OUR BEST SELLERS (SPLIT LAYOUT) ── */}
           <section className="mx-4 my-8 rounded-3xl overflow-hidden bg-[#f8f6f1]">
-            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[320px]">
 
               {/* Left: Lifestyle Image */}
-              <div className="relative overflow-hidden">
+              <div className="relative overflow-hidden h-full">
                 <img
                   src="/bestseller-lifestyle.png"
                   alt="CareCraftz Bestsellers"
                   className="w-full h-full object-cover"
-                  style={{ minHeight: '400px' }}
+                  style={{ maxHeight: '380px' }}
                 />
                 {/* Subtle overlay gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
