@@ -62,7 +62,6 @@ function App() {
             } />
             <Route path="/shop" element={
               <>
-                <Navbar />
                 <Shop />
                 <Footer />
                 <WhatsAppButton />
