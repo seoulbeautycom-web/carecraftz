@@ -26,6 +26,16 @@ interface Product {
   shadowColor: string
 }
 
+interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  featured_image: string | null
+  author_name: string
+  published_at: string
+}
+
 const colorSchemes = [
   { bg: '#8DEBD1', shadow: '#1db954' },
   { bg: '#F4956A', shadow: '#e05c1a' },
@@ -41,6 +51,7 @@ export default function NewHomePage() {
   const [products, setProducts] = useState<Product[]>([])
   const [skinTypeProducts, setSkinTypeProducts] = useState<Product[]>([])
   const [featuredBestseller, setFeaturedBestseller] = useState<Product | null>(null)
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [activeSkinType, setActiveSkinType] = useState('Oily')
   const [loading, setLoading] = useState(true)
 
@@ -133,7 +144,20 @@ export default function NewHomePage() {
 
   useEffect(() => {
     fetchFeaturedBestseller()
+    fetchBlogPosts()
   }, [])
+
+  const fetchBlogPosts = async () => {
+    const { data } = await supabase
+      .from('blog_posts')
+      .select('id, title, slug, excerpt, featured_image, author_name, published_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(4)
+    if (data) {
+      setBlogPosts(data)
+    }
+  }
 
   const formatPrice = (product: Product) => {
     if (product.price_pkr) return `From ₨${product.price_pkr.toLocaleString()}`
@@ -498,7 +522,7 @@ export default function NewHomePage() {
 
           {/* ── SECTION 8: SHOP OUR BEST SELLERS (SPLIT LAYOUT) ── */}
           <section className="mx-4 my-8 rounded-3xl overflow-hidden bg-[#f8f6f1]">
-            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[420px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[520px]">
 
               {/* Left: Lifestyle Image */}
               <div className="relative overflow-hidden h-full">
@@ -572,6 +596,76 @@ export default function NewHomePage() {
               </div>
 
             </div>
+          </section>
+
+          {/* ── SECTION 9: READ THE LATEST (BLOG) ── */}
+          <section className="px-4 py-12 md:px-6">
+            <h2 className="text-center text-2xl md:text-3xl font-semibold text-[#2b2b2b] mb-10">Read the Latest</h2>
+
+            {blogPosts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {blogPosts.map((post, index) => (
+                  <article
+                    key={post.id}
+                    className="group cursor-pointer"
+                    onClick={() => navigate(`/blog/${post.slug}`)}
+                  >
+                    {/* Image Container - varying styles like reference */}
+                    <div className={`
+                      relative overflow-hidden mb-4
+                      ${index === 0 ? 'rounded-lg' : index === 1 || index === 3 ? 'rounded-full aspect-square' : 'rounded-lg'}
+                    `}>
+                      {post.featured_image ? (
+                        <img
+                          src={post.featured_image}
+                          alt={post.title}
+                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-[#f0ece0] flex items-center justify-center">
+                          <span className="text-4xl">🌿</span>
+                        </div>
+                      )}
+                      {/* Blue shadow accent like reference */}
+                      <div className={`
+                        absolute -bottom-2 -right-2 bg-[#7B68EE] opacity-20
+                        ${index === 1 || index === 3 ? 'w-full h-full rounded-full' : 'w-full h-full rounded-lg'}
+                      `} style={{ zIndex: -1 }} />
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="font-semibold text-[#2b2b2b] text-sm mb-2 leading-snug group-hover:text-[#7B68EE] transition-colors">
+                      {post.title}
+                    </h3>
+                    <p className="text-[#696a67] text-xs leading-relaxed line-clamp-3 mb-3">
+                      {post.excerpt || 'Discover the benefits of natural skincare and how it can transform your daily routine.'}
+                    </p>
+                    <button className="text-[#2b2b2b] text-xs font-semibold uppercase tracking-wider hover:text-[#7B68EE] transition-colors">
+                      Read More
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              /* Placeholder cards when no blog posts */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="cursor-pointer group">
+                    <div className={`
+                      relative overflow-hidden mb-4 bg-[#f0ece0]
+                      ${i === 2 || i === 4 ? 'rounded-full aspect-square' : 'rounded-lg'}
+                    `}>
+                      <div className="w-full h-48 flex items-center justify-center">
+                        <div className="w-20 h-20 bg-white/50 rounded-2xl" />
+                      </div>
+                    </div>
+                    <div className="h-4 bg-[#f0ece0] rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-[#f0ece0] rounded w-full mb-1" />
+                    <div className="h-3 bg-[#f0ece0] rounded w-2/3" />
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Footer */}
