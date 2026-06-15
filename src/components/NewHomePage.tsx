@@ -498,7 +498,7 @@ export default function NewHomePage() {
 
           {/* ── SECTION 8: SHOP OUR BEST SELLERS (SPLIT LAYOUT) ── */}
           <section className="mx-4 my-8 rounded-3xl overflow-hidden bg-[#f8f6f1]">
-            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[320px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[420px]">
 
               {/* Left: Lifestyle Image */}
               <div className="relative overflow-hidden h-full">
