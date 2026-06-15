@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { 
   Star, 
-  Search, 
   ChevronDown, 
   Bell,
-  Plus,
   ThumbsUp,
   MessageSquare,
   MoreHorizontal,
@@ -76,12 +74,13 @@ export default function Reviews() {
       label: 'Avg. Rating', 
       value: `${avgRating}/5`, 
       color: 'text-amber-600',
-      subtext: '',
-      stars: true
+      filter: 'all',
+      stars: true,
+      icon: Star
     },
-    { label: 'Total Reviews', value: totalReviews, color: 'text-indigo-600' },
-    { label: 'Pending', value: pendingReviews, color: 'text-amber-600' },
-    { label: 'Flagged', value: flaggedReviews, color: 'text-red-600' }
+    { label: 'Total Reviews', value: totalReviews, color: 'text-indigo-600', filter: 'all', icon: MessageSquare },
+    { label: 'Pending', value: pendingReviews, color: 'text-amber-600', filter: 'pending', icon: MoreHorizontal },
+    { label: 'Flagged', value: flaggedReviews, color: 'text-red-600', filter: 'flagged', icon: XCircle }
   ]
 
   const getStatusBadge = (status: string) => {
@@ -180,23 +179,13 @@ export default function Reviews() {
               <p className="text-sm text-gray-500">Moderate and respond to customer reviews.</p>
             </div>
             
-            {/* Right - Search & Actions */}
+            {/* Right - Actions */}
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search anything..."
-                  className="pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
-                />
-              </div>
               <button className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                New
+                {(pendingReviews > 0 || flaggedReviews > 0) && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
               </button>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
@@ -209,31 +198,53 @@ export default function Reviews() {
         </div>
 
         <div className="p-8">
-          {/* Stats Cards */}
+          {/* Clickable Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                {stat.stars ? (
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-3xl font-bold text-amber-600">{avgRating}</span>
-                      <span className="text-lg text-gray-400">/5</span>
+            {stats.map((stat, index) => {
+              const Icon = stat.icon
+              return (
+                <button
+                  key={index}
+                  onClick={() => stat.filter && setStatusFilter(stat.filter)}
+                  className={`bg-white rounded-2xl p-6 shadow-sm border text-left transition-all hover:shadow-md ${
+                    statusFilter === stat.filter ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-gray-100'
+                  }`}
+                >
+                  {stat.stars ? (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xl font-bold text-amber-600">{avgRating}</span>
+                          <span className="text-lg text-gray-400">/5</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 mt-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`w-4 h-4 ${star <= Math.round(avgRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-amber-600" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-0.5 mt-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          className={`w-4 h-4 ${star <= Math.round(avgRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} 
-                        />
-                      ))}
+                  ) : (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                        <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+                      </div>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '100')}`}>
+                        <Icon className={`w-5 h-5 ${stat.color}`} />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                )}
-                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {/* Reviews Section */}

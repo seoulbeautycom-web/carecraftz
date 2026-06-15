@@ -7,7 +7,9 @@ import {
   Bell,
   Grid3X3,
   Table as TableIcon,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
@@ -45,6 +47,7 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
   const [userName, setUserName] = useState('Admin')
+  const [inventoryFilter, setInventoryFilter] = useState<'all' | 'active' | 'low' | 'out'>('all')
 
   useEffect(() => {
     fetchProducts()
@@ -98,10 +101,10 @@ export default function Products() {
   const outOfStockProducts = products.filter(p => p.inventory === 0).length
 
   const stats = [
-    { label: 'Total Products', value: totalProducts, color: 'text-indigo-600' },
-    { label: 'Active', value: activeProducts, color: 'text-emerald-600' },
-    { label: 'Low Stock', value: lowStockProducts, color: 'text-amber-600' },
-    { label: 'Out of Stock', value: outOfStockProducts, color: 'text-red-600' }
+    { label: 'Total Products', value: totalProducts, color: 'text-indigo-600', filter: 'all' as const, icon: Package },
+    { label: 'Active', value: activeProducts, color: 'text-emerald-600', filter: 'active' as const, icon: CheckCircle2 },
+    { label: 'Low Stock', value: lowStockProducts, color: 'text-amber-600', filter: 'low' as const, icon: AlertTriangle },
+    { label: 'Out of Stock', value: outOfStockProducts, color: 'text-red-600', filter: 'out' as const, icon: XCircle }
   ]
 
   const formatPrice = (price: number) => {
@@ -291,7 +294,22 @@ export default function Products() {
     }
   ]
 
-  const displayProducts = products.length > 0 ? filteredProducts : sampleProducts
+  // Apply inventory filter
+  const inventoryFilteredProducts = filteredProducts.filter(product => {
+    if (inventoryFilter === 'all') return true
+    if (inventoryFilter === 'active') return product.is_active
+    if (inventoryFilter === 'low') return product.inventory <= product.low_stock_threshold && product.inventory > 0
+    if (inventoryFilter === 'out') return product.inventory === 0
+    return true
+  })
+
+  const displayProducts = products.length > 0 ? inventoryFilteredProducts : sampleProducts.filter(product => {
+    if (inventoryFilter === 'all') return true
+    if (inventoryFilter === 'active') return product.is_active
+    if (inventoryFilter === 'low') return product.inventory <= product.low_stock_threshold && product.inventory > 0
+    if (inventoryFilter === 'out') return product.inventory === 0
+    return true
+  })
 
   return (
     <AdminLayout>
@@ -305,23 +323,11 @@ export default function Products() {
               <p className="text-sm text-gray-500">Manage your product catalog and inventory.</p>
             </div>
             
-            {/* Right - Search & Actions */}
+            {/* Right - Actions */}
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search anything..."
-                  className="pl-10 pr-4 py-2 bg-gray-100 border-0 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-64"
-                />
-              </div>
               <button className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                New
               </button>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
@@ -334,14 +340,30 @@ export default function Products() {
         </div>
 
         <div className="p-8">
-          {/* Stats Cards */}
+          {/* Clickable Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
+            {stats.map((stat, index) => {
+              const Icon = stat.icon
+              return (
+                <button
+                  key={index}
+                  onClick={() => setInventoryFilter(stat.filter)}
+                  className={`bg-white rounded-2xl p-6 shadow-sm border text-left transition-all hover:shadow-md ${
+                    inventoryFilter === stat.filter ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                      <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+                    </div>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '100')}`}>
+                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
 
           {/* Products Table Section */}
