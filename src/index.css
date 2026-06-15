@@ -241,3 +241,22 @@ body {
   border-radius: 24px;
   overflow: hidden;
 }
+
+/* Custom Scrollbar - Hide track, styled thumb */
+.scrollbar-hide {
+  scrollbar-width: thin;
+  scrollbar-color: #E8A4E0 transparent;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  background-color: #E8A4E0;
+  border-radius: 20px;
+}

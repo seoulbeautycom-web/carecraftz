@@ -28,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div 
-      className="relative rounded-3xl p-6 flex flex-col items-center transition-transform hover:scale-[1.02]"
+      className="relative rounded-3xl p-6 flex flex-col items-center transition-transform hover:scale-[1.02] font-['Poppins']"
       style={{ 
         backgroundColor: product.bgColor,
         boxShadow: `6px 6px 0px ${product.shadowColor}`

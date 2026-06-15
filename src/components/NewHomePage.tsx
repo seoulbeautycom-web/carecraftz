@@ -58,15 +58,14 @@ export default function NewHomePage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#E8A4E0] p-3 overflow-hidden">
+    <div className="h-screen w-screen bg-[#E8A4E0] p-3 overflow-hidden font-['Poppins']">
       {/* Inner Container - Fixed height, internal scroll */}
       <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden">
         {/* Fixed Header */}
         <NewHeader />
-        <AnnouncementBar />
 
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable Content Area with Custom Scrollbar */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
           {/* Hero Section */}
           <section className="w-full">
             <img 
@@ -75,6 +74,9 @@ export default function NewHomePage() {
               className="w-full h-auto object-cover"
             />
           </section>
+
+          {/* Announcement Bar - Below Hero */}
+          <AnnouncementBar />
 
           {/* Main Content */}
           <main className="px-4 py-8 md:px-8 lg:px-12">

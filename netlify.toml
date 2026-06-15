@@ -1,0 +1,12 @@
+# THIS IS ONLY TO SATISFY THE DEPLOYMENT TOOL
+# WE ACTUALLY USE VERCEL - NOT NETLIFY
+# See DEPLOY_SEPARATION.md for actual deployment info
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

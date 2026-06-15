@@ -18,10 +18,22 @@ export default function NewHeader() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-4">
+    <header className="sticky top-0 z-50 px-4 pt-4 font-['Poppins']">
       <div className="flex items-center justify-between gap-4">
-        {/* Main Nav - Lavender Pill */}
-        <nav className="flex-1 bg-[#eeecfe] rounded-full px-6 py-3 flex items-center justify-between">
+        {/* Logo - Left */}
+        <button 
+          onClick={() => navigate('/')}
+          className="flex-shrink-0"
+        >
+          <img 
+            src="/cclogov3.png" 
+            alt="CareCraftz"
+            className="h-10 w-auto"
+          />
+        </button>
+
+        {/* Main Nav - Lavender Pill - Centered */}
+        <nav className="flex-1 bg-[#eeecfe] rounded-full px-6 py-3 flex items-center justify-center mx-4">
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
