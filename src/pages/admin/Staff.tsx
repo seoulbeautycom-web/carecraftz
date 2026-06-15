@@ -4,7 +4,6 @@ import {
   ChevronDown, 
   Bell,
   Plus,
-  Mail,
   X,
   CheckCircle2,
   RefreshCw,
@@ -47,15 +46,6 @@ interface TeamMember {
   last_active: string
 }
 
-interface PendingInvite {
-  id: string
-  email: string
-  role: string
-  invited_by: string
-  created_at: string
-  token: string
-}
-
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Admin', color: 'bg-blue-100 text-blue-700', permissions: 'Full access' },
   { value: 'editor', label: 'Editor', color: 'bg-purple-100 text-purple-700', permissions: 'Products, Content' },
@@ -69,21 +59,23 @@ const AVATAR_COLORS = ['bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-emer
 export default function Staff() {
   const navigate = useNavigate()
   const [staff, setStaff] = useState<TeamMember[]>([])
-  const [invites, setInvites] = useState<PendingInvite[]>([])
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('Admin')
   const [activeFilter, setActiveFilter] = useState<'all' | 'online' | 'offline'>('all')
   
   // Modal states
-  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedStaff, setSelectedStaff] = useState<TeamMember | null>(null)
   
-  // Form states
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('staff')
-  const [sending, setSending] = useState(false)
+  // Add Staff form states
+  const [newFullName, setNewFullName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newRole, setNewRole] = useState('staff')
+  const [newIsActive, setNewIsActive] = useState(true)
+  const [addError, setAddError] = useState('')
+  const [adding, setAdding] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
   // Notification and profile states
@@ -157,12 +149,6 @@ export default function Staff() {
         setStaff(processedStaff)
       }
 
-      // Fetch pending invites (from a hypothetical invites table)
-      // For now, we'll use localStorage to simulate invites
-      const savedInvites = localStorage.getItem('staff_invites')
-      if (savedInvites) {
-        setInvites(JSON.parse(savedInvites))
-      }
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -208,63 +194,52 @@ export default function Staff() {
     }
   }
 
-  const handleSendInvite = async () => {
-    if (!inviteEmail) return
-    
-    setSending(true)
+  const resetAddForm = () => {
+    setNewFullName('')
+    setNewEmail('')
+    setNewRole('staff')
+    setNewIsActive(true)
+    setAddError('')
+  }
+
+  const handleAddStaff = async () => {
+    if (!newFullName.trim()) { setAddError('Full name is required'); return }
+    if (!newEmail.trim()) { setAddError('Email is required'); return }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(newEmail.trim())) { setAddError('Enter a valid email address'); return }
+
+    setAdding(true)
+    setAddError('')
     try {
-      // Create a new invite
-      const newInvite: PendingInvite = {
-        id: crypto.randomUUID(),
-        email: inviteEmail,
-        role: inviteRole,
-        invited_by: userName,
-        created_at: new Date().toISOString(),
-        token: crypto.randomUUID()
+      const { data, error } = await supabase
+        .from('staff')
+        .insert({
+          full_name: newFullName.trim(),
+          email: newEmail.trim().toLowerCase(),
+          role: newRole,
+          is_active: newIsActive,
+          permissions: {},
+        })
+        .select()
+        .single()
+
+      if (error) {
+        if (error.code === '23505') {
+          setAddError('A staff member with this email already exists.')
+        } else {
+          setAddError(error.message)
+        }
+        return
       }
-      
-      const updatedInvites = [...invites, newInvite]
-      setInvites(updatedInvites)
-      localStorage.setItem('staff_invites', JSON.stringify(updatedInvites))
-      
-      // Close modal and reset
-      setShowInviteModal(false)
-      setInviteEmail('')
-      setInviteRole('staff')
-      
-      // Show success notification
-      alert(`Invite sent to ${inviteEmail}`)
-    } catch (error) {
-      console.error('Error sending invite:', error)
-      alert('Failed to send invite. Please try again.')
-    } finally {
-      setSending(false)
-    }
-  }
 
-  const handleResendInvite = async (invite: PendingInvite) => {
-    setActionLoading(true)
-    try {
-      // Simulate resending
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      alert(`Invite resent to ${invite.email}`)
-    } catch (error) {
-      console.error('Error resending invite:', error)
+      const processed = processStaffMember(data, staff.length)
+      setStaff(prev => [processed, ...prev])
+      setShowAddModal(false)
+      resetAddForm()
+    } catch (err) {
+      setAddError('Unexpected error. Please try again.')
     } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleRevokeInvite = async (inviteId: string) => {
-    setActionLoading(true)
-    try {
-      const updatedInvites = invites.filter(i => i.id !== inviteId)
-      setInvites(updatedInvites)
-      localStorage.setItem('staff_invites', JSON.stringify(updatedInvites))
-    } catch (error) {
-      console.error('Error revoking invite:', error)
-    } finally {
-      setActionLoading(false)
+      setAdding(false)
     }
   }
 
@@ -334,7 +309,6 @@ export default function Staff() {
   // Calculate stats
   const totalStaff = staff.length
   const onlineStaff = staff.filter(s => s.status === 'online').length
-  const pendingInvitesCount = invites.length
 
   const stats = [
     { 
@@ -350,13 +324,6 @@ export default function Staff() {
       color: 'text-emerald-600',
       filter: 'online' as const,
       icon: CheckCircle2
-    },
-    { 
-      label: 'Pending Invites', 
-      value: pendingInvitesCount, 
-      color: 'text-amber-600',
-      filter: null,
-      icon: Mail
     }
   ]
 
@@ -495,7 +462,7 @@ export default function Staff() {
 
         <div className="p-8">
           {/* Clickable Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {stats.map((stat, index) => (
               <button
                 key={index}
@@ -535,11 +502,11 @@ export default function Staff() {
                 )}
               </div>
               <button 
-                onClick={() => setShowInviteModal(true)}
+                onClick={() => { resetAddForm(); setShowAddModal(true) }}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Invite Staff
+                Add Staff
               </button>
             </div>
             <div className="overflow-x-auto">
@@ -623,57 +590,16 @@ export default function Staff() {
             </div>
           </div>
 
-          {/* Pending Invites Section */}
-          {invites.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">Pending Invites</h3>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {invites.map((invite) => (
-                  <div key={invite.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                        <Mail className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{invite.email}</p>
-                        <p className="text-xs text-gray-500">
-                          Invited as {invite.role.charAt(0).toUpperCase() + invite.role.slice(1)} · {new Date(invite.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleResendInvite(invite)}
-                        disabled={actionLoading}
-                        className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Resend'}
-                      </button>
-                      <button 
-                        onClick={() => handleRevokeInvite(invite.id)}
-                        disabled={actionLoading}
-                        className="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        Revoke
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Invite Staff Modal */}
-        {showInviteModal && (
+        {/* Add Staff Modal */}
+        {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Invite Staff Member</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Add Staff Member</h2>
                 <button 
-                  onClick={() => setShowInviteModal(false)}
+                  onClick={() => setShowAddModal(false)}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -682,12 +608,23 @@ export default function Staff() {
               
               <div className="space-y-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    value={newFullName}
+                    onChange={(e) => setNewFullName(e.target.value)}
+                    placeholder="Jane Smith"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                   <input
                     type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="colleague@company.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="jane@carecraftz.com"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
                   />
                 </div>
@@ -695,8 +632,8 @@ export default function Staff() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
                   <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
                   >
                     {ROLE_OPTIONS.map(option => (
@@ -707,35 +644,52 @@ export default function Staff() {
                   </select>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Role Permissions</h4>
-                  <p className="text-sm text-gray-500">
-                    {ROLE_OPTIONS.find(r => r.value === inviteRole)?.permissions}
-                  </p>
+                <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Active Account</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {ROLE_OPTIONS.find(r => r.value === newRole)?.permissions}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewIsActive(v => !v)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      newIsActive ? 'bg-indigo-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      newIsActive ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
                 </div>
+
+                {addError && (
+                  <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl">{addError}</p>
+                )}
               </div>
               
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setShowInviteModal(false)}
+                  onClick={() => setShowAddModal(false)}
                   className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSendInvite}
-                  disabled={!inviteEmail || sending}
+                  onClick={handleAddStaff}
+                  disabled={adding}
                   className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
                 >
-                  {sending ? (
+                  {adding ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Sending...
+                      Adding...
                     </>
                   ) : (
                     <>
-                      <Mail className="w-4 h-4" />
-                      Send Invite
+                      <Plus className="w-4 h-4" />
+                      Add Staff Member
                     </>
                   )}
                 </button>
