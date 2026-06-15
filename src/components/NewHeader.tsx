@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
+import { User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 
@@ -32,8 +32,8 @@ export default function NewHeader() {
     : 'bg-white border border-gray-200 shadow-md'
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 py-3 font-['Poppins'] transition-all duration-300">
-      <div className="flex items-center justify-between gap-3">
+    <header className="fixed top-0 left-0 right-0 z-50 font-['Poppins'] transition-all duration-300">
+      <div className="flex items-center justify-between gap-3 mx-auto max-w-[92%] mt-4">
 
         {/* Logo Pill */}
         <button
@@ -45,7 +45,7 @@ export default function NewHeader() {
         </button>
 
         {/* Main Nav Outer Pill — desktop only */}
-        <nav className={`hidden md:flex flex-1 ${pillBase} rounded-full px-2 py-2 items-center justify-between gap-1 transition-all duration-300`}>
+        <nav className={`hidden md:flex ${pillBase} rounded-full px-2 py-2 items-center justify-between gap-1 transition-all duration-300`} style={{width: 'min(640px, 55%)'}}>
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.path)
             return (
@@ -71,9 +71,6 @@ export default function NewHeader() {
             className="p-1.5 hover:bg-black/5 rounded-full transition-colors"
           >
             <User className="w-5 h-5 text-[#2b2b2b]" />
-          </button>
-          <button className="p-1.5 hover:bg-black/5 rounded-full transition-colors">
-            <Search className="w-5 h-5 text-[#2b2b2b]" />
           </button>
           <button
             onClick={() => navigate('/cart')}
