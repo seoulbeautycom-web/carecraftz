@@ -12,7 +12,8 @@ import {
   Star,
   FileText,
   Globe,
-  Search
+  Search,
+  Droplets
 } from 'lucide-react'
 
 interface AdminLayoutProps {
@@ -24,6 +25,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: ShoppingCart, label: 'Orders', path: '/orders' },
   { icon: Package, label: 'Products', path: '/products' },
+  { icon: Droplets, label: 'Skin Types', path: '/skin-types' },
   { icon: Star, label: 'Reviews', path: '/reviews' },
   { icon: FileText, label: 'Content', path: '/content' },
   { icon: Globe, label: 'Social', path: '/social' },

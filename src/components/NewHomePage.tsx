@@ -6,6 +6,13 @@ import AnnouncementBar from './AnnouncementBar'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 
+const SKIN_TYPES = [
+  { label: 'Oily',      color: 'bg-[#c8f135] text-[#2b2b2b]',  activeColor: 'bg-[#a8d41a]' },
+  { label: 'Dry',       color: 'bg-[#FFD4B8] text-[#2b2b2b]',  activeColor: 'bg-[#ffb886]' },
+  { label: 'Combo',     color: 'bg-[#8DEBD1] text-[#2b2b2b]',  activeColor: 'bg-[#5ed4b5]' },
+  { label: 'Sensitive', color: 'bg-[#b8c6ff] text-[#2b2b2b]',  activeColor: 'bg-[#8fa5ff]' },
+]
+
 interface Product {
   id: string
   name: string
@@ -32,6 +39,8 @@ export default function NewHomePage() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
   const [products, setProducts] = useState<Product[]>([])
+  const [skinTypeProducts, setSkinTypeProducts] = useState<Product[]>([])
+  const [activeSkinType, setActiveSkinType] = useState('Oily')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,6 +74,38 @@ export default function NewHomePage() {
     setLoading(false)
   }
 
+  const fetchSkinTypeProducts = async (skinType: string) => {
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('skin_type', skinType)
+      .limit(6)
+    if (data) {
+      const mapped = data.map((p, index) => {
+        const colors = colorSchemes[index % colorSchemes.length]
+        return {
+          id: p.id,
+          name: p.name,
+          subtitle: p.subtitle || p.description?.substring(0, 40) || 'Natural skincare',
+          price: p.price_pkr || p.price_aed || 0,
+          price_pkr: p.price_pkr || 0,
+          price_aed: p.price_aed || 0,
+          currency: (p.currency || 'PKR') as 'PKR' | 'AED',
+          image: p.image || '',
+          bgColor: colors.bg,
+          shadowColor: colors.shadow,
+        }
+      })
+      setSkinTypeProducts(mapped)
+    } else {
+      setSkinTypeProducts([])
+    }
+  }
+
+  useEffect(() => {
+    fetchSkinTypeProducts(activeSkinType)
+  }, [activeSkinType])
+
   const formatPrice = (product: Product) => {
     if (product.price_pkr) return `From ₨${product.price_pkr.toLocaleString()}`
     if (product.price_aed) return `From AED ${product.price_aed}`
@@ -88,7 +129,7 @@ export default function NewHomePage() {
               src="/herosec.png"
               alt="CareCraftz Hero"
               className="w-full object-cover block"
-              style={{ minHeight: '420px', maxHeight: '90vh' }}
+              style={{ height: '100vh' }}
             />
             {/* Overlaid text card - bottom left */}
             <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-5 max-w-xs shadow-lg">
@@ -107,6 +148,116 @@ export default function NewHomePage() {
           <div className="mt-6">
             <AnnouncementBar />
           </div>
+
+          {/* ── SECTION 4: LIFESTYLE IMAGE ── */}
+          <section className="relative mx-4 my-8 rounded-3xl overflow-hidden">
+            <img
+              src="/herosec.png"
+              alt="CareCraftz Natural Products"
+              className="w-full object-cover block"
+              style={{ height: '70vh' }}
+            />
+            <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-5 max-w-xs shadow-lg">
+              <h2 className="text-xl font-bold text-[#2b2b2b] mb-2">Refill. Reuse. Rejoice.</h2>
+              <p className="text-sm text-[#696a67] mb-4">Our refill program cuts waste and saves you money. Because good skin shouldn't cost the earth.</p>
+              <button
+                onClick={() => navigate('/refill')}
+                className="bg-[#2b2b2b] hover:bg-black text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+              >
+                Shop Refill Program
+              </button>
+            </div>
+          </section>
+
+          {/* ── SECTION 5: SHOP BY SKIN TYPE ── */}
+          <section className="px-4 py-10 md:px-6">
+            <h2 className="text-center text-2xl font-semibold text-[#2b2b2b] mb-6">Shop by Skin Type</h2>
+
+            {/* Filter Pills */}
+            <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
+              {SKIN_TYPES.map((type) => (
+                <button
+                  key={type.label}
+                  onClick={() => setActiveSkinType(type.label)}
+                  className={`px-6 py-2 rounded-full text-sm font-semibold transition-all ${
+                    activeSkinType === type.label
+                      ? `${type.activeColor} text-[#2b2b2b] scale-105 shadow-md`
+                      : `${type.color} opacity-80 hover:opacity-100`
+                  }`}
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Horizontal Scrolling Product Cards */}
+            <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
+              {skinTypeProducts.length > 0 ? (
+                skinTypeProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="relative rounded-3xl p-5 flex flex-col flex-shrink-0 cursor-pointer"
+                    style={{
+                      width: '280px',
+                      backgroundColor: product.bgColor,
+                      boxShadow: `5px 5px 0px ${product.shadowColor}`,
+                    }}
+                    onClick={() => navigate(`/product/${product.id}`)}
+                  >
+                    <button
+                      className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center text-[#2b2b2b] hover:bg-black/10 rounded-full transition-colors z-10"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        addToCart({
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          image: product.image,
+                          currency: product.currency,
+                          location: product.currency === 'PKR' ? 'Pakistan' : 'UAE',
+                          delivery_charge: product.currency === 'PKR' ? 200 : 15,
+                        })
+                      }}
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <div className="flex items-center justify-center min-h-[200px] py-4">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="max-h-48 max-w-full object-contain drop-shadow-md" />
+                      ) : (
+                        <div className="w-24 h-24 bg-white/30 rounded-2xl" />
+                      )}
+                    </div>
+                    <div className="mt-3">
+                      <h3 className="font-semibold text-[#2b2b2b] text-sm">{product.name}</h3>
+                      <p className="text-[#2b2b2b]/70 text-xs italic">{product.subtitle}</p>
+                      <p className="text-[#2b2b2b] font-medium text-xs mt-1">{formatPrice(product)}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                /* Placeholder cards */
+                colorSchemes.map((colors, i) => (
+                  <div
+                    key={i}
+                    className="relative rounded-3xl p-5 flex flex-col flex-shrink-0"
+                    style={{ width: '280px', backgroundColor: colors.bg, boxShadow: `5px 5px 0px ${colors.shadow}` }}
+                  >
+                    <button className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center text-[#2b2b2b] hover:bg-black/10 rounded-full transition-colors">
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <div className="flex items-center justify-center min-h-[200px]">
+                      <div className="w-24 h-24 bg-white/30 rounded-2xl" />
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="h-4 bg-white/40 rounded w-3/4" />
+                      <div className="h-3 bg-white/30 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
 
           {/* ── SECTION 3: SHOP BESTSELLERS ── */}
           <section className="px-4 py-10 md:px-6">

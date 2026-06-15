@@ -49,6 +49,7 @@ interface Product {
   tags: string[]
   tag1: string | null
   tag2: string | null
+  skin_type?: string | null
   created_at: string
   updated_at: string
   created_by: string | null
@@ -559,6 +560,7 @@ export default function Products() {
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Product</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">SKU</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
+                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Skin Type</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Price</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Stock</th>
                     <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Sold</th>
@@ -602,6 +604,20 @@ export default function Products() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm text-gray-600">{product.category || '-'}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {product.skin_type ? (
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                              product.skin_type === 'Oily' ? 'bg-lime-100 text-lime-700' :
+                              product.skin_type === 'Dry' ? 'bg-orange-100 text-orange-700' :
+                              product.skin_type === 'Combo' ? 'bg-teal-100 text-teal-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {product.skin_type}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm font-medium text-gray-900">{formatPrice(product.price)}</span>

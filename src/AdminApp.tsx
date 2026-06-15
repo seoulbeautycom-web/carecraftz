@@ -11,6 +11,7 @@ import Analytics from './pages/admin/Analytics'
 import Reviews from './pages/admin/Reviews'
 import BlogPosts from './pages/admin/BlogPosts'
 import SocialMedia from './pages/admin/SocialMedia'
+import SkinTypes from './pages/admin/SkinTypes'
 
 /**
  * Admin Portal App - Separate from customer-facing site
@@ -69,6 +70,11 @@ function AdminApp() {
           <Route path="/social" element={
             <ProtectedRoute>
               <SocialMedia />
+            </ProtectedRoute>
+          } />
+          <Route path="/skin-types" element={
+            <ProtectedRoute>
+              <SkinTypes />
             </ProtectedRoute>
           } />
           
