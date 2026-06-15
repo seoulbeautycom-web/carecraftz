@@ -40,6 +40,7 @@ export default function NewHomePage() {
   const { addToCart } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [skinTypeProducts, setSkinTypeProducts] = useState<Product[]>([])
+  const [featuredBestseller, setFeaturedBestseller] = useState<Product | null>(null)
   const [activeSkinType, setActiveSkinType] = useState('Oily')
   const [loading, setLoading] = useState(true)
 
@@ -105,6 +106,34 @@ export default function NewHomePage() {
   useEffect(() => {
     fetchSkinTypeProducts(activeSkinType)
   }, [activeSkinType])
+
+  const fetchFeaturedBestseller = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_featured', true)
+      .limit(1)
+      .single()
+    if (data) {
+      const colors = colorSchemes[0]
+      setFeaturedBestseller({
+        id: data.id,
+        name: data.name,
+        subtitle: data.subtitle || data.description?.substring(0, 40) || 'Natural skincare',
+        price: data.price_pkr || data.price_aed || 0,
+        price_pkr: data.price_pkr || 0,
+        price_aed: data.price_aed || 0,
+        currency: (data.currency || 'PKR') as 'PKR' | 'AED',
+        image: data.image || '',
+        bgColor: colors.bg,
+        shadowColor: colors.shadow,
+      })
+    }
+  }
+
+  useEffect(() => {
+    fetchFeaturedBestseller()
+  }, [])
 
   const formatPrice = (product: Product) => {
     if (product.price_pkr) return `From ₨${product.price_pkr.toLocaleString()}`
@@ -464,6 +493,84 @@ export default function NewHomePage() {
                   About Us
                 </button>
               </div>
+            </div>
+          </section>
+
+          {/* ── SECTION 8: SHOP OUR BEST SELLERS (SPLIT LAYOUT) ── */}
+          <section className="mx-4 my-8 rounded-3xl overflow-hidden bg-[#f8f6f1]">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
+
+              {/* Left: Lifestyle Image */}
+              <div className="relative overflow-hidden">
+                <img
+                  src="/bestseller-lifestyle.png"
+                  alt="CareCraftz Bestsellers"
+                  className="w-full h-full object-cover"
+                  style={{ minHeight: '400px' }}
+                />
+                {/* Subtle overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+              </div>
+
+              {/* Right: Featured Product */}
+              <div className="flex flex-col items-center justify-center p-10 md:p-14 bg-[#f5f0e8]">
+                <h2 className="text-2xl md:text-3xl font-semibold text-[#2b2b2b] mb-8">Shop Our Best Sellers</h2>
+
+                {featuredBestseller ? (
+                  <div
+                    className="relative w-full max-w-[280px] rounded-3xl p-6 flex flex-col items-center cursor-pointer group transition-transform hover:scale-[1.02]"
+                    style={{
+                      backgroundColor: '#e8e6c9',
+                      boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.05)',
+                    }}
+                    onClick={() => navigate(`/product/${featuredBestseller.id}`)}
+                  >
+                    {/* Circular background */}
+                    <div className="absolute inset-0 rounded-3xl bg-[#f0ece0]" style={{ zIndex: 0 }} />
+
+                    {/* Product Image */}
+                    <div className="relative z-10 w-48 h-48 rounded-full bg-[#e8e4d4] flex items-center justify-center mb-5 overflow-hidden">
+                      {featuredBestseller.image ? (
+                        <img
+                          src={featuredBestseller.image}
+                          alt={featuredBestseller.name}
+                          className="w-full h-full object-contain p-4"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-white/50 rounded-2xl flex items-center justify-center">
+                          <span className="text-4xl">🌿</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="relative z-10 text-center">
+                      <h3 className="font-semibold text-[#2b2b2b] text-lg">{featuredBestseller.name}</h3>
+                      <p className="text-[#5a5a5a] text-sm italic">{featuredBestseller.subtitle}</p>
+                      <p className="text-[#2b2b2b] font-medium text-base mt-2">{formatPrice(featuredBestseller)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Placeholder when no featured product */
+                  <div
+                    className="relative w-full max-w-[280px] rounded-3xl p-6 flex flex-col items-center"
+                    style={{
+                      backgroundColor: '#e8e6c9',
+                      boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <div className="w-48 h-48 rounded-full bg-[#e8e4d4] flex items-center justify-center mb-5">
+                      <div className="w-24 h-24 bg-white/50 rounded-2xl" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <div className="h-5 bg-white/50 rounded w-32 mx-auto" />
+                      <div className="h-3 bg-white/40 rounded w-24 mx-auto" />
+                      <div className="h-4 bg-white/50 rounded w-20 mx-auto mt-3" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </section>
 
