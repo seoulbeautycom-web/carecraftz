@@ -667,6 +667,139 @@ export default function NewHomePage() {
             )}
           </section>
 
+          {/* ── SECTION 10: THE OFFICIAL STUFF (CERTIFICATIONS) ── */}
+          <section className="mx-4 my-8 rounded-[60px] overflow-hidden py-12 px-8" style={{ backgroundColor: '#FF9A7A' }}>
+            <h2 className="text-center text-xl font-semibold text-[#2b2b2b] mb-8">The Official Stuff</h2>
+            
+            <div className="flex items-center justify-center gap-8 md:gap-16 flex-wrap">
+              {/* B Corp */}
+              <div className="flex flex-col items-center">
+                <svg viewBox="0 0 80 100" className="w-16 h-20 md:w-20 md:h-24">
+                  <circle cx="40" cy="50" r="35" fill="none" stroke="#2b2b2b" strokeWidth="3"/>
+                  <text x="40" y="58" textAnchor="middle" fontSize="32" fontWeight="bold" fill="#2b2b2b">B</text>
+                  <rect x="15" y="82" width="50" height="3" fill="#2b2b2b"/>
+                </svg>
+                <p className="text-[#2b2b2b] text-xs font-bold mt-1">Certified</p>
+                <p className="text-[#2b2b2b] text-xs font-bold">Corporation</p>
+              </div>
+
+              {/* Plastic Negative */}
+              <div className="flex flex-col items-center">
+                <svg viewBox="0 0 100 80" className="w-20 h-16 md:w-24 md:h-20">
+                  <rect x="10" y="10" width="80" height="60" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
+                  <text x="50" y="30" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2b2b2b">CERTIFIED</text>
+                  <text x="50" y="48" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#2b2b2b">PLASTIC</text>
+                  <text x="50" y="62" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#2b2b2b">NEGATIVE</text>
+                  <text x="50" y="74" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2b2b2b">PRODUCT</text>
+                  <circle cx="35" cy="42" r="8" fill="none" stroke="#2b2b2b" strokeWidth="1.5"/>
+                  <path d="M32 42 L38 42 M35 39 L35 45" stroke="#2b2b2b" strokeWidth="1"/>
+                </svg>
+              </div>
+
+              {/* Leaping Bunny */}
+              <div className="flex flex-col items-center">
+                <svg viewBox="0 0 100 80" className="w-20 h-16 md:w-24 md:h-20">
+                  <ellipse cx="60" cy="50" rx="25" ry="18" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
+                  <circle cx="75" cy="35" r="10" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
+                  <circle cx="77" cy="32" r="1.5" fill="#2b2b2b"/>
+                  <ellipse cx="68" cy="38" rx="4" ry="2" fill="none" stroke="#2b2b2b" strokeWidth="1"/>
+                  <path d="M35 55 Q20 45 15 55 Q12 60 20 62" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
+                  <path d="M50 32 L45 20 M52 30 L50 18 M58 30 L62 18" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M45 65 L35 75 M50 66 L50 78 M55 65 L62 75 M60 62 L68 70" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M82 42 L88 38" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </section>
+
+          {/* ── SECTION 11: VALUES MARQUEE ── */}
+          <section className="mx-4 my-8 rounded-full overflow-hidden py-4 px-6" style={{ backgroundColor: '#E8B800' }}>
+            <div className="flex items-center gap-12 animate-marquee whitespace-nowrap">
+              {[
+                { icon: '🐰', label: 'Cruelty Free' },
+                { icon: '🪐', label: 'For All Bodies' },
+                { icon: '♻️', label: 'Low Waste' },
+                { icon: '🌱', label: 'Vegan' },
+                { icon: '🖐️', label: 'Small Batch' },
+                { icon: '☀️', label: 'Give Back' },
+                { icon: '🌿', label: 'Plants for President' },
+              ].map((item, i) => (
+                <span key={i} className="inline-flex items-center gap-2 text-[#2b2b2b] text-sm font-semibold">
+                  <span className="text-lg">{item.icon}</span>
+                  {item.label}
+                </span>
+              ))}
+              {[
+                { icon: '🐰', label: 'Cruelty Free' },
+                { icon: '🪐', label: 'For All Bodies' },
+                { icon: '♻️', label: 'Low Waste' },
+                { icon: '🌱', label: 'Vegan' },
+                { icon: '🖐️', label: 'Small Batch' },
+                { icon: '☀️', label: 'Give Back' },
+                { icon: '🌿', label: 'Plants for President' },
+              ].map((item, i) => (
+                <span key={`dup-${i}`} className="inline-flex items-center gap-2 text-[#2b2b2b] text-sm font-semibold">
+                  <span className="text-lg">{item.icon}</span>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          {/* ── SECTION 12: CUSTOMER REVIEWS ── */}
+          <section className="px-4 py-12 md:px-6">
+            <h2 className="text-center text-2xl md:text-3xl font-semibold text-[#2b2b2b] mb-3">What Our Customers Say</h2>
+            <p className="text-center text-[#696a67] text-sm mb-10">Join thousands of happy skincare lovers</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {[
+                { name: 'Sarah M.', location: 'Dubai', rating: 5, text: 'The Moringa Soap is absolutely life-changing! My skin has never felt this soft and hydrated. I\'ve tried so many products but nothing compares to this handmade goodness.', avatar: '👩🏽' },
+                { name: 'Aisha K.', location: 'Lahore', rating: 5, text: 'Finally found a skincare brand that actually works for my sensitive skin. No more redness or irritation. CareCraftz understands what real skin needs!', avatar: '👩🏻' },
+                { name: 'Fatima R.', location: 'Karachi', rating: 5, text: 'I was skeptical at first but after 2 weeks of using the Korean-inspired serum, my acne scars have visibly faded. This is my holy grail product now.', avatar: '👩🏾' },
+                { name: 'Noor H.', location: 'Islamabad', rating: 5, text: 'The refill program is genius! Not only am I saving money, but I feel good knowing I\'m reducing plastic waste. The products are amazing too!', avatar: '👩🏼' },
+                { name: 'Zara A.', location: 'Dubai', rating: 5, text: 'Best natural skincare I\'ve ever used! The ingredients are so pure and you can literally feel the difference. My glow has never been better! ✨', avatar: '👩🏽‍🦱' },
+                { name: 'Maryam S.', location: 'London', rating: 5, text: 'Discovered CareCraftz while visiting Dubai and now I order to UK! The shipping is fast and the products arrive perfectly packaged. 10/10 recommend!', avatar: '👩🏻‍🦰' },
+                { name: 'Huda B.', location: 'Abu Dhabi', rating: 5, text: 'As someone with oily skin, finding the right products was always a struggle. The "Shop by Skin Type" feature helped me find my perfect match!', avatar: '👩🏿' },
+                { name: 'Lina T.', location: 'Sharjah', rating: 5, text: 'The customer service is exceptional and the products speak for themselves. My entire family now uses CareCraftz - from my mom to my teenage daughter!', avatar: '👩' },
+                { name: 'Yasmin P.', location: 'Pakistan', rating: 5, text: 'Finally a brand that delivers on its promises! My skin texture has improved dramatically. These products are worth every penny.', avatar: '👩🏽‍🦳' },
+              ].map((review, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                  style={{ boxShadow: `4px 4px 0px ${['#8DEBD1', '#F4956A', '#FFD94A', '#E8A4E0', '#7EC8E3', '#FF8FAB'][i % 6]}` }}
+                >
+                  {/* Stars */}
+                  <div className="flex gap-0.5 mb-3">
+                    {[...Array(review.rating)].map((_, s) => (
+                      <span key={s} className="text-[#E8B800] text-sm">★</span>
+                    ))}
+                  </div>
+
+                  {/* Review Text */}
+                  <p className="text-[#2b2b2b] text-sm leading-relaxed mb-4">"{review.text}"</p>
+
+                  {/* Author */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl">
+                      {review.avatar}
+                    </div>
+                    <div>
+                      <p className="text-[#2b2b2b] text-sm font-semibold">{review.name}</p>
+                      <p className="text-[#696a67] text-xs">{review.location}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Trust Badge */}
+            <div className="text-center mt-10">
+              <p className="text-[#2b2b2b] text-sm font-medium">
+                <span className="text-[#1db954]">★★★★★</span> Rated 4.9/5 from over 50,000+ reviews
+              </p>
+            </div>
+          </section>
+
           {/* Footer */}
           <footer className="bg-[#eeecfe] px-6 py-10 mt-8">
             <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
