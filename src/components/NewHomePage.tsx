@@ -76,23 +76,24 @@ export default function NewHomePage() {
       {/* Inner Container */}
       <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden">
 
-        {/* Fixed Header */}
-        <NewHeader />
+        {/* Scrollable Content - hero is first, header floats over it */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide relative">
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {/* ── SECTION 1: HERO - full bleed, header floats above ── */}
+          <section className="relative w-full">
+            {/* Header floats over hero */}
+            <NewHeader />
 
-          {/* ── SECTION 1: HERO ── */}
-          <section className="relative mx-4 mt-4 rounded-3xl overflow-hidden">
             <img
               src="/herosec.png"
               alt="CareCraftz Hero"
-              className="w-full h-auto object-cover block"
+              className="w-full object-cover block"
+              style={{ minHeight: '420px', maxHeight: '90vh' }}
             />
-            {/* Overlaid text card - bottom left, like benchmark */}
+            {/* Overlaid text card - bottom left */}
             <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-5 max-w-xs shadow-lg">
               <h1 className="text-xl font-bold text-[#2b2b2b] mb-2">Natural Skincare,<br />Crafted With Care</h1>
-              <p className="text-sm text-[#696a67] mb-4">Handmade and Korean-inspired beauty. As old as humans.</p>
+              <p className="text-sm text-[#696a67] mb-4">Handmade and Korean-inspired beauty. Crafted with care.</p>
               <button
                 onClick={() => navigate('/shop')}
                 className="bg-[#ff9570] hover:bg-[#ff7a50] text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
@@ -102,8 +103,10 @@ export default function NewHomePage() {
             </div>
           </section>
 
-          {/* ── SECTION 2: ANNOUNCEMENT BAR ── */}
-          <AnnouncementBar />
+          {/* ── SECTION 2: ANNOUNCEMENT BAR - with breathing room ── */}
+          <div className="mt-6">
+            <AnnouncementBar />
+          </div>
 
           {/* ── SECTION 3: SHOP BESTSELLERS ── */}
           <section className="px-4 py-10 md:px-6">

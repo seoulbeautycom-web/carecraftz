@@ -1,28 +1,32 @@
-import { Truck, Heart } from 'lucide-react'
+import { Sparkles, Leaf, FlaskConical, Globe } from 'lucide-react'
+
+const items = [
+  { icon: Sparkles, text: 'For your skin — carefully researched and designed in Dubai' },
+  { icon: Leaf, text: 'Handmade natural collection of products' },
+  { icon: FlaskConical, text: 'Korean skincare hydrating formulas' },
+  { icon: Globe, text: 'Launching in Pakistan and the UK' },
+]
 
 export default function AnnouncementBar() {
+  const repeated = [...items, ...items, ...items]
+
   return (
-    <div className="bg-[#7B68EE] text-white py-2.5 px-4 overflow-hidden">
-      <div className="flex items-center justify-center gap-8 text-xs font-medium whitespace-nowrap">
-        {/* Marquee container */}
-        <div className="flex items-center gap-8 animate-marquee">
-          <span className="flex items-center gap-2">
-            <Truck className="w-3.5 h-3.5" />
-            Free domestic shipping on orders over $45
+    <div
+      className="bg-[#7B68EE] text-white overflow-hidden"
+      style={{ fontFamily: "'Poppins', sans-serif", padding: '14px 0' }}
+    >
+      <div className="flex whitespace-nowrap animate-marquee">
+        {repeated.map((item, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-2.5 text-sm font-semibold"
+            style={{ paddingLeft: '72px' }}
+          >
+            <item.icon className="w-4 h-4 flex-shrink-0 opacity-90" />
+            {item.text}
+            <span className="opacity-40 ml-6">✦</span>
           </span>
-          <span className="flex items-center gap-2">
-            <Heart className="w-3.5 h-3.5" />
-            We&apos;ve updated our packaging! Read more about it here
-          </span>
-          <span className="flex items-center gap-2">
-            <Truck className="w-3.5 h-3.5" />
-            Spend $45 USD more for free shipping
-          </span>
-          <span className="flex items-center gap-2">
-            <Heart className="w-3.5 h-3.5" />
-            We&apos;ve updated our packaging! Read more about it here
-          </span>
-        </div>
+        ))}
       </div>
     </div>
   )

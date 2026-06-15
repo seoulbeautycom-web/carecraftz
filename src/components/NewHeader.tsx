@@ -18,7 +18,7 @@ export default function NewHeader() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 px-4 pt-4 font-['Poppins']">
+    <header className="absolute top-0 left-0 right-0 z-50 px-4 pt-4 font-['Poppins']">
       <div className="flex items-center justify-between gap-4">
         {/* Logo - Left */}
         <button 
