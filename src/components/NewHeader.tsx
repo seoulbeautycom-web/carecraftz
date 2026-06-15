@@ -18,22 +18,22 @@ export default function NewHeader() {
   ]
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 px-4 pt-4 font-['Poppins']">
+    <header className="fixed top-0 left-0 right-0 z-50 px-4 py-3 font-['Poppins'] bg-white/50 backdrop-blur-md">
       <div className="flex items-center justify-between gap-4">
-        {/* Logo - Left */}
+        {/* Logo Box - Same size as others */}
         <button 
           onClick={() => navigate('/')}
-          className="flex-shrink-0"
+          className="flex-shrink-0 bg-[#eeecfe]/80 rounded-full px-4 py-2 flex items-center justify-center"
         >
           <img 
-            src="/cclogov3.png" 
+            src="/logo-icon.png" 
             alt="CareCraftz"
-            className="h-10 w-auto"
+            className="h-8 w-auto"
           />
         </button>
 
         {/* Main Nav - Lavender Pill - Centered */}
-        <nav className="flex-1 bg-[#eeecfe] rounded-full px-6 py-3 flex items-center justify-center mx-4">
+        <nav className="flex-1 bg-[#eeecfe]/80 rounded-full px-6 py-2.5 flex items-center justify-center mx-4">
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
@@ -57,7 +57,7 @@ export default function NewHeader() {
         </nav>
 
         {/* Utility Icons - Green Pill */}
-        <div className="bg-[#d4f5d4] rounded-full px-4 py-3 flex items-center gap-3">
+        <div className="bg-[#d4f5d4]/80 rounded-full px-4 py-2.5 flex items-center gap-3">
           <button 
             onClick={() => navigate('/profile')}
             className="p-1.5 hover:bg-white/50 rounded-full transition-colors"
