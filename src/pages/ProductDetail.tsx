@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 import { ShoppingCart, Star, ChevronLeft, Check, Quote, ArrowRight } from 'lucide-react'
-import NewHeader from '../components/NewHeader'
+import PageFrame from '../components/PageFrame'
 
 interface Product {
   id: string
@@ -65,7 +65,7 @@ interface Review {
 const TABS = ['What It Is', 'How To Use', 'Ingredients'] as const
 type Tab = typeof TABS[number]
 
-export default function ProductDetail() {
+function ProductDetailInner() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { addToCart, items } = useCart()
@@ -156,11 +156,7 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#E8A4E0] p-3 overflow-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden">
-
-        {/* Sticky Header */}
-        <NewHeader />
+    <>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto pt-16">
@@ -539,7 +535,14 @@ export default function ProductDetail() {
           </button>
         )}
 
-      </div>
-    </div>
+    </>
+  )
+}
+
+export default function ProductDetail() {
+  return (
+    <PageFrame frameColor="#FFAFC5" scrollDriven={true}>
+      <ProductDetailInner />
+    </PageFrame>
   )
 }

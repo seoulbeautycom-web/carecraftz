@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
+import PageFrame from '../components/PageFrame'
 
-export default function Terms() {
+function TermsInner() {
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar />
+    <div>
       
       <main className="max-w-4xl mx-auto px-6 py-24">
         <h1 className="text-4xl font-light mb-8">Terms of Service</h1>
@@ -170,7 +168,14 @@ export default function Terms() {
         </div>
       </main>
 
-      <Footer />
     </div>
+  )
+}
+
+export default function Terms() {
+  return (
+    <PageFrame frameColor="#A3C4BC">
+      <TermsInner />
+    </PageFrame>
   )
 }

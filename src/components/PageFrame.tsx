@@ -1,5 +1,5 @@
 import NewHeader from './NewHeader'
-import Footer from './Footer'
+import SiteFooter from './SiteFooter'
 import WhatsAppButton from './WhatsAppButton'
 import CartDrawer from './CartDrawer'
 
@@ -8,42 +8,41 @@ interface PageFrameProps {
   frameColor: string
   showFooter?: boolean
   /**
-   * When true, the page manages its own scroll (e.g. scroll-driven animations).
-   * A fixed rounded frame overlay is painted on top so the colored border + curves
-   * are always visible without clipping the page's scroll content.
+   * scrollDriven: page manages its own scroll (Craft, Shop, FutureLaunches).
+   * A fixed border overlay paints the colored frame + rounded inner corners
+   * without clipping the page's native scroll behaviour.
    */
   scrollDriven?: boolean
 }
 
 export default function PageFrame({ children, frameColor, showFooter = true, scrollDriven = false }: PageFrameProps) {
   if (scrollDriven) {
-    // Fixed overlay: colored outer area + rounded inner window — sits on top of everything,
-    // pointer-events:none so scroll/clicks pass through. Matches the homepage look exactly.
     return (
       <div style={{ fontFamily: "'Poppins', sans-serif" }}>
         {/*
-          Fixed overlay: a 12px border with borderRadius 24px sits inset from viewport edges.
-          The area between the viewport edge and this border is filled by the frameColor background.
-          This exactly replicates the homepage p-3 / rounded-3xl look without clipping scroll content.
+          Fixed border overlay — 12px colored border with 24px inner radius
+          paints the outer frame + curved corners on top of the page.
+          pointer-events: none so all clicks/scroll pass through.
         */}
         <div
           className="fixed inset-0 pointer-events-none z-[9999]"
-          style={{
-            border: `12px solid ${frameColor}`,
-            borderRadius: '24px',
-          }}
+          style={{ border: `12px solid ${frameColor}`, borderRadius: '24px' }}
         />
         <NewHeader />
         {children}
-        {showFooter && <Footer />}
+        {showFooter && <SiteFooter />}
         <WhatsAppButton />
         <CartDrawer />
       </div>
     )
   }
 
-  // Standard pages: exactly matches homepage structure —
-  // h-screen outer with frameColor, inner cream rounded-3xl with overflow-y-auto
+  // Standard pages:
+  // - h-screen outer colored background (fills corners with frameColor)
+  // - p-3 padding → cream inner container sits 12px from edges
+  // - rounded-3xl on inner → curved inner corners, rectangle outer corners filled with frameColor
+  // - overflow-y-auto on the scroll area → scrollbar sits INSIDE the cream box
+  // - scrollbar-color styled to frameColor so it matches the frame
   return (
     <div
       className="h-screen w-screen p-3 overflow-hidden"
@@ -51,9 +50,15 @@ export default function PageFrame({ children, frameColor, showFooter = true, scr
     >
       <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden relative">
         <NewHeader />
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: `${frameColor} transparent`,
+          }}
+        >
           {children}
-          {showFooter && <Footer />}
+          {showFooter && <SiteFooter />}
         </div>
         <WhatsAppButton />
         <CartDrawer />

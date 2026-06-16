@@ -1,10 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
 import SeoulBeauty from './components/SeoulBeauty'
 import AboutUs from './components/AboutUs'
+import PageFrame from './components/PageFrame'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import FutureLaunches from './pages/FutureLaunches'
@@ -20,9 +19,15 @@ import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import Checkout from './pages/Checkout'
-import WhatsAppButton from './components/WhatsAppButton'
-import CartDrawer from './components/CartDrawer'
 import NewHomePage from './components/NewHomePage'
+
+// Inline page wrappers for components that are not yet standalone pages
+function SeoulBeautyPage() {
+  return <PageFrame frameColor="#F7B2BD" scrollDriven={true}><SeoulBeauty /></PageFrame>
+}
+function AboutUsPage() {
+  return <PageFrame frameColor="#B2D8B2" scrollDriven={true}><AboutUs /></PageFrame>
+}
 
 function App() {
   return (
@@ -30,75 +35,30 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            <Route path="/" element={
-              <AuthProvider>
-                <CartProvider>
-                  <NewHomePage />
-                </CartProvider>
-              </AuthProvider>
-            } />
-            <Route path="/seoul-beauty" element={
-              <>
-                <Navbar />
-                <SeoulBeauty />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/about" element={
-              <>
-                <Navbar />
-                <AboutUs />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/about-us" element={
-              <>
-                <Navbar />
-                <AboutUs />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:id" element={
-              <>
-                <ProductDetail />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/future-launches" element={<FutureLaunches />} />
-            <Route path="/craft" element={<Craft />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/refill" element={<Refill />} />
-            <Route path="/partners" element={<Partners />} />
-            <Route path="/rewards" element={<Navigate to="/partners" replace />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
+            {/* Home — uses its own self-contained frame (pink #E8A4E0) */}
+            <Route path="/" element={<NewHomePage />} />
+
+            {/* All other pages — PageFrame is the single source of truth for frame/header/footer */}
+            <Route path="/seoul-beauty" element={<SeoulBeautyPage />} />
+            <Route path="/about"        element={<AboutUsPage />} />
+            <Route path="/about-us"     element={<AboutUsPage />} />
+            <Route path="/shop"         element={<Shop />} />           {/* #FF8C69 coral — scrollDriven */}
+            <Route path="/product/:id"  element={<ProductDetail />} />  {/* #FFAFC5 rose  — scrollDriven */}
+            <Route path="/craft"        element={<Craft />} />          {/* #8DEBD1 mint  — scrollDriven */}
+            <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky — scrollDriven */}
+            <Route path="/blog"         element={<Blog />} />           {/* #FFD94A yellow */}
+            <Route path="/refill"       element={<Refill />} />         {/* #F4956A peach */}
+            <Route path="/partners"     element={<Partners />} />       {/* #E8A4E0 lilac */}
+            <Route path="/rewards"      element={<Navigate to="/partners" replace />} />
+            <Route path="/signin"       element={<SignIn />} />         {/* #C9B8FF purple */}
+            <Route path="/signup"       element={<SignUp />} />         {/* #A8E6CF mint */}
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/privacy" element={
-              <>
-                <Privacy />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/terms" element={
-              <>
-                <Terms />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/checkout" element={<Checkout />} />
-            {/* Admin routes removed - use admin.carecraftz.com */}
+            <Route path="/profile"      element={<Profile />} />        {/* #FFD6B0 peach */}
+            <Route path="/cart"         element={<CartPage />} />       {/* #B0E4FF sky */}
+            <Route path="/checkout"     element={<Checkout />} />       {/* #B5C7EB indigo */}
+            <Route path="/privacy"      element={<Privacy />} />        {/* #D4B896 tan */}
+            <Route path="/terms"        element={<Terms />} />          {/* #A3C4BC teal */}
+            {/* Admin routes — use admin.carecraftz.com */}
           </Routes>
         </CartProvider>
       </AuthProvider>

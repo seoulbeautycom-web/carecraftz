@@ -4,8 +4,7 @@ import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { ArrowLeft, CreditCard, Truck, Shield, MapPin, Phone, Mail, User, CheckCircle, Package, Send, Home, AlertCircle } from 'lucide-react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
+import PageFrame from '../components/PageFrame'
 
 interface OrderForm {
   fullName: string
@@ -18,7 +17,7 @@ interface OrderForm {
   paymentMethod: 'cod' | 'card'
 }
 
-export default function Checkout() {
+function CheckoutInner() {
   const navigate = useNavigate()
   const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart } = useCart()
   const { user } = useAuth()
@@ -194,9 +193,7 @@ export default function Checkout() {
 
   if (items.length === 0 && !orderSuccess) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-[#F5F5F0] py-20">
+      <div className="min-h-screen bg-[#F5F5F0] py-20">
           <div className="max-w-2xl mx-auto px-6 text-center">
             <div className="bg-white rounded-2xl p-12 shadow-sm">
               <h1 className="text-2xl font-bold text-[#1F331F] mb-4">Your cart is empty</h1>
@@ -210,8 +207,6 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-        <Footer />
-      </>
     )
   }
 
@@ -296,7 +291,6 @@ export default function Checkout() {
             </div>
           </div>
         </div>
-        <Footer />
       </>
     )
   }
@@ -621,7 +615,14 @@ export default function Checkout() {
           </div>
         </div>
       </div>
-      <Footer />
     </>
+  )
+}
+
+export default function Checkout() {
+  return (
+    <PageFrame frameColor="#B5C7EB" showFooter={false}>
+      <CheckoutInner />
+    </PageFrame>
   )
 }
