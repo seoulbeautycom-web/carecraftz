@@ -24,10 +24,7 @@ export default function PageFrame({ children, frameColor, showFooter = true, scr
         {/* Fixed colored border ring — purely decorative, never clips content */}
         <div
           className="fixed inset-0 pointer-events-none z-[9999]"
-          style={{
-            boxShadow: `inset 0 0 0 12px ${frameColor}`,
-            borderRadius: '24px',
-          }}
+          style={{ boxShadow: `inset 0 0 0 10px ${frameColor}` }}
         />
         <NewHeader />
         {children}

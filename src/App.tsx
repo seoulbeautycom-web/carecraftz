@@ -12,6 +12,7 @@ import Craft from './pages/Craft'
 import Blog from './pages/Blog'
 import Refill from './pages/Refill'
 import Partners from './pages/Partners'
+import CartPage from './pages/CartPage'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 import AuthCallback from './pages/auth/AuthCallback'
@@ -63,14 +64,7 @@ function App() {
                 <CartDrawer />
               </>
             } />
-            <Route path="/shop" element={
-              <>
-                <Shop />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
+            <Route path="/shop" element={<Shop />} />
             <Route path="/product/:id" element={
               <>
                 <ProductDetail />
@@ -84,26 +78,11 @@ function App() {
             <Route path="/refill" element={<Refill />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/rewards" element={<Navigate to="/partners" replace />} />
-            <Route path="/signin" element={
-              <>
-                <Navbar />
-                <SignIn />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
-            <Route path="/signup" element={
-              <>
-                <Navbar />
-                <SignUp />
-                <Footer />
-                <WhatsAppButton />
-                <CartDrawer />
-              </>
-            } />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/cart" element={<CartPage />} />
             <Route path="/privacy" element={
               <>
                 <Privacy />

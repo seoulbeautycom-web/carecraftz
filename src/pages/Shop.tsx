@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, Check, Pause, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
-import NewHeader from '../components/NewHeader'
+import PageFrame from '../components/PageFrame'
 
 interface Product {
   id: string
@@ -59,7 +59,7 @@ const BOTTOM_COLORS = [
   'bg-[#b2ebf2]',
 ]
 
-export default function Shop() {
+function ShopInner() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
   const [products, setProducts] = useState<Product[]>([])
@@ -133,7 +133,6 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-white font-['Poppins']">
-      <NewHeader />
 
       {/* Filter Tabs */}
       <div className="pt-24 pb-4 flex justify-center">
@@ -320,5 +319,13 @@ export default function Shop() {
       </section>
 
     </div>
+  )
+}
+
+export default function Shop() {
+  return (
+    <PageFrame frameColor="#FF8C69" showFooter={true} scrollDriven={true}>
+      <ShopInner />
+    </PageFrame>
   )
 }

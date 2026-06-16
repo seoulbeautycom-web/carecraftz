@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
 import { User, Mail, Phone, Package, LogOut, ShoppingBag, ChevronRight, MapPin, CheckCircle, AlertCircle, Send, Home } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import CartDrawer from '../components/CartDrawer'
+import PageFrame from '../components/PageFrame'
 
 interface Order {
   id: string
@@ -36,10 +35,9 @@ const ORDER_STEPS = [
   { id: 5, name: 'Delivered', icon: Home }
 ]
 
-export default function Profile() {
+function ProfileInner() {
   const navigate = useNavigate()
   const { user, signOut, loading: authLoading } = useAuth()
-  const { setIsCartOpen } = useCart()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'addresses'>('overview')
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -105,39 +103,15 @@ export default function Profile() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#F9F4F0] flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#FFD6B0] border-t-[#2b2b2b] rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F4F0]">
-      <CartDrawer />
-
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <button
-              onClick={() => navigate('/')}
-              className="text-xl font-light"
-            >
-              CareCraftz
-            </button>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <ShoppingBag className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#fbfcf4]">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1">
@@ -418,5 +392,13 @@ export default function Profile() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function Profile() {
+  return (
+    <PageFrame frameColor="#FFD6B0" showFooter={false}>
+      <ProfileInner />
+    </PageFrame>
   )
 }
