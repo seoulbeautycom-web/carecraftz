@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ArrowRight, X, Building2, Globe, Mail, Phone, FileText, Shield, Star } from 'lucide-react'
+import { Check, ArrowRight, Building2, Globe, Mail, FileText, Shield, Star } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
 
 function PartnersInner() {
