@@ -657,7 +657,7 @@ function FutureLaunchesInner() {
 
 export default function FutureLaunches() {
   return (
-    <PageFrame frameColor="#7EC8E3" showFooter={true} disableScroll={true}>
+    <PageFrame frameColor="#7EC8E3" showFooter={true} scrollDriven={true}>
       <FutureLaunchesInner />
     </PageFrame>
   )

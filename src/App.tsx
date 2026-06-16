@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
@@ -83,6 +83,7 @@ function App() {
             <Route path="/blog" element={<Blog />} />
             <Route path="/refill" element={<Refill />} />
             <Route path="/partners" element={<Partners />} />
+            <Route path="/rewards" element={<Navigate to="/partners" replace />} />
             <Route path="/signin" element={
               <>
                 <Navbar />

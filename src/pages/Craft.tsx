@@ -430,7 +430,7 @@ function CraftInner() {
 
 export default function Craft() {
   return (
-    <PageFrame frameColor="#8DEBD1" showFooter={true}>
+    <PageFrame frameColor="#8DEBD1" showFooter={true} scrollDriven={true}>
       <CraftInner />
     </PageFrame>
   )

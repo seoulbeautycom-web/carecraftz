@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PageFrame from '../components/PageFrame'
@@ -9,22 +8,17 @@ interface BlogPost {
   title: string
   slug: string
   excerpt: string | null
-  content: string | null
+  body: string | null
   featured_image: string | null
   author_name: string | null
   published_at: string | null
   status: string
   tags: string[] | null
-  category: string | null
 }
 
-const CATEGORIES = ['All', 'Skincare', 'Ingredients', 'Sustainability', 'Tips & Tricks', 'Behind the Brand']
-
 function BlogInner() {
-  const navigate = useNavigate()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeCategory, setActiveCategory] = useState('All')
   const [featured, setFeatured] = useState<BlogPost | null>(null)
 
   useEffect(() => {
@@ -43,10 +37,6 @@ function BlogInner() {
     fetchPosts()
   }, [])
 
-  const filtered = activeCategory === 'All'
-    ? posts
-    : posts.filter(p => p.category === activeCategory)
-
   const formatDate = (d: string | null) => {
     if (!d) return ''
     return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -61,22 +51,6 @@ function BlogInner() {
         <p className="text-[#696a67] text-base max-w-md mx-auto">Stories, rituals and honest ingredients talk — straight from the lab.</p>
       </div>
 
-      {/* Category filter pills */}
-      <div className="flex flex-wrap justify-center gap-2 mb-10">
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-5 py-1.5 rounded-full text-sm font-medium border transition-all ${
-              activeCategory === cat
-                ? 'bg-[#2b2b2b] text-white border-[#2b2b2b]'
-                : 'bg-white text-[#2b2b2b] border-gray-200 hover:border-gray-400'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -91,7 +65,7 @@ function BlogInner() {
             <div
               className="rounded-3xl overflow-hidden mb-10 cursor-pointer group relative"
               style={{ minHeight: 440 }}
-              onClick={() => navigate(`/blog/${featured.slug}`)}
+              onClick={() => { /* blog detail page coming soon */ }}
             >
               {featured.featured_image ? (
                 <img
@@ -124,11 +98,11 @@ function BlogInner() {
           )}
 
           {/* Post grid */}
-          {filtered.length === 0 ? (
-            <div className="text-center py-16 text-[#696a67]">No posts in this category yet.</div>
+          {posts.length === 0 ? (
+            <div className="text-center py-16 text-[#696a67]">More posts coming soon.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((post, i) => {
+              {posts.map((post, i) => {
                 const cardColors = ['#fce4ec', '#e8f5e9', '#fff9c4', '#ede7f6', '#e3f2fd', '#fff3e0']
                 const cardColor = cardColors[i % cardColors.length]
                 return (
@@ -136,7 +110,7 @@ function BlogInner() {
                     key={post.id}
                     className="rounded-2xl overflow-hidden cursor-pointer group flex flex-col"
                     style={{ backgroundColor: cardColor }}
-                    onClick={() => navigate(`/blog/${post.slug}`)}
+                    onClick={() => { /* blog detail page coming soon */ }}
                   >
                     <div className="h-48 overflow-hidden relative">
                       {post.featured_image ? (
@@ -152,9 +126,9 @@ function BlogInner() {
                       )}
                     </div>
                     <div className="p-5 flex flex-col flex-1">
-                      {post.category && (
+                      {post.tags && post.tags.length > 0 && (
                         <span className="text-xs font-semibold uppercase tracking-wider text-[#696a67] mb-2 flex items-center gap-1">
-                          <Tag className="w-3 h-3" />{post.category}
+                          <Tag className="w-3 h-3" />{post.tags[0]}
                         </span>
                       )}
                       <h3 className="font-semibold text-[#2b2b2b] text-base leading-snug mb-2 flex-1">{post.title}</h3>
