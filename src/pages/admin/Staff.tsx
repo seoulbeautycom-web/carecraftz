@@ -304,7 +304,8 @@ export default function Staff() {
 
       // If user not found in auth, that's fine — just clean up the staff row
       if (edgeResult.error && edgeResult.error !== 'User not found') {
-        showToast(`Failed to delete auth account: ${edgeResult.error}`, 'error')
+        const errDetail = edgeResult.full ? `${edgeResult.error} | ${JSON.stringify(edgeResult.full)}` : String(edgeResult.error)
+        showToast(`Auth error: ${errDetail}`, 'error')
         return
       }
 
