@@ -39,7 +39,9 @@ jobs:
       
       - name: Set Edge Function secrets
         run: |
-          supabase secrets set PROJECT_URL=${{ secrets.SUPABASE_PROJECT_URL }} SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          printf 'PROJECT_URL=%s\nSERVICE_ROLE_KEY=%s\n' '${{ secrets.SUPABASE_PROJECT_URL }}' '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' > .env.edge
+          supabase secrets set --env-file .env.edge
+          rm .env.edge
 
       - name: Verify deployment
         run: echo "Migrations and Edge Functions deployed successfully"
