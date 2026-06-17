@@ -212,6 +212,21 @@ export default function Staff() {
     setAddError('')
   }
 
+  const callEdgeFunction = async (action: string, payload: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://rbxiureeqjywsabxrckv.supabase.co'
+    const res = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      },
+      body: JSON.stringify({ action, ...payload }),
+    })
+    return res.json()
+  }
+
   const handleAddStaff = async () => {
     if (!newFullName.trim()) { setAddError('Full name is required'); return }
     if (!newEmail.trim()) { setAddError('Email is required'); return }
@@ -223,47 +238,38 @@ export default function Staff() {
     setAdding(true)
     setAddError('')
     try {
-      // Add timeout protection
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000)
-      )
-
-      const insertPayload: Record<string, unknown> = {
-        full_name: newFullName.trim(),
+      // Step 1: Create auth.users entry via Edge Function (service role)
+      const edgeResult = await callEdgeFunction('create_user', {
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
-        role: newRole,
-        is_active: newIsActive,
-        permissions: {},
+      })
+
+      if (edgeResult.error) {
+        setAddError(edgeResult.error === 'User already exists'
+          ? 'A user with this email already exists.'
+          : edgeResult.error)
+        return
       }
 
-      const insertPromise = supabase
+      const authUserId = edgeResult.user?.id
+
+      // Step 2: Insert into public.staff with the real auth user_id
+      const { data, error } = await supabase
         .from('staff')
-        .insert(insertPayload)
+        .insert({
+          user_id: authUserId,
+          full_name: newFullName.trim(),
+          email: newEmail.trim().toLowerCase(),
+          role: newRole,
+          is_active: newIsActive,
+          permissions: {},
+        })
         .select()
         .single()
 
-      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any
-
       if (error) {
-        // If password column doesn't exist yet, retry without it
-        if (error.message?.includes('password') && error.message?.includes('column')) {
-          const { data: data2, error: error2 } = await supabase
-            .from('staff')
-            .insert({ full_name: insertPayload.full_name, email: insertPayload.email, role: insertPayload.role, is_active: insertPayload.is_active, permissions: {} })
-            .select().single()
-          if (error2) { setAddError(error2.code === '23505' ? 'A staff member with this email already exists.' : error2.message); return }
-          const processed = processStaffMember(data2, staff.length)
-          setStaff(prev => [processed, ...prev])
-          setShowAddModal(false)
-          resetAddForm()
-          return
-        }
-        if (error.code === '23505') {
-          setAddError('A staff member with this email already exists.')
-        } else {
-          setAddError(error.message || 'Failed to add staff member.')
-        }
+        // Auth user was created but staff row failed — still show success but warn
+        setAddError(`Auth user created but staff record failed: ${error.message}. Contact support.`)
         return
       }
 
@@ -280,24 +286,36 @@ export default function Staff() {
 
   const handleDeleteStaff = async () => {
     if (!selectedStaff) return
-    
+
     setActionLoading(true)
     try {
+      // Step 1: Delete from auth.users via Edge Function
+      const edgeResult = await callEdgeFunction('delete_user', {
+        email: selectedStaff.email,
+      })
+
+      // If user not found in auth, that's fine — just clean up the staff row
+      if (edgeResult.error && edgeResult.error !== 'User not found') {
+        alert(`Failed to delete auth account: ${edgeResult.error}`)
+        return
+      }
+
+      // Step 2: Delete from public.staff
       const { error } = await supabase
         .from('staff')
         .delete()
         .eq('id', selectedStaff.id)
-      
+
       if (error) {
-        console.error('Error deleting staff:', error)
-        alert('Failed to delete staff member.')
-      } else {
-        setStaff(staff.filter(s => s.id !== selectedStaff.id))
-        setShowDeleteModal(false)
-        setSelectedStaff(null)
+        alert(`Auth account deleted but staff record failed: ${error.message}`)
+        return
       }
-    } catch (error) {
-      console.error('Error:', error)
+
+      setStaff(staff.filter(s => s.id !== selectedStaff.id))
+      setShowDeleteModal(false)
+      setSelectedStaff(null)
+    } catch (err: any) {
+      alert(err?.message || 'Unexpected error. Please try again.')
     } finally {
       setActionLoading(false)
     }
@@ -309,46 +327,49 @@ export default function Staff() {
     setActionLoading(true)
     setEditError('')
     try {
-      // Add timeout protection
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000)
-      )
-
-      const updatePayload: Record<string, unknown> = {
-        role: selectedStaff.role,
-        is_active: selectedStaff.is_active,
-        updated_at: new Date().toISOString()
-      }
-
-      // Only update password if provided
+      // Step 1: If password provided, update auth.users via Edge Function
       if (editPassword.trim()) {
         if (editPassword.length < 6) {
           setEditError('Password must be at least 6 characters')
           setActionLoading(false)
           return
         }
-        updatePayload.password = editPassword
+
+        const edgeResult = await callEdgeFunction('reset_password', {
+          email: selectedStaff.email,
+          newPassword: editPassword,
+        })
+
+        if (edgeResult.error) {
+          setEditError(`Password update failed: ${edgeResult.error}`)
+          setActionLoading(false)
+          return
+        }
       }
 
-      const updatePromise = supabase
+      // Step 2: Update role/active status in public.staff
+      const { error } = await supabase
         .from('staff')
-        .update(updatePayload)
+        .update({
+          role: selectedStaff.role,
+          is_active: selectedStaff.is_active,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', selectedStaff.id)
 
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any
-
       if (error) {
-        setEditError(error.message || 'Failed to update staff member.')
-      } else {
-        const updatedStaff = staff.map(s =>
-          s.id === selectedStaff.id ? processStaffMember({ ...s, ...selectedStaff }, 0) : s
-        )
-        setStaff(updatedStaff)
-        setShowEditModal(false)
-        setSelectedStaff(null)
-        setEditPassword('')
-        setShowEditPassword(false)
+        setEditError(error.message || 'Failed to update staff record.')
+        return
       }
+
+      const updatedStaff = staff.map(s =>
+        s.id === selectedStaff.id ? processStaffMember({ ...s, ...selectedStaff }, 0) : s
+      )
+      setStaff(updatedStaff)
+      setShowEditModal(false)
+      setSelectedStaff(null)
+      setEditPassword('')
+      setShowEditPassword(false)
     } catch (err: any) {
       setEditError(err?.message || 'Unexpected error. Please try again.')
     } finally {

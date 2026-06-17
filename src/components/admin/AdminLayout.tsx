@@ -53,7 +53,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       navigate('/login')
+      setLoading(false)
+      return
     }
+
+    // Verify this auth user has an active staff record
+    const { data: staffRecord } = await supabase
+      .from('staff')
+      .select('id, is_active')
+      .eq('email', session.user.email)
+      .maybeSingle()
+
+    if (!staffRecord || !staffRecord.is_active) {
+      await supabase.auth.signOut()
+      navigate('/login')
+      setLoading(false)
+      return
+    }
+
     setLoading(false)
   }
 
