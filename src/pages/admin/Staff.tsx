@@ -81,6 +81,11 @@ export default function Staff() {
   const [adding, setAdding] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
 
+  // Edit Staff form states
+  const [editPassword, setEditPassword] = useState('')
+  const [showEditPassword, setShowEditPassword] = useState(false)
+  const [editError, setEditError] = useState('')
+
   // Notification and profile states
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -218,6 +223,11 @@ export default function Staff() {
     setAdding(true)
     setAddError('')
     try {
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000)
+      )
+
       const insertPayload: Record<string, unknown> = {
         full_name: newFullName.trim(),
         email: newEmail.trim().toLowerCase(),
@@ -227,11 +237,13 @@ export default function Staff() {
         permissions: {},
       }
 
-      const { data, error } = await supabase
+      const insertPromise = supabase
         .from('staff')
         .insert(insertPayload)
         .select()
         .single()
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise]) as any
 
       if (error) {
         // If password column doesn't exist yet, retry without it
@@ -250,7 +262,7 @@ export default function Staff() {
         if (error.code === '23505') {
           setAddError('A staff member with this email already exists.')
         } else {
-          setAddError(error.message)
+          setAddError(error.message || 'Failed to add staff member.')
         }
         return
       }
@@ -259,8 +271,8 @@ export default function Staff() {
       setStaff(prev => [processed, ...prev])
       setShowAddModal(false)
       resetAddForm()
-    } catch (err) {
-      setAddError('Unexpected error. Please try again.')
+    } catch (err: any) {
+      setAddError(err?.message || 'Unexpected error. Please try again.')
     } finally {
       setAdding(false)
     }
@@ -293,31 +305,52 @@ export default function Staff() {
 
   const handleUpdateStaff = async () => {
     if (!selectedStaff) return
-    
+
     setActionLoading(true)
+    setEditError('')
     try {
-      const { error } = await supabase
+      // Add timeout protection
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out. Please try again.')), 15000)
+      )
+
+      const updatePayload: Record<string, unknown> = {
+        role: selectedStaff.role,
+        is_active: selectedStaff.is_active,
+        updated_at: new Date().toISOString()
+      }
+
+      // Only update password if provided
+      if (editPassword.trim()) {
+        if (editPassword.length < 6) {
+          setEditError('Password must be at least 6 characters')
+          setActionLoading(false)
+          return
+        }
+        updatePayload.password = editPassword
+      }
+
+      const updatePromise = supabase
         .from('staff')
-        .update({
-          role: selectedStaff.role,
-          is_active: selectedStaff.is_active,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', selectedStaff.id)
-      
+
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any
+
       if (error) {
-        console.error('Error updating staff:', error)
-        alert('Failed to update staff member.')
+        setEditError(error.message || 'Failed to update staff member.')
       } else {
-        const updatedStaff = staff.map(s => 
+        const updatedStaff = staff.map(s =>
           s.id === selectedStaff.id ? processStaffMember({ ...s, ...selectedStaff }, 0) : s
         )
         setStaff(updatedStaff)
         setShowEditModal(false)
         setSelectedStaff(null)
+        setEditPassword('')
+        setShowEditPassword(false)
       }
-    } catch (error) {
-      console.error('Error:', error)
+    } catch (err: any) {
+      setEditError(err?.message || 'Unexpected error. Please try again.')
     } finally {
       setActionLoading(false)
     }
@@ -369,6 +402,9 @@ export default function Staff() {
 
   const openEditModal = (member: TeamMember) => {
     setSelectedStaff(member)
+    setEditPassword('')
+    setShowEditPassword(false)
+    setEditError('')
     setShowEditModal(true)
   }
 
@@ -797,6 +833,31 @@ export default function Staff() {
                     Account Active
                   </label>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">New Password (optional)</label>
+                  <div className="relative">
+                    <input
+                      type={showEditPassword ? 'text' : 'password'}
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Leave blank to keep current password"
+                      className="w-full px-4 py-2.5 pr-11 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Min. 6 characters</p>
+                </div>
+
+                {editError && (
+                  <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl">{editError}</p>
+                )}
               </div>
               
               <div className="flex gap-3 mt-6">
