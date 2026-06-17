@@ -221,7 +221,6 @@ function CheckoutInner() {
 
     return (
       <>
-        <Navbar />
         <div className="min-h-screen bg-[#F5F5F0] py-12">
           <div className="max-w-3xl mx-auto px-6">
             {/* Success Header */}
@@ -303,7 +302,6 @@ function CheckoutInner() {
 
   return (
     <>
-      <Navbar />
       <div className="min-h-screen bg-[#F5F5F0] py-8">
         <div className="max-w-7xl mx-auto px-6">
           <button
