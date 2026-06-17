@@ -1,4 +1,5 @@
 name: Deploy Supabase Migrations
+# Triggered to apply pending migrations
 
 on:
   push:
