@@ -86,6 +86,13 @@ export default function Staff() {
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [editError, setEditError] = useState('')
 
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
   // Notification and profile states
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -277,6 +284,7 @@ export default function Staff() {
       setStaff(prev => [processed, ...prev])
       setShowAddModal(false)
       resetAddForm()
+      showToast(`${newFullName.trim()} was added successfully.`, 'success')
     } catch (err: any) {
       setAddError(err?.message || 'Unexpected error. Please try again.')
     } finally {
@@ -296,7 +304,7 @@ export default function Staff() {
 
       // If user not found in auth, that's fine — just clean up the staff row
       if (edgeResult.error && edgeResult.error !== 'User not found') {
-        alert(`Failed to delete auth account: ${edgeResult.error}`)
+        showToast(`Failed to delete auth account: ${edgeResult.error}`, 'error')
         return
       }
 
@@ -307,15 +315,17 @@ export default function Staff() {
         .eq('id', selectedStaff.id)
 
       if (error) {
-        alert(`Auth account deleted but staff record failed: ${error.message}`)
+        showToast(`Auth account deleted but staff record failed: ${error.message}`, 'error')
         return
       }
 
+      const deletedName = selectedStaff.full_name
       setStaff(staff.filter(s => s.id !== selectedStaff.id))
       setShowDeleteModal(false)
       setSelectedStaff(null)
+      showToast(`${deletedName} was removed successfully.`, 'success')
     } catch (err: any) {
-      alert(err?.message || 'Unexpected error. Please try again.')
+      showToast(err?.message || 'Unexpected error. Please try again.', 'error')
     } finally {
       setActionLoading(false)
     }
@@ -370,6 +380,7 @@ export default function Staff() {
       setSelectedStaff(null)
       setEditPassword('')
       setShowEditPassword(false)
+      showToast('Staff member updated successfully.', 'success')
     } catch (err: any) {
       setEditError(err?.message || 'Unexpected error. Please try again.')
     } finally {
@@ -437,6 +448,24 @@ export default function Staff() {
   return (
     <AdminLayout>
       <div className="flex-1 bg-gray-50 min-h-screen">
+
+        {/* Toast Notification */}
+        {toast && (
+          <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-medium transition-all animate-in slide-in-from-top-2 ${
+            toast.type === 'success'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}>
+            {toast.type === 'success'
+              ? <CheckCircle2 className="w-5 h-5 shrink-0" />
+              : <X className="w-5 h-5 shrink-0" />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Top Navigation Bar - No New button, No Search */}
         <div className="bg-white border-b border-gray-200 px-8 py-4">
           <div className="flex items-center justify-between">

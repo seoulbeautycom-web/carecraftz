@@ -1,5 +1,5 @@
 name: Deploy Supabase Migrations
-# Triggered to apply pending migrations
+# Triggered to apply pending migrations and deploy Edge Functions
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/**/*.sql'
+      - 'supabase/functions/**'
       - '.github/workflows/supabase-migrations.yml'
   workflow_dispatch:
 
@@ -29,9 +30,16 @@ jobs:
       
       - name: Link Supabase project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
-      
+
       - name: Push migrations
         run: supabase db push
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --no-verify-jwt
       
+      - name: Set Edge Function secrets
+        run: |
+          supabase secrets set PROJECT_URL=${{ secrets.SUPABASE_PROJECT_URL }} SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Verify deployment
-        run: echo "Migrations deployed successfully"
+        run: echo "Migrations and Edge Functions deployed successfully"
