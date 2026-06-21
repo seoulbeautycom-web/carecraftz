@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { X, Plus, Trash2, Upload, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { ArrowLeft, X, Plus, Trash2, Upload, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 interface Product {
@@ -64,7 +64,9 @@ interface Review {
 interface Props {
   product?: Product & { id: string }
   onClose: () => void
-  onSaved: () => void
+  onSaved: (productId?: string) => void
+  layout?: 'modal' | 'page'
+  closeOnSave?: boolean
 }
 
 type ModalTab = 'basics' | 'branding' | 'details' | 'sections' | 'blog' | 'reviews'
@@ -107,7 +109,8 @@ const buildProductForm = (product?: Partial<Product> & { id?: string }): Product
   images: Array.isArray(product?.images) ? product.images : [],
 })
 
-export default function ProductModal({ product, onClose, onSaved }: Props) {
+export default function ProductModal({ product, onClose, onSaved, layout = 'modal', closeOnSave = true }: Props) {
+  const isPageLayout = layout === 'page'
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
   const [form, setForm] = useState<Product>(buildProductForm(product))
   const [sections, setSections] = useState<ProductSection[]>([])
@@ -121,12 +124,12 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const brandLogoInputRef = useRef<HTMLInputElement>(null)
 
-  const fetchBlogPosts = async () => {
+  const fetchBlogPosts = useCallback(async () => {
     const { data } = await supabase.from('blog_posts').select('id,title,slug').eq('status', 'published').order('title')
     setAllBlogPosts(data || [])
-  }
+  }, [])
 
-  const fetchSections = async (productId: string) => {
+  const fetchSections = useCallback(async (productId: string) => {
     const { data } = await supabase.from('product_sections').select('*').eq('product_id', productId).order('sort_order')
     setSections((data || []).map((s: ProductSection) => ({
       ...s,
@@ -137,17 +140,17 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
       breakdown_image: s.breakdown_image || '',
       breakdown_left_image: s.breakdown_left_image || '',
     })))
-  }
+  }, [])
 
-  const fetchBlogAssignment = async (productId: string) => {
+  const fetchBlogAssignment = useCallback(async (productId: string) => {
     const { data } = await supabase.from('product_blog_assignments').select('blog_post_id').eq('product_id', productId).maybeSingle()
     if (data?.blog_post_id) setAssignedBlogId(data.blog_post_id)
-  }
+  }, [])
 
-  const fetchReviews = async (productId: string) => {
+  const fetchReviews = useCallback(async (productId: string) => {
     const { data } = await supabase.from('reviews').select('*').eq('product_id', productId).order('created_at', { ascending: false })
     setReviews(data || [])
-  }
+  }, [])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -229,7 +232,7 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
-  }, [product?.id])
+  }, [fetchBlogPosts, fetchSections, fetchBlogAssignment, fetchReviews, product?.id])
 
   const updateSection = (idx: number, field: keyof ProductSection, value: string | number) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
@@ -302,8 +305,10 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
         await supabase.from('product_blog_assignments').insert({ product_id: productId, blog_post_id: assignedBlogId })
       }
 
-      onSaved()
-      onClose()
+      onSaved(productId)
+      if (closeOnSave) {
+        onClose()
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save product')
     } finally {
@@ -322,8 +327,8 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center">
-      <div className="my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+    <div className={isPageLayout ? 'w-full' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center'}>
+      <div className={isPageLayout ? 'flex w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
@@ -331,9 +336,19 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
             <h2 className="text-xl font-bold text-gray-900">{product?.id ? 'Edit Product' : 'Add Product'}</h2>
             {product?.id && <p className="text-xs text-gray-400 mt-0.5">ID: {product.id}</p>}
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          {isPageLayout ? (
+            <button
+              onClick={onClose}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to products
+            </button>
+          ) : (
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Tab bar */}
@@ -354,7 +369,7 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className={isPageLayout ? 'px-8 py-6' : 'flex-1 overflow-y-auto px-8 py-6'}>
 
           {/* ── TAB: BASICS ── */}
           {activeTab === 'basics' && (
@@ -807,7 +822,7 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
           {!error && <span />}
           <div className="flex gap-3">
             <button onClick={onClose} className="px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
-              Cancel
+              {isPageLayout ? 'Back to products' : 'Cancel'}
             </button>
             <button
               onClick={handleSave}
