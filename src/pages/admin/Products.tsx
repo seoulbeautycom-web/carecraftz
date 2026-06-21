@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   Package, 
@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
-import ProductModal from '../../components/admin/ProductModal'
 
 interface Order {
   id: string
@@ -37,6 +36,9 @@ interface Product {
   description: string | null
   how_to_use?: string | null
   ingredients?: string | null
+  brand_name?: string | null
+  brand_logo?: string | null
+  seller_name?: string | null
   price: number
   price_pkr?: number | null
   price_aed?: number | null
@@ -63,6 +65,17 @@ interface Product {
   sold?: number
 }
 
+const getTimeAgo = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+  return `${Math.floor(diffInMinutes / 1440)}d ago`
+}
+
 export default function Products() {
   const navigate = useNavigate()
   const [products, setProducts] = useState<Product[]>([])
@@ -75,16 +88,12 @@ export default function Products() {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [newOrdersCount, setNewOrdersCount] = useState(0)
-  const [showProductModal, setShowProductModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined)
 
-  useEffect(() => {
-    fetchProducts()
-    fetchUserName()
-    fetchOrdersForNotifications()
-  }, [])
+  const openProductEditor = useCallback((productId?: string) => {
+    navigate(productId ? `/products/${productId}` : '/products/new')
+  }, [navigate])
 
-  const fetchOrdersForNotifications = async () => {
+  const fetchOrdersForNotifications = useCallback(async () => {
     const { data } = await supabase
       .from('orders')
       .select('*')
@@ -97,39 +106,28 @@ export default function Products() {
       }))
       setAllOrders(ordersWithTime)
       
-      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const last24Hours = new Date()
+      last24Hours.setHours(last24Hours.getHours() - 24)
       const recentOrders = data.filter((o: Order) => new Date(o.created_at) > last24Hours)
       setNewOrdersCount(recentOrders.length)
     }
-  }
-
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
-  }
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login', { replace: true })
   }
 
-  const fetchUserName = async () => {
+  const fetchUserName = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user?.email) {
       const name = session.user.email.split('@')[0]
       setUserName(name.charAt(0).toUpperCase() + name.slice(1))
     }
-  }
+  }, [])
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      setLoading(true)
       const { data: productsData, error } = await supabase
         .from('products')
         .select('*')
@@ -152,12 +150,31 @@ export default function Products() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const filteredProducts = products.filter(product => {
-    return product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-  })
+  const loadInitialData = useCallback(() => {
+    void fetchProducts()
+    void fetchUserName()
+    void fetchOrdersForNotifications()
+  }, [fetchProducts, fetchUserName, fetchOrdersForNotifications])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(loadInitialData, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [loadInitialData])
+
+  const query = searchQuery.toLowerCase()
+  const matchesSearch = (product: Pick<Product, 'name' | 'subtitle' | 'sku' | 'category' | 'brand_name' | 'seller_name'>) => [
+    product.name,
+    product.subtitle || '',
+    product.sku || '',
+    product.category || '',
+    product.brand_name || '',
+    product.seller_name || '',
+  ].some((value) => value.toLowerCase().includes(query))
+
+  const filteredProducts = products.filter(matchesSearch)
 
   // Calculate stats
   const totalProducts = products.length
@@ -205,6 +222,9 @@ export default function Products() {
       id: '1',
       name: 'Calendula & Oat Soap',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 12,
       compare_at_price: null,
       inventory: 84,
@@ -231,6 +251,9 @@ export default function Products() {
       id: '2',
       name: 'Whipped Shea Body Butter',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 22,
       compare_at_price: null,
       inventory: 56,
@@ -257,6 +280,9 @@ export default function Products() {
       id: '3',
       name: 'Rosehip Facial Serum',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 38,
       compare_at_price: null,
       inventory: 32,
@@ -283,6 +309,9 @@ export default function Products() {
       id: '4',
       name: 'Lavender Dream Soap',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 14,
       compare_at_price: null,
       inventory: 10,
@@ -309,6 +338,9 @@ export default function Products() {
       id: '5',
       name: 'Green Clay Detox Mask',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 28,
       compare_at_price: null,
       inventory: 0,
@@ -335,6 +367,9 @@ export default function Products() {
       id: '6',
       name: 'Botanical Bath Salts',
       description: '',
+      brand_name: 'CareCraftz',
+      brand_logo: '',
+      seller_name: 'CareCraftz Official',
       price: 18,
       compare_at_price: null,
       inventory: 63,
@@ -368,13 +403,17 @@ export default function Products() {
     return true
   })
 
-  const displayProducts = products.length > 0 ? inventoryFilteredProducts : sampleProducts.filter(product => {
-    if (inventoryFilter === 'all') return true
-    if (inventoryFilter === 'active') return product.is_active
-    if (inventoryFilter === 'low') return product.inventory <= product.low_stock_threshold && product.inventory > 0
-    if (inventoryFilter === 'out') return product.inventory === 0
-    return true
-  })
+  const usingDemoProducts = products.length === 0
+  const displayProducts = usingDemoProducts
+    ? sampleProducts.filter((product) => {
+        if (!matchesSearch(product)) return false
+        if (inventoryFilter === 'all') return true
+        if (inventoryFilter === 'active') return product.is_active
+        if (inventoryFilter === 'low') return product.inventory <= product.low_stock_threshold && product.inventory > 0
+        if (inventoryFilter === 'out') return product.inventory === 0
+        return true
+      })
+    : inventoryFilteredProducts
 
   return (
     <AdminLayout>
@@ -553,7 +592,7 @@ export default function Products() {
                     </button>
                   </div>
                   <button
-                    onClick={() => { setEditingProduct(undefined); setShowProductModal(true) }}
+                    onClick={() => openProductEditor()}
                     className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
                     <Plus className="w-4 h-4" />
                     Add Product
@@ -562,112 +601,204 @@ export default function Products() {
               </div>
             </div>
 
-            {/* Products Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Product</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">SKU</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Skin Type</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Price</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Stock</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Sold</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                        Loading products...
-                      </td>
+            {viewMode === 'table' ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Product</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">SKU</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Skin Type</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Price</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Stock</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Sold</th>
+                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
                     </tr>
-                  ) : displayProducts.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                        No products found
-                      </td>
-                    </tr>
-                  ) : (
-                    displayProducts.map((product) => (
-                      <tr key={product.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                              {product.images && product.images.length > 0 ? (
-                                <img 
-                                  src={product.images[0]} 
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Package className="w-5 h-5 text-gray-400" />
-                              )}
-                            </div>
-                            <button
-                              onClick={() => { setEditingProduct(product); setShowProductModal(true) }}
-                              className="text-sm font-medium text-gray-900 hover:text-indigo-600 text-left transition-colors"
-                            >
-                              {product.name}
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">{product.sku || '-'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">{product.category || '-'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {product.skin_type ? (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              product.skin_type === 'Oily' ? 'bg-lime-100 text-lime-700' :
-                              product.skin_type === 'Dry' ? 'bg-orange-100 text-orange-700' :
-                              product.skin_type === 'Combo' ? 'bg-teal-100 text-teal-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {product.skin_type}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm font-medium text-gray-900">{formatPrice(product.price)}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`text-sm ${product.inventory <= product.low_stock_threshold ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                            {product.inventory}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1 text-sm text-emerald-600">
-                            <span className="text-emerald-500">↗</span>
-                            {product.sold || 0}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {getStatusBadge(product)}
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                          Loading products...
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : displayProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                          No products found
+                        </td>
+                      </tr>
+                    ) : (
+                      displayProducts.map((product) => (
+                        <tr
+                          key={product.id}
+                          tabIndex={0}
+                          onClick={() => openProductEditor(usingDemoProducts ? undefined : product.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              openProductEditor(usingDemoProducts ? undefined : product.id)
+                            }
+                          }}
+                          className="group border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                                {product.images && product.images.length > 0 ? (
+                                  <img
+                                    src={product.images[0]}
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="w-5 h-5 text-gray-400" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                    {product.name}
+                                  </span>
+                                  {product.brand_name && (
+                                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                                      {product.brand_name}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  {product.brand_name || 'No brand yet'}{product.seller_name ? ` • Seller: ${product.seller_name}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-gray-600">{product.sku || '-'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm text-gray-600">{product.category || '-'}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {product.skin_type ? (
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                product.skin_type === 'Oily' ? 'bg-lime-100 text-lime-700' :
+                                product.skin_type === 'Dry' ? 'bg-orange-100 text-orange-700' :
+                                product.skin_type === 'Combo' ? 'bg-teal-100 text-teal-700' :
+                                'bg-blue-100 text-blue-700'
+                              }`}>
+                                {product.skin_type}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-medium text-gray-900">{formatPrice(product.price)}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`text-sm ${product.inventory <= product.low_stock_threshold ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                              {product.inventory}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1 text-sm text-emerald-600">
+                              <span className="text-emerald-500">↗</span>
+                              {product.sold || 0}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {getStatusBadge(product)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="grid gap-6 p-6 sm:grid-cols-2 xl:grid-cols-3">
+                {loading ? (
+                  <div className="col-span-full rounded-2xl border border-gray-100 bg-gray-50 px-6 py-10 text-center text-gray-500">
+                    Loading products...
+                  </div>
+                ) : displayProducts.length === 0 ? (
+                  <div className="col-span-full rounded-2xl border border-gray-100 bg-gray-50 px-6 py-10 text-center text-gray-500">
+                    No products found
+                  </div>
+                ) : (
+                  displayProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => openProductEditor(usingDemoProducts ? undefined : product.id)}
+                      className="group rounded-3xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    >
+                      <div className="relative overflow-hidden rounded-2xl bg-gray-100 aspect-[4/3]">
+                        {product.images && product.images.length > 0 ? (
+                          <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Package className="h-10 w-10 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="absolute left-3 top-3">
+                          {getStatusBadge(product)}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                              {product.name}
+                            </h3>
+                            {product.brand_name && (
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                                {product.brand_name}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                            {product.subtitle || product.description || 'No description added yet.'}
+                          </p>
+                        </div>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600">
+                          <Eye className="h-5 w-5" />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Price</p>
+                          <p className="font-medium text-gray-900">{formatPrice(product.price)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Stock</p>
+                          <p className="font-medium text-gray-900">{product.inventory}</p>
+                        </div>
+                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">SKU</p>
+                          <p className="font-medium text-gray-900">{product.sku || '—'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Sold</p>
+                          <p className="font-medium text-gray-900">{product.sold || 0}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                        <span>{product.brand_name || 'No brand yet'}{product.seller_name ? ` • ${product.seller_name}` : ''}</span>
+                        <span className="font-medium text-indigo-600">Open details →</span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
-      {showProductModal && (
-        <ProductModal
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          product={editingProduct as any}
-          onClose={() => setShowProductModal(false)}
-          onSaved={() => { fetchProducts(); setShowProductModal(false) }}
-        />
-      )}
     </AdminLayout>
   )
 }

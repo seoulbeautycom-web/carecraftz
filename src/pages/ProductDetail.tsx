@@ -12,6 +12,9 @@ interface Product {
   description: string | null
   how_to_use: string | null
   ingredients: string | null
+  brand_name: string | null
+  brand_logo: string | null
+  seller_name: string | null
   price: number
   price_pkr: number | null
   price_aed: number | null
@@ -218,6 +221,28 @@ function ProductDetailInner() {
                 <h1 className="text-3xl font-bold text-[#2b2b2b]">{product.name}</h1>
                 {product.subtitle && (
                   <p className="text-[#696a67] italic mt-1">{product.subtitle}</p>
+                )}
+                {(product.brand_name || product.seller_name || product.brand_logo) && (
+                  <div className="mt-4 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+                    <div className="h-12 w-12 overflow-hidden rounded-2xl bg-[#f0ece0] flex items-center justify-center">
+                      {product.brand_logo ? (
+                        <img src={product.brand_logo} alt={product.brand_name || product.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-semibold text-[#2b2b2b]">
+                          {(product.brand_name || product.name).charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-[#696a67]">Brand & seller</p>
+                      <p className="text-sm font-semibold text-[#2b2b2b]">
+                        {product.brand_name || 'Brand not set'}
+                      </p>
+                      {product.seller_name && (
+                        <p className="text-xs text-[#696a67]">Sold by {product.seller_name}</p>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 

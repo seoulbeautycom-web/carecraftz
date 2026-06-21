@@ -9,6 +9,9 @@ interface Product {
   description: string
   how_to_use: string
   ingredients: string
+  brand_name: string
+  brand_logo: string
+  seller_name: string
   price: number
   price_pkr: number | null
   price_aed: number | null
@@ -64,10 +67,11 @@ interface Props {
   onSaved: () => void
 }
 
-type ModalTab = 'basics' | 'details' | 'sections' | 'blog' | 'reviews'
+type ModalTab = 'basics' | 'branding' | 'details' | 'sections' | 'blog' | 'reviews'
 
 const TABS: { key: ModalTab; label: string }[] = [
   { key: 'basics', label: 'Basics' },
+  { key: 'branding', label: 'Branding' },
   { key: 'details', label: 'How To Use & Ingredients' },
   { key: 'sections', label: 'Page Sections' },
   { key: 'blog', label: 'Blog Assignment' },
@@ -76,15 +80,36 @@ const TABS: { key: ModalTab; label: string }[] = [
 
 const EMPTY_PRODUCT: Product = {
   name: '', subtitle: '', description: '', how_to_use: '', ingredients: '',
+  brand_name: '', brand_logo: '', seller_name: '',
   price: 0, price_pkr: null, price_aed: null, compare_at_price: null,
   inventory: 0, low_stock_threshold: 10, category: '', location: 'UAE',
   delivery_charge: 0, images: [], is_active: true, is_featured: false,
   sku: '', weight: null, discount_percent: 0, tag1: '', tag2: '', skin_type: '',
 }
 
+const buildProductForm = (product?: Partial<Product> & { id?: string }): Product => ({
+  ...EMPTY_PRODUCT,
+  ...product,
+  name: product?.name || '',
+  subtitle: product?.subtitle || '',
+  description: product?.description || '',
+  how_to_use: product?.how_to_use || '',
+  ingredients: product?.ingredients || '',
+  brand_name: product?.brand_name || '',
+  brand_logo: product?.brand_logo || '',
+  seller_name: product?.seller_name || '',
+  category: product?.category || '',
+  location: product?.location || 'UAE',
+  sku: product?.sku || '',
+  tag1: product?.tag1 || '',
+  tag2: product?.tag2 || '',
+  skin_type: product?.skin_type || '',
+  images: Array.isArray(product?.images) ? product.images : [],
+})
+
 export default function ProductModal({ product, onClose, onSaved }: Props) {
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
-  const [form, setForm] = useState<Product>(product ? { ...EMPTY_PRODUCT, ...product } : EMPTY_PRODUCT)
+  const [form, setForm] = useState<Product>(buildProductForm(product))
   const [sections, setSections] = useState<ProductSection[]>([])
   const [allBlogPosts, setAllBlogPosts] = useState<BlogPost[]>([])
   const [assignedBlogId, setAssignedBlogId] = useState<string>('')
@@ -92,16 +117,9 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [imageUploading, setImageUploading] = useState(false)
+  const [brandLogoUploading, setBrandLogoUploading] = useState(false)
   const imageInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    fetchBlogPosts()
-    if (product?.id) {
-      fetchSections(product.id)
-      fetchBlogAssignment(product.id)
-      fetchReviews(product.id)
-    }
-  }, [product?.id])
+  const brandLogoInputRef = useRef<HTMLInputElement>(null)
 
   const fetchBlogPosts = async () => {
     const { data } = await supabase.from('blog_posts').select('id,title,slug').eq('status', 'published').order('title')
@@ -150,6 +168,31 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
     if (imageInputRef.current) imageInputRef.current.value = ''
   }
 
+  const handleBrandLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const file = files[0]
+    setBrandLogoUploading(true)
+    setError('')
+
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `product-branding/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+      setForm((current) => ({ ...current, brand_logo: data.publicUrl }))
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload brand logo')
+    } finally {
+      setBrandLogoUploading(false)
+      if (brandLogoInputRef.current) brandLogoInputRef.current.value = ''
+    }
+  }
+
   const handleSectionImageUpload = async (idx: number, field: 'breakdown_image' | 'breakdown_left_image', file: File) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, _uploading: true } : s))
     const ext = file.name.split('.').pop()
@@ -175,6 +218,19 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
 
   const removeSection = (idx: number) => setSections(prev => prev.filter((_, i) => i !== idx))
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchBlogPosts()
+      if (product?.id) {
+        void fetchSections(product.id)
+        void fetchBlogAssignment(product.id)
+        void fetchReviews(product.id)
+      }
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [product?.id])
+
   const updateSection = (idx: number, field: keyof ProductSection, value: string | number) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
   }
@@ -191,6 +247,7 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
         const { error } = await supabase.from('products').update({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
+          brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
           price: form.price, price_pkr: form.price_pkr, price_aed: form.price_aed,
           compare_at_price: form.compare_at_price, inventory: form.inventory,
           low_stock_threshold: form.low_stock_threshold, category: form.category,
@@ -206,6 +263,7 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
         const { data, error } = await supabase.from('products').insert({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
+          brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
           price: form.price, price_pkr: form.price_pkr, price_aed: form.price_aed,
           compare_at_price: form.compare_at_price, inventory: form.inventory,
           low_stock_threshold: form.low_stock_threshold, category: form.category,
@@ -444,6 +502,88 @@ export default function ProductModal({ product, onClose, onSaved }: Props) {
                     <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
                   </label>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: BRANDING ── */}
+          {activeTab === 'branding' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand Name</label>
+                  <input
+                    value={form.brand_name}
+                    onChange={(e) => setForm((current) => ({ ...current, brand_name: e.target.value }))}
+                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    placeholder="e.g. CareCraftz"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Seller Name</label>
+                  <input
+                    value={form.seller_name}
+                    onChange={(e) => setForm((current) => ({ ...current, seller_name: e.target.value }))}
+                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    placeholder="e.g. CareCraftz Official"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand Logo</label>
+                <p className="text-xs text-gray-400 mt-0.5 mb-3">Upload a public logo image for this product's brand identity.</p>
+
+                {form.brand_logo ? (
+                  <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="h-20 w-20 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                      <img src={form.brand_logo} alt={form.brand_name || 'Brand logo'} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">{form.brand_name || 'Brand logo uploaded'}</p>
+                      <p className="text-xs text-gray-500 break-all">{form.brand_logo}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => brandLogoInputRef.current?.click()}
+                        className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm((current) => ({ ...current, brand_logo: '' }))}
+                        className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => brandLogoInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-sm text-gray-500 transition-colors hover:border-indigo-400 hover:bg-indigo-50"
+                  >
+                    {brandLogoUploading ? (
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                    ) : (
+                      <>
+                        <Upload className="h-5 w-5 text-gray-400" />
+                        <span className="mt-2 font-medium text-gray-700">Click to upload brand logo</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                <input
+                  ref={brandLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBrandLogoUpload}
+                />
               </div>
             </div>
           )}

@@ -6,6 +6,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
 import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
+import ProductEditor from './pages/admin/ProductEditor'
 import Settings from './pages/admin/Settings'
 import Analytics from './pages/admin/Analytics'
 import Reviews from './pages/admin/Reviews'
@@ -41,6 +42,16 @@ function AdminApp() {
           <Route path="/staff" element={
             <ProtectedRoute>
               <StaffManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/products/new" element={
+            <ProtectedRoute>
+              <ProductEditor />
+            </ProtectedRoute>
+          } />
+          <Route path="/products/:productId" element={
+            <ProtectedRoute>
+              <ProductEditor />
             </ProtectedRoute>
           } />
           <Route path="/access-control" element={
