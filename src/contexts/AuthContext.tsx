@@ -9,6 +9,18 @@ interface User {
   full_name?: string
 }
 
+const userFromSession = (sessionUser: { id: string; email?: string | null; phone?: string | null } | null): User | null => {
+  if (!sessionUser?.email) {
+    return null
+  }
+
+  return {
+    id: sessionUser.id,
+    email: sessionUser.email,
+    phone: sessionUser.phone || undefined,
+  }
+}
+
 interface AuthContextType {
   user: User | null
   loading: boolean
@@ -28,32 +40,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          phone: session.user.phone || undefined,
-        })
+    let isMounted = true
+
+    const syncSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!isMounted) {
+        return
       }
+
+      setUser(userFromSession(session?.user ?? null))
       setLoading(false)
-    })
+    }
+
+    // Check for existing session
+    void syncSession()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          phone: session.user.phone || undefined,
-        })
-      } else {
-        setUser(null)
-      }
+      setUser(userFromSession(session?.user ?? null))
+      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    const handlePageShow = () => {
+      void syncSession()
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+      window.removeEventListener('pageshow', handlePageShow)
+    }
   }, [])
 
   const signInWithEmail = async (email: string, password: string) => {

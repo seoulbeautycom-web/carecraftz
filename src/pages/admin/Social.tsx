@@ -93,7 +93,7 @@ export default function Social() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const fetchUserName = async () => {
@@ -381,3 +381,4 @@ export default function Social() {
     </AdminLayout>
   )
 }
+

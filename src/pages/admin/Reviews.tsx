@@ -91,7 +91,7 @@ export default function Reviews() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const fetchUserName = async () => {
@@ -504,3 +504,4 @@ export default function Reviews() {
     </AdminLayout>
   )
 }
+

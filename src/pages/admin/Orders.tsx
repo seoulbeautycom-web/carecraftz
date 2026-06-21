@@ -136,7 +136,7 @@ export default function AdminOrders() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const handleViewOrder = (orderId: string) => {
@@ -496,8 +496,8 @@ export default function AdminOrders() {
 
         {/* Order Detail Modal */}
         {showDetailModal && selectedOrder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Order Details</h2>
                 <button 
@@ -558,3 +558,4 @@ export default function AdminOrders() {
     </AdminLayout>
   )
 }
+

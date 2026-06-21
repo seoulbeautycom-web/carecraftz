@@ -121,7 +121,7 @@ export default function SkinTypes() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const unassignedProducts = allProducts.filter(p => !p.skin_type)
@@ -349,3 +349,4 @@ export default function SkinTypes() {
     </AdminLayout>
   )
 }
+

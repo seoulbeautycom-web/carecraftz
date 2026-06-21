@@ -95,7 +95,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const handleViewOrder = (orderId: string) => {
@@ -517,3 +517,4 @@ export default function AdminDashboard() {
     </AdminLayout>
   )
 }
+

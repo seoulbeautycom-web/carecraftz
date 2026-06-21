@@ -116,7 +116,7 @@ export default function Products() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const fetchUserName = async () => {
@@ -671,3 +671,4 @@ export default function Products() {
     </AdminLayout>
   )
 }
+

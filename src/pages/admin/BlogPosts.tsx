@@ -326,8 +326,8 @@ export default function BlogPosts() {
 
         {/* Add Post Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 my-8 p-6">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Post</h2>
               <form onSubmit={handleAddPost} className="space-y-4">
                 <div>
@@ -437,8 +437,8 @@ export default function BlogPosts() {
 
         {/* Edit Post Modal */}
         {showEditModal && editingPost && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 my-8 p-6">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Post</h2>
               <form onSubmit={handleEditPost} className="space-y-4">
                 <div>

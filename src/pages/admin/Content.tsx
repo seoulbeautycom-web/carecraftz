@@ -91,7 +91,7 @@ export default function Content() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   const fetchUserName = async () => {
@@ -421,8 +421,8 @@ export default function Content() {
 
         {/* New Page Modal */}
         {showNewPageModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Create New Page</h2>
                 <button 
@@ -472,8 +472,8 @@ export default function Content() {
 
         {/* New Post Modal */}
         {showNewPostModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Create New Post</h2>
                 <button 
@@ -525,3 +525,4 @@ export default function Content() {
     </AdminLayout>
   )
 }
+

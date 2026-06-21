@@ -319,8 +319,8 @@ export default function SocialMedia() {
 
             {/* Add Social Link Modal */}
             {showAddSocial && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+              <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
+                <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Add Social Media Link</h2>
                   <form onSubmit={handleAddSocial} className="space-y-4">
                     <div>
