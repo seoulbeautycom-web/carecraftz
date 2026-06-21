@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
+import { ROLE_OPTIONS } from '../../lib/rbac'
 
 interface Order {
   id: string
@@ -46,14 +47,6 @@ interface TeamMember {
   permissionsDisplay: string
   last_active: string
 }
-
-const ROLE_OPTIONS = [
-  { value: 'admin', label: 'Admin', color: 'bg-blue-100 text-blue-700', permissions: 'Full access' },
-  { value: 'editor', label: 'Editor', color: 'bg-purple-100 text-purple-700', permissions: 'Products, Content' },
-  { value: 'support', label: 'Support', color: 'bg-emerald-100 text-emerald-700', permissions: 'Orders, Customers' },
-  { value: 'analyst', label: 'Analyst', color: 'bg-pink-100 text-pink-700', permissions: 'Analytics only' },
-  { value: 'staff', label: 'Staff', color: 'bg-gray-100 text-gray-700', permissions: 'Limited access' }
-]
 
 const AVATAR_COLORS = ['bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-pink-500', 'bg-amber-500', 'bg-indigo-500', 'bg-rose-500']
 
@@ -177,7 +170,7 @@ export default function Staff() {
       ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
       : names[0].substring(0, 2).toUpperCase()
     
-    const roleOption = ROLE_OPTIONS.find(r => r.value === member.role) || ROLE_OPTIONS[4]
+    const roleOption = ROLE_OPTIONS.find(r => r.value === member.role) || ROLE_OPTIONS.find(r => r.value === 'staff') || ROLE_OPTIONS[ROLE_OPTIONS.length - 1]
     
     // Determine online status based on last_signed_in
     const lastSignIn = member.last_signed_in ? new Date(member.last_signed_in) : null
@@ -280,6 +273,15 @@ export default function Staff() {
         return
       }
 
+      const { error: syncError } = await supabase.rpc('sync_staff_role_assignment', {
+        target_staff_id: data.id,
+        target_role_code: newRole,
+      })
+
+      if (syncError) {
+        console.warn('Failed to sync staff role assignment:', syncError)
+      }
+
       const processed = processStaffMember(data, staff.length)
       setStaff(prev => [processed, ...prev])
       setShowAddModal(false)
@@ -371,6 +373,15 @@ export default function Staff() {
       if (error) {
         setEditError(error.message || 'Failed to update staff record.')
         return
+      }
+
+      const { error: syncError } = await supabase.rpc('sync_staff_role_assignment', {
+        target_staff_id: selectedStaff.id,
+        target_role_code: selectedStaff.role,
+      })
+
+      if (syncError) {
+        console.warn('Failed to sync updated staff role assignment:', syncError)
       }
 
       const updatedStaff = staff.map(s =>

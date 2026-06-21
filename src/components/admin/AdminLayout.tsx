@@ -13,7 +13,8 @@ import {
   FileText,
   Globe,
   Search,
-  Droplets
+  Droplets,
+  ShieldCheck
 } from 'lucide-react'
 
 interface AdminLayoutProps {
@@ -30,6 +31,7 @@ const menuItems = [
   { icon: FileText, label: 'Content', path: '/content' },
   { icon: Globe, label: 'Social', path: '/social' },
   { icon: Users, label: 'Staff', path: '/staff' },
+  { icon: ShieldCheck, label: 'Access Control', path: '/access-control' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ]

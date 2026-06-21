@@ -25,10 +25,7 @@ export default function AdminLogin() {
       if (error) throw error
 
       if (data.user) {
-        await supabase
-          .from('staff')
-          .update({ last_signed_in: new Date().toISOString() })
-          .eq('email', email)
+        await supabase.rpc('bump_my_last_signed_in')
       }
       
       navigate('/dashboard')

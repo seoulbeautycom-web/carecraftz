@@ -12,6 +12,7 @@ import Reviews from './pages/admin/Reviews'
 import BlogPosts from './pages/admin/BlogPosts'
 import SocialMedia from './pages/admin/SocialMedia'
 import SkinTypes from './pages/admin/SkinTypes'
+import AccessControl from './pages/admin/AccessControl'
 
 /**
  * Admin Portal App - Separate from customer-facing site
@@ -40,6 +41,11 @@ function AdminApp() {
           <Route path="/staff" element={
             <ProtectedRoute>
               <StaffManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/access-control" element={
+            <ProtectedRoute>
+              <AccessControl />
             </ProtectedRoute>
           } />
           <Route path="/products" element={
