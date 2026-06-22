@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/whatsapp/webhook",
+      "destination": "/api/whatsapp/webhook"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
