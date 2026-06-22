@@ -109,6 +109,126 @@ const buildProductForm = (product?: Partial<Product> & { id?: string }): Product
   images: Array.isArray(product?.images) ? product.images : [],
 })
 
+type SupabaseErrorLike = {
+  message?: string
+  details?: string | null
+  hint?: string | null
+  code?: string | number | null
+}
+
+type ProductSaveStage = 'product details' | 'page sections' | 'blog assignment'
+
+const cleanErrorText = (value?: string | null) => (value || '').trim()
+
+const extractErrorMessage = (error: unknown): string => {
+  if (typeof error === 'string') return error.trim()
+  if (error instanceof Error) return error.message.trim()
+
+  if (error && typeof error === 'object') {
+    const typedError = error as SupabaseErrorLike
+    return [typedError.message, typedError.details, typedError.hint]
+      .map(cleanErrorText)
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+  }
+
+  return ''
+}
+
+const getFriendlyProductError = (error: unknown): string => {
+  const message = extractErrorMessage(error)
+  const lowerMessage = message.toLowerCase()
+  const code = error && typeof error === 'object' ? String((error as SupabaseErrorLike).code ?? '') : ''
+
+  if (!message) {
+    return 'Please try again in a moment.'
+  }
+
+  if (
+    lowerMessage.includes('failed to fetch') ||
+    lowerMessage.includes('networkerror') ||
+    lowerMessage.includes('network request failed')
+  ) {
+    return 'The app could not reach the server. Please check your internet connection and try again.'
+  }
+
+  if (
+    code === '42501' ||
+    lowerMessage.includes('permission denied') ||
+    lowerMessage.includes('row-level security') ||
+    lowerMessage.includes('rls')
+  ) {
+    return "Your account does not have permission to save products right now. Please sign in with an admin account and try again."
+  }
+
+  if (code === '23505' || lowerMessage.includes('duplicate key') || lowerMessage.includes('already exists')) {
+    if (lowerMessage.includes('sku') || lowerMessage.includes('products_sku')) {
+      return 'That SKU is already being used by another product. Please choose a different SKU.'
+    }
+
+    if (lowerMessage.includes('slug')) {
+      return 'That slug is already being used. Please choose a different value.'
+    }
+
+    return 'One of the values you entered is already in use. Please change the duplicate field and try again.'
+  }
+
+  if (code === '23502' || lowerMessage.includes('null value in column') || lowerMessage.includes('violates not-null constraint')) {
+    return 'Please fill in the missing required fields before saving.'
+  }
+
+  if (code === '23503' || lowerMessage.includes('foreign key')) {
+    return 'One of the linked records could not be found. Please refresh the page and try again.'
+  }
+
+  if (lowerMessage.includes('violates check constraint') || lowerMessage.includes('check constraint')) {
+    if (lowerMessage.includes('skin_type')) {
+      return 'Please pick a valid skin type or leave it blank.'
+    }
+
+    return 'One of the values you selected is not allowed. Please review the form and try again.'
+  }
+
+  if (lowerMessage.includes('no product id after save')) {
+    return 'The product was saved, but the app could not confirm the new product ID. Please refresh and try again.'
+  }
+
+  if (lowerMessage.includes('relation "') && lowerMessage.includes('does not exist')) {
+    return 'A required database table is missing. Please contact support or run the latest database migration.'
+  }
+
+  if (lowerMessage.includes('invalid input syntax') || lowerMessage.includes('cannot cast') || lowerMessage.includes('parse')) {
+    return 'One of the numbers or fields contains an invalid value. Please check prices, stock, and any numeric fields.'
+  }
+
+  if (lowerMessage.includes('storage') || lowerMessage.includes('upload')) {
+    return 'A file upload failed. Please try a smaller image or upload again.'
+  }
+
+  const looksTechnical = /(postgres|postgrest|sql|rpc|uuid|constraint|relation|foreign key|null value|duplicate key|syntax error)/i.test(message)
+  return looksTechnical ? 'Something went wrong while saving. Please try again.' : message
+}
+
+const buildProductSaveErrorMessage = (stage: ProductSaveStage, error: unknown, productWasSaved: boolean): string => {
+  const reason = getFriendlyProductError(error)
+
+  if (stage === 'product details') {
+    return `We couldn't save the product details. ${reason}`
+  }
+
+  if (productWasSaved) {
+    return `The product details were saved, but the ${stage} could not be updated. ${reason}`
+  }
+
+  return `We couldn't save the ${stage}. ${reason}`
+}
+
+const buildProductUploadErrorMessage = (label: string, error: unknown): string => {
+  const reason = getFriendlyProductError(error)
+  return `We couldn't upload the ${label}. ${reason}`
+}
+
 export default function ProductModal({ product, onClose, onSaved, layout = 'modal', closeOnSave = true }: Props) {
   const isPageLayout = layout === 'page'
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
@@ -157,18 +277,34 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
     if (!files || files.length === 0) return
     setImageUploading(true)
     const uploaded: string[] = []
-    for (const file of Array.from(files)) {
-      const ext = file.name.split('.').pop()
-      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('product-images').upload(path, file)
-      if (!error) {
+    let uploadError: unknown = null
+
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop()
+        const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error } = await supabase.storage.from('product-images').upload(path, file)
+
+        if (error) {
+          uploadError = error
+          break
+        }
+
         const { data } = supabase.storage.from('product-images').getPublicUrl(path)
         uploaded.push(data.publicUrl)
       }
+
+      setForm(f => ({ ...f, images: [...f.images, ...uploaded] }))
+
+      if (uploadError) {
+        throw uploadError
+      }
+    } catch (uploadError) {
+      setError(buildProductUploadErrorMessage('product image', uploadError))
+    } finally {
+      setImageUploading(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
     }
-    setForm(f => ({ ...f, images: [...f.images, ...uploaded] }))
-    setImageUploading(false)
-    if (imageInputRef.current) imageInputRef.current.value = ''
   }
 
   const handleBrandLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,7 +325,7 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
       const { data } = supabase.storage.from('product-images').getPublicUrl(path)
       setForm((current) => ({ ...current, brand_logo: data.publicUrl }))
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload brand logo')
+      setError(buildProductUploadErrorMessage('brand logo', uploadError))
     } finally {
       setBrandLogoUploading(false)
       if (brandLogoInputRef.current) brandLogoInputRef.current.value = ''
@@ -198,14 +334,20 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
 
   const handleSectionImageUpload = async (idx: number, field: 'breakdown_image' | 'breakdown_left_image', file: File) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, _uploading: true } : s))
-    const ext = file.name.split('.').pop()
-    const path = `product-sections/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('product-images').upload(path, file)
-    if (!error) {
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `product-sections/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error } = await supabase.storage.from('product-images').upload(path, file)
+
+      if (error) {
+        throw error
+      }
+
       const { data } = supabase.storage.from('product-images').getPublicUrl(path)
       setSections(prev => prev.map((s, i) => i === idx ? { ...s, [field]: data.publicUrl, _uploading: false } : s))
-    } else {
+    } catch (uploadError) {
       setSections(prev => prev.map((s, i) => i === idx ? { ...s, _uploading: false } : s))
+      setError(buildProductUploadErrorMessage('section image', uploadError))
     }
   }
 
@@ -239,14 +381,20 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
   }
 
   const handleSave = async () => {
-    if (!form.name.trim()) { setError('Product name is required'); return }
+    if (!form.name.trim()) {
+      setError('Please add a product name before saving.')
+      return
+    }
+
     setSaving(true)
     setError('')
-    try {
-      let productId = product?.id
 
+    let productId = product?.id
+    let productWasSaved = Boolean(productId)
+    let saveStage: ProductSaveStage = 'product details'
+
+    try {
       if (productId) {
-        // Update
         const { error } = await supabase.from('products').update({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
@@ -262,7 +410,6 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
         }).eq('id', productId)
         if (error) throw error
       } else {
-        // Insert
         const { data, error } = await supabase.from('products').insert({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
@@ -281,8 +428,12 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
 
       if (!productId) throw new Error('No product ID after save')
 
-      // Save sections: delete all then re-insert
-      await supabase.from('product_sections').delete().eq('product_id', productId)
+      productWasSaved = true
+
+      saveStage = 'page sections'
+      const { error: deleteSectionsError } = await supabase.from('product_sections').delete().eq('product_id', productId)
+      if (deleteSectionsError) throw deleteSectionsError
+
       if (sections.length > 0) {
         const toInsert = sections.map((s, i) => ({
           product_id: productId,
@@ -299,10 +450,13 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
         if (error) throw error
       }
 
-      // Save blog assignment
-      await supabase.from('product_blog_assignments').delete().eq('product_id', productId)
+      saveStage = 'blog assignment'
+      const { error: deleteBlogError } = await supabase.from('product_blog_assignments').delete().eq('product_id', productId)
+      if (deleteBlogError) throw deleteBlogError
+
       if (assignedBlogId) {
-        await supabase.from('product_blog_assignments').insert({ product_id: productId, blog_post_id: assignedBlogId })
+        const { error: blogAssignmentError } = await supabase.from('product_blog_assignments').insert({ product_id: productId, blog_post_id: assignedBlogId })
+        if (blogAssignmentError) throw blogAssignmentError
       }
 
       onSaved(productId)
@@ -310,7 +464,8 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
         onClose()
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to save product')
+      console.error(`Product save failed while ${saveStage}:`, err)
+      setError(buildProductSaveErrorMessage(saveStage, err, productWasSaved))
     } finally {
       setSaving(false)
     }
@@ -350,6 +505,14 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
             </button>
           )}
         </div>
+
+        {error && (
+          <div className="px-8 pt-4">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert" aria-live="polite">
+              {error}
+            </div>
+          </div>
+        )}
 
         {/* Tab bar */}
         <div className="flex gap-1 px-8 pt-4 border-b border-gray-100 overflow-x-auto">
@@ -818,8 +981,7 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
 
         {/* Footer */}
         <div className="flex items-center justify-between px-8 py-5 border-t border-gray-100 bg-gray-50/50">
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          {!error && <span />}
+          <span />
           <div className="flex gap-3">
             <button onClick={onClose} className="px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
               {isPageLayout ? 'Back to products' : 'Cancel'}
