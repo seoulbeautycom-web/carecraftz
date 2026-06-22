@@ -28,9 +28,9 @@ export default function AdminLogin() {
         await supabase.rpc('bump_my_last_signed_in')
       }
       
-      navigate('/dashboard')
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
+      navigate('/', { replace: true })
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setLoading(false)
     }

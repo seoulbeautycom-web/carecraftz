@@ -1,40 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
-import {
-  LayoutDashboard,
-  Users,
-  BarChart3,
-  Settings,
-  Store,
-  ShoppingCart,
-  Package,
-  Star,
-  FileText,
-  Globe,
-  Search,
-  Droplets,
-  ShieldCheck
-} from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Search, Store } from 'lucide-react'
+import { useAdminAccess } from '../../contexts/admin-access-context'
+import { ADMIN_NAV_ITEMS } from '../../lib/adminNavigation'
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
-
-// All admin pages - styled to match reference design
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: ShoppingCart, label: 'Orders', path: '/orders' },
-  { icon: Package, label: 'Products', path: '/products' },
-  { icon: Droplets, label: 'Skin Types', path: '/skin-types' },
-  { icon: Star, label: 'Reviews', path: '/reviews' },
-  { icon: FileText, label: 'Content', path: '/content' },
-  { icon: Globe, label: 'Social', path: '/social' },
-  { icon: Users, label: 'Staff', path: '/staff' },
-  { icon: ShieldCheck, label: 'Access Control', path: '/access-control' },
-  { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
-]
 
 const salesChannels = [
   { name: 'Online Store', dot: 'bg-emerald-500' },
@@ -43,38 +14,11 @@ const salesChannels = [
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const navigate = useNavigate()
   const location = useLocation()
-  const [loading, setLoading] = useState(true)
+  const { loading, fullName, roleCode, landingPath, hasAnyPermission: canAccessAnyPermission } = useAdminAccess()
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      navigate('/login')
-      setLoading(false)
-      return
-    }
-
-    // Verify this auth user has an active staff record
-    const { data: staffRecord } = await supabase
-      .from('staff')
-      .select('id, is_active')
-      .eq('email', session.user.email)
-      .maybeSingle()
-
-    if (!staffRecord || !staffRecord.is_active) {
-      await supabase.auth.signOut()
-      navigate('/login')
-      setLoading(false)
-      return
-    }
-
-    setLoading(false)
-  }
+  const menuItems = ADMIN_NAV_ITEMS.filter((item) => canAccessAnyPermission(item.requiredAnyPermissions))
+  const homePath = landingPath ?? '/'
 
   if (loading) {
     return (
@@ -93,13 +37,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <aside className="w-64 bg-slate-900 flex flex-col fixed h-screen">
         {/* Logo Area */}
         <div className="p-5">
-          <Link to="/dashboard" className="flex items-center gap-3">
+          <Link to={homePath} className="flex items-center gap-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <Store className="w-5 h-5 text-white" />
             </div>
             <div>
               <span className="font-bold text-white text-base">CareCraftz</span>
-              <span className="block text-xs text-slate-500 -mt-0.5">by carecraftz.com</span>
+              <span className="block text-xs text-slate-500 -mt-0.5">
+                {fullName || roleCode || 'Staff access'}
+              </span>
             </div>
           </Link>
         </div>
@@ -128,7 +74,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Link
                     to={item.path}
                     className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
-                      isActive
+                      isActive || (item.path !== '/dashboard' && location.pathname.startsWith(`${item.path}/`))
                         ? 'bg-indigo-600 text-white'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800'
                     }`}

@@ -395,7 +395,7 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
 
     try {
       if (productId) {
-        const { error } = await supabase.from('products').update({
+        const { data: updatedProduct, error } = await supabase.from('products').update({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
           brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
@@ -407,10 +407,13 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
           sku: form.sku, weight: form.weight, discount_percent: form.discount_percent,
           tag1: form.tag1, tag2: form.tag2, skin_type: form.skin_type,
           updated_at: new Date().toISOString(),
-        }).eq('id', productId)
+        }).eq('id', productId).select('id').maybeSingle()
         if (error) throw error
+        if (!updatedProduct?.id) {
+          throw new Error('No product record was updated. This usually means your account no longer has product edit permission, or the product no longer exists.')
+        }
       } else {
-        const { data, error } = await supabase.from('products').insert({
+        const { data: insertedProduct, error } = await supabase.from('products').insert({
           name: form.name, subtitle: form.subtitle, description: form.description,
           how_to_use: form.how_to_use, ingredients: form.ingredients,
           brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
@@ -421,9 +424,12 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
           images: form.images, is_active: form.is_active, is_featured: form.is_featured,
           sku: form.sku, weight: form.weight, discount_percent: form.discount_percent,
           tag1: form.tag1, tag2: form.tag2, skin_type: form.skin_type,
-        }).select().single()
+        }).select('id').maybeSingle()
         if (error) throw error
-        productId = data.id
+        if (!insertedProduct?.id) {
+          throw new Error('The product row was not created. Please check your product creation permissions and try again.')
+        }
+        productId = insertedProduct.id
       }
 
       if (!productId) throw new Error('No product ID after save')
