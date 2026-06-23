@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -56,8 +57,53 @@ interface PartnerApplicationRow {
   updated_at: string
 }
 
+interface PartnerStoreRow {
+  id: string
+  application_id: string | null
+  slug: string
+  tenant_type: 'flagship' | 'partner'
+  display_name: string
+  legal_name: string
+  primary_email: string
+  status: 'pending' | 'active' | 'suspended' | 'closed'
+  approval_status: 'pending' | 'approved' | 'rejected'
+  commission_rate: number
+  branding_json: Record<string, unknown>
+  settings_json: Record<string, unknown>
+  approved_by_staff_id: string | null
+  approved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 type ApplicationFilter = 'all' | PartnerApplicationRow['status']
+type MarketplaceSection = 'applications' | 'stores'
 type SaveAction = 'review' | 'approve' | 'reject' | null
+type StoreSaveAction = 'create' | 'update' | null
+
+interface StoreFormState {
+  slug: string
+  displayName: string
+  legalName: string
+  primaryEmail: string
+  ownerInviteEmail: string
+  status: PartnerStoreRow['status']
+  approvalStatus: PartnerStoreRow['approval_status']
+  commissionRate: string
+}
+
+interface ProvisionStoreResult {
+  partner_store_id?: string
+  slug?: string
+  display_name?: string
+  legal_name?: string
+  primary_email?: string
+  tenant_type?: string
+  status?: string
+  approval_status?: string
+  invite_id?: string | null
+  invite_url?: string | null
+}
 
 const STATUS_LABELS: Record<PartnerApplicationRow['status'], string> = {
   submitted: 'Submitted',
@@ -91,6 +137,28 @@ const slugifyPreview = (value: string) => {
   return slug || 'partner-store'
 }
 
+const emptyStoreForm = (): StoreFormState => ({
+  slug: '',
+  displayName: '',
+  legalName: '',
+  primaryEmail: '',
+  ownerInviteEmail: '',
+  status: 'active',
+  approvalStatus: 'approved',
+  commissionRate: '0',
+})
+
+const storeFormFromRow = (store: PartnerStoreRow): StoreFormState => ({
+  slug: store.slug,
+  displayName: store.display_name,
+  legalName: store.legal_name,
+  primaryEmail: store.primary_email,
+  ownerInviteEmail: '',
+  status: store.status,
+  approvalStatus: store.approval_status,
+  commissionRate: String(store.commission_rate ?? 0),
+})
+
 export default function PartnerApplications() {
   const [applications, setApplications] = useState<PartnerApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +170,15 @@ export default function PartnerApplications() {
   const [slugInput, setSlugInput] = useState('')
   const [reviewNotes, setReviewNotes] = useState('')
   const [savingAction, setSavingAction] = useState<SaveAction>(null)
+  const [activeSection, setActiveSection] = useState<MarketplaceSection>('applications')
+  const [stores, setStores] = useState<PartnerStoreRow[]>([])
+  const [storesLoading, setStoresLoading] = useState(true)
+  const [storesError, setStoresError] = useState('')
+  const [storesSuccess, setStoresSuccess] = useState('')
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
+  const [storeForm, setStoreForm] = useState<StoreFormState>(emptyStoreForm())
+  const [storeSavingAction, setStoreSavingAction] = useState<StoreSaveAction>(null)
+  const [createdInviteUrl, setCreatedInviteUrl] = useState('')
 
   const loadApplications = useCallback(async (preferredId?: string | null) => {
     setLoading(true)
@@ -143,9 +220,52 @@ export default function PartnerApplications() {
     }
   }, [])
 
+  const loadStores = useCallback(async (preferredId?: string | null) => {
+    setStoresLoading(true)
+    setStoresError('')
+
+    try {
+      const { data, error } = await supabase
+        .from('partner_stores')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const rows = (data ?? []) as PartnerStoreRow[]
+      setStores(rows)
+
+      const nextStore = preferredId
+        ? rows.find((store) => store.id === preferredId) ?? null
+        : rows[0] ?? null
+
+      if (!nextStore) {
+        setSelectedStoreId(null)
+        setStoreForm(emptyStoreForm())
+        return
+      }
+
+      setSelectedStoreId(nextStore.id)
+      setStoreForm(storeFormFromRow(nextStore))
+    } catch (error) {
+      console.error('Failed to load partner stores:', error)
+      setStoresError(error instanceof Error ? error.message : 'Failed to load partner stores')
+    } finally {
+      setStoresLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
-    void loadApplications()
+    queueMicrotask(() => {
+      void loadApplications()
+    })
   }, [loadApplications])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadStores()
+    })
+  }, [loadStores])
 
   const filteredApplications = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -172,29 +292,38 @@ export default function PartnerApplications() {
   )
 
   useEffect(() => {
-    if (!filteredApplications.length) {
-      if (selectedId !== null) {
-        setSelectedId(null)
+    queueMicrotask(() => {
+      if (!filteredApplications.length) {
+        if (selectedId !== null) {
+          setSelectedId(null)
+        }
+
+        return
       }
 
-      return
-    }
-
-    if (!selectedId || !filteredApplications.some((application) => application.id === selectedId)) {
-      setSelectedId(filteredApplications[0].id)
-    }
+      if (!selectedId || !filteredApplications.some((application) => application.id === selectedId)) {
+        setSelectedId(filteredApplications[0].id)
+      }
+    })
   }, [filteredApplications, selectedId])
 
   useEffect(() => {
-    if (!selectedApplication) {
-      setSlugInput('')
-      setReviewNotes('')
-      return
-    }
+    queueMicrotask(() => {
+      if (!selectedApplication) {
+        setSlugInput('')
+        setReviewNotes('')
+        return
+      }
 
-    setSlugInput(selectedApplication.slug ?? slugifyPreview(selectedApplication.company_name))
-    setReviewNotes(selectedApplication.review_notes ?? '')
+      setSlugInput(selectedApplication.slug ?? slugifyPreview(selectedApplication.company_name))
+      setReviewNotes(selectedApplication.review_notes ?? '')
+    })
   }, [selectedApplication])
+
+  const selectedStore = useMemo(
+    () => stores.find((store) => store.id === selectedStoreId) ?? null,
+    [selectedStoreId, stores],
+  )
 
   const metrics = useMemo(() => {
     return {
@@ -286,6 +415,139 @@ export default function PartnerApplications() {
     }
   }
 
+  const startNewStoreDraft = () => {
+    setSelectedStoreId(null)
+    setStoreForm(emptyStoreForm())
+    setCreatedInviteUrl('')
+    setStoresError('')
+    setStoresSuccess('')
+    setActiveSection('stores')
+  }
+
+  const selectStoreForEdit = (store: PartnerStoreRow) => {
+    setSelectedStoreId(store.id)
+    setStoreForm(storeFormFromRow(store))
+    setCreatedInviteUrl('')
+    setStoresError('')
+    setStoresSuccess('')
+    setActiveSection('stores')
+  }
+
+  const handleSaveStore = async () => {
+    const normalizedSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
+    const displayName = storeForm.displayName.trim()
+    const legalName = storeForm.legalName.trim()
+    const primaryEmail = storeForm.primaryEmail.trim().toLowerCase()
+    const ownerEmail = storeForm.ownerInviteEmail.trim().toLowerCase()
+    const commissionRate = Number.parseFloat(storeForm.commissionRate)
+
+    if (!displayName) {
+      setStoresError('Display name is required.')
+      return
+    }
+
+    if (!legalName) {
+      setStoresError('Legal name is required.')
+      return
+    }
+
+    if (!primaryEmail) {
+      setStoresError('Primary email is required.')
+      return
+    }
+
+    setStoresError('')
+    setStoresSuccess('')
+    setCreatedInviteUrl('')
+
+    if (selectedStoreId) {
+      setStoreSavingAction('update')
+
+      try {
+        const { data, error } = await supabase
+          .from('partner_stores')
+          .update({
+            slug: normalizedSlug,
+            display_name: displayName,
+            legal_name: legalName,
+            primary_email: primaryEmail,
+            status: storeForm.status,
+            approval_status: storeForm.approvalStatus,
+            commission_rate: Number.isFinite(commissionRate) ? commissionRate : 0,
+          })
+          .eq('id', selectedStoreId)
+          .select('*')
+          .maybeSingle()
+
+        if (error) throw error
+
+        if (!data?.id) {
+          throw new Error('No partner store record was updated.')
+        }
+
+        const updatedStore = data as PartnerStoreRow
+        setStoresSuccess(`Updated /org/${updatedStore.slug}.`)
+        setSelectedStoreId(updatedStore.id)
+        setStoreForm(storeFormFromRow(updatedStore))
+        await loadStores(updatedStore.id)
+      } catch (error) {
+        console.error('Failed to update partner store:', error)
+        setStoresError(error instanceof Error ? error.message : 'Failed to update partner store')
+      } finally {
+        setStoreSavingAction(null)
+      }
+
+      return
+    }
+
+    setStoreSavingAction('create')
+
+    try {
+      const { data, error } = await supabase.rpc('provision_partner_store', {
+        target_slug: normalizedSlug,
+        display_name: displayName,
+        legal_name: legalName,
+        primary_email: primaryEmail,
+        owner_email: ownerEmail || null,
+        invite_role_code: 'store_owner',
+        tenant_type: 'partner',
+        status: storeForm.status,
+        approval_status: storeForm.approvalStatus,
+        commission_rate: Number.isFinite(commissionRate) ? commissionRate : 0,
+        branding_json: {},
+        settings_json: {},
+      })
+
+      if (error) throw error
+
+      const result = data as ProvisionStoreResult | null
+      const createdSlug = result?.slug ?? normalizedSlug
+      const createdStoreId = result?.partner_store_id ?? null
+
+      setStoresSuccess(result?.invite_url
+        ? `Created /org/${createdSlug} and generated an owner invite link.`
+        : `Created /org/${createdSlug}.`)
+      setCreatedInviteUrl(result?.invite_url ?? '')
+
+      if (createdStoreId) {
+        await loadStores(createdStoreId)
+      } else {
+        await loadStores()
+      }
+
+      setStoreForm((current) => ({
+        ...current,
+        ownerInviteEmail: '',
+      }))
+      setActiveSection('stores')
+    } catch (error) {
+      console.error('Failed to create partner store:', error)
+      setStoresError(error instanceof Error ? error.message : 'Failed to create partner store')
+    } finally {
+      setStoreSavingAction(null)
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="min-h-screen bg-slate-50">
@@ -295,9 +557,9 @@ export default function PartnerApplications() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
                 <Store className="w-3.5 h-3.5" /> Partner Marketplace
               </div>
-              <h1 className="text-3xl font-semibold text-slate-900">Partner applications</h1>
+              <h1 className="text-3xl font-semibold text-slate-900">Partner marketplace</h1>
               <p className="mt-2 text-slate-600 max-w-2xl">
-                Review public partner requests, approve store provisioning, and assign the slug that becomes the partner’s public storefront identity.
+                Review incoming partner applications, or jump into store setup to create a partner slug directly and manage the tenant record from the master control plane.
               </p>
             </div>
 
@@ -326,6 +588,32 @@ export default function PartnerApplications() {
             </div>
           ) : null}
 
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection('applications')}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                activeSection === 'applications'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Application review
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('stores')}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                activeSection === 'stores'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Store setup
+            </button>
+          </div>
+
+          <div className={activeSection === 'applications' ? 'block' : 'hidden'}>
           <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
             <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-4 border-b border-slate-200 space-y-3">
@@ -548,6 +836,270 @@ export default function PartnerApplications() {
                 </div>
               )}
             </section>
+          </div>
+          </div>
+
+          <div className={activeSection === 'stores' ? 'block' : 'hidden'}>
+            {storesError ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
+                <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <p className="text-sm">{storesError}</p>
+              </div>
+            ) : null}
+
+            {storesSuccess ? (
+              <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
+                <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p>{storesSuccess}</p>
+                  {createdInviteUrl ? (
+                    <Link to={createdInviteUrl} className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-50">
+                      Open owner invite <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
+              <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-900">Partner stores</h2>
+                      <p className="mt-1 text-sm text-slate-500">Create a store slug and keep its public tenant record in sync.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={startNewStoreDraft}
+                      className="rounded-2xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-black"
+                    >
+                      New store
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                      <div className="font-semibold text-slate-500 uppercase tracking-[0.18em]">Total</div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">{stores.length}</div>
+                    </div>
+                    <div className="rounded-2xl bg-emerald-50 px-3 py-2.5">
+                      <div className="font-semibold text-emerald-700 uppercase tracking-[0.18em]">Active</div>
+                      <div className="mt-1 text-lg font-bold text-emerald-900">{stores.filter((store) => store.status === 'active').length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
+                  {storesLoading ? (
+                    <div className="p-8 text-center text-slate-500">Loading partner stores...</div>
+                  ) : stores.length === 0 ? (
+                    <div className="p-8 text-center text-slate-500">
+                      No partner stores yet. Use the form on the right to create your first slug.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {stores.map((store) => {
+                        const isSelected = store.id === selectedStoreId
+
+                        return (
+                          <button
+                            key={store.id}
+                            type="button"
+                            onClick={() => selectStoreForEdit(store)}
+                            className={`w-full text-left px-4 py-4 transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-slate-900">{store.display_name}</h3>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${store.status === 'active' ? 'bg-emerald-100 text-emerald-700' : store.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    {store.status}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">{store.primary_email}</p>
+                                <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
+                                  <Store className="w-3.5 h-3.5" /> /org/{store.slug}
+                                </div>
+                              </div>
+                              <ArrowUpRight className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`} />
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-2xl font-semibold text-slate-900">
+                        {selectedStore ? `Edit /org/${selectedStore.slug}` : 'Create a partner store'}
+                      </h2>
+                      {selectedStore ? (
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
+                          {selectedStore.approval_status}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {selectedStore ? 'Update the slug or tenant metadata for an existing partner store.' : 'Create your own slug, optional owner invite, and a partner tenant record.'}
+                    </p>
+                  </div>
+
+                  {selectedStore ? (
+                    <Link
+                      to={`/org/${selectedStore.slug}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                    >
+                      Open tenant portal <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  ) : null}
+                </div>
+
+                <div className="p-6 space-y-6">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                    <div className="flex items-center gap-2 font-semibold text-slate-900 mb-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-600" /> Slug-based partner setup
+                    </div>
+                    <p>
+                      The slug becomes the public tenant key for /org/:slug. If you provide an owner email, the master admin flow will also generate the first invite link so you can claim the tenant immediately.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Store slug</label>
+                      <input
+                        value={storeForm.slug}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, slug: event.target.value }))}
+                        placeholder="my-partner-store"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">Normalized to a safe slug automatically. The final tenant URL becomes /org/slug.</p>
+                      <p className="mt-1 text-xs font-medium text-slate-700">
+                        Preview: <span className="font-mono">/org/{slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')}</span>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Display name</label>
+                      <input
+                        value={storeForm.displayName}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, displayName: event.target.value }))}
+                        placeholder="Partner store name"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Legal name</label>
+                      <input
+                        value={storeForm.legalName}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, legalName: event.target.value }))}
+                        placeholder="Registered legal entity"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Primary email</label>
+                      <input
+                        value={storeForm.primaryEmail}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, primaryEmail: event.target.value }))}
+                        placeholder="store@example.com"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Owner invite email (new store only)</label>
+                      <input
+                        value={storeForm.ownerInviteEmail}
+                        disabled={selectedStoreId !== null}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, ownerInviteEmail: event.target.value }))}
+                        placeholder="Optional invite email for the first owner"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Leave this blank if you only want to reserve the slug for now.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Commission rate</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={storeForm.commissionRate}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, commissionRate: event.target.value }))}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Status</label>
+                      <select
+                        value={storeForm.status}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, status: event.target.value as PartnerStoreRow['status'] }))}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Approval status</label>
+                      <select
+                        value={storeForm.approvalStatus}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, approvalStatus: event.target.value as PartnerStoreRow['approval_status'] }))}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+                    {selectedStore ? (
+                      <button
+                        type="button"
+                        onClick={startNewStoreDraft}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Create new store
+                      </button>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={handleSaveStore}
+                      disabled={storeSavingAction !== null}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {storeSavingAction === 'create'
+                        ? 'Creating...'
+                        : storeSavingAction === 'update'
+                          ? 'Saving...'
+                          : selectedStore
+                            ? 'Save store'
+                            : storeForm.ownerInviteEmail.trim()
+                              ? 'Create store & invite owner'
+                              : 'Create store'}
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       </div>
