@@ -36,6 +36,60 @@ import {
 import { ADMIN_MODULE_PERMISSIONS } from './lib/adminNavigation'
 import { TENANT_MODULE_PERMISSIONS } from './lib/tenantNavigation'
 
+const tenantPortalRouteChildren = (
+  <>
+    <Route index element={<TenantEntryRedirect />} />
+    <Route
+      path="dashboard"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.dashboard}>
+          <TenantDashboardPage />
+        </TenantProtectedRoute>
+      }
+    />
+    <Route
+      path="products"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.products}>
+          <TenantProductsPage />
+        </TenantProtectedRoute>
+      }
+    />
+    <Route
+      path="orders"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.orders}>
+          <TenantOrdersPage />
+        </TenantProtectedRoute>
+      }
+    />
+    <Route
+      path="members"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.members}>
+          <TenantMembersPage />
+        </TenantProtectedRoute>
+      }
+    />
+    <Route
+      path="invites"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.invites}>
+          <TenantInvitesPage />
+        </TenantProtectedRoute>
+      }
+    />
+    <Route
+      path="settings"
+      element={
+        <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.settings}>
+          <TenantSettingsPage />
+        </TenantProtectedRoute>
+      }
+    />
+  </>
+)
+
 /**
  * Admin Portal App - Separate from customer-facing site
  * Deploy to: admin.carecraftz.com
@@ -56,56 +110,12 @@ function AdminApp() {
 
               {/* Partner tenant portal */}
               <Route path="/org/:slug/claim" element={<TenantClaimInvitePage />} />
+              <Route path="/:slug/claim" element={<TenantClaimInvitePage />} />
               <Route path="/org/:slug" element={<TenantRouteScope />}>
-                <Route index element={<TenantEntryRedirect />} />
-                <Route
-                  path="dashboard"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.dashboard}>
-                      <TenantDashboardPage />
-                    </TenantProtectedRoute>
-                  }
-                />
-                <Route
-                  path="products"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.products}>
-                      <TenantProductsPage />
-                    </TenantProtectedRoute>
-                  }
-                />
-                <Route
-                  path="orders"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.orders}>
-                      <TenantOrdersPage />
-                    </TenantProtectedRoute>
-                  }
-                />
-                <Route
-                  path="members"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.members}>
-                      <TenantMembersPage />
-                    </TenantProtectedRoute>
-                  }
-                />
-                <Route
-                  path="invites"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.invites}>
-                      <TenantInvitesPage />
-                    </TenantProtectedRoute>
-                  }
-                />
-                <Route
-                  path="settings"
-                  element={
-                    <TenantProtectedRoute requiredAnyPermissions={TENANT_MODULE_PERMISSIONS.settings}>
-                      <TenantSettingsPage />
-                    </TenantProtectedRoute>
-                  }
-                />
+                {tenantPortalRouteChildren}
+              </Route>
+              <Route path="/:slug" element={<TenantRouteScope />}>
+                {tenantPortalRouteChildren}
               </Route>
 
               {/* Protected Admin Routes */}

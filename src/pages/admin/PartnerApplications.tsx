@@ -19,7 +19,9 @@ import {
   XCircle,
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
+import { useAdminAccess } from '../../contexts/admin-access-context'
 import { supabase } from '../../lib/supabase'
+import { getTenantRootPath } from '../../lib/tenantNavigation'
 
 interface PartnerApplicationRow {
   id: string
@@ -137,6 +139,39 @@ const slugifyPreview = (value: string) => {
   return slug || 'partner-store'
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String((error as { message?: unknown }).message ?? '').trim()
+    if (message) {
+      return message
+    }
+  }
+
+  return fallback
+}
+
+const getStoreActionErrorMessage = (error: unknown, fallback: string) => {
+  const message = getErrorMessage(error, fallback)
+  const normalizedMessage = message.toLowerCase()
+
+  if (
+    normalizedMessage.includes('provision_partner_store')
+    && (normalizedMessage.includes('does not exist') || normalizedMessage.includes('could not find the function'))
+  ) {
+    return 'The direct store provisioning RPC is not deployed in the database yet. Wait for the Supabase migration workflow to finish, then try again.'
+  }
+
+  if (normalizedMessage.includes('insufficient permissions')) {
+    return 'You need partners.provision, partners.manage, or roles.manage access to create or edit partner stores.'
+  }
+
+  return message
+}
+
 const emptyStoreForm = (): StoreFormState => ({
   slug: '',
   displayName: '',
@@ -160,6 +195,7 @@ const storeFormFromRow = (store: PartnerStoreRow): StoreFormState => ({
 })
 
 export default function PartnerApplications() {
+  const { hasAnyPermission: hasAdminAnyPermission } = useAdminAccess()
   const [applications, setApplications] = useState<PartnerApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
@@ -214,7 +250,7 @@ export default function PartnerApplications() {
       })
     } catch (error) {
       console.error('Failed to load partner applications:', error)
-      setPageError(error instanceof Error ? error.message : 'Failed to load partner applications')
+      setPageError(getErrorMessage(error, 'Failed to load partner applications'))
     } finally {
       setLoading(false)
     }
@@ -249,7 +285,7 @@ export default function PartnerApplications() {
       setStoreForm(storeFormFromRow(nextStore))
     } catch (error) {
       console.error('Failed to load partner stores:', error)
-      setStoresError(error instanceof Error ? error.message : 'Failed to load partner stores')
+      setStoresError(getErrorMessage(error, 'Failed to load partner stores'))
     } finally {
       setStoresLoading(false)
     }
@@ -325,6 +361,9 @@ export default function PartnerApplications() {
     [selectedStoreId, stores],
   )
 
+  const canManagePartnerStores = hasAdminAnyPermission(['partners.provision', 'partners.manage', 'roles.manage'])
+  const storePreviewSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
+
   const metrics = useMemo(() => {
     return {
       total: applications.length,
@@ -355,7 +394,7 @@ export default function PartnerApplications() {
       await loadApplications(selectedApplication.id)
     } catch (error) {
       console.error('Failed to mark partner application as in review:', error)
-      setPageError(error instanceof Error ? error.message : 'Failed to mark partner application as in review')
+      setPageError(getErrorMessage(error, 'Failed to mark partner application as in review'))
     } finally {
       setSavingAction(null)
     }
@@ -383,7 +422,7 @@ export default function PartnerApplications() {
       await loadApplications(selectedApplication.id)
     } catch (error) {
       console.error('Failed to approve partner application:', error)
-      setPageError(error instanceof Error ? error.message : 'Failed to approve partner application')
+      setPageError(getErrorMessage(error, 'Failed to approve partner application'))
     } finally {
       setSavingAction(null)
     }
@@ -409,7 +448,7 @@ export default function PartnerApplications() {
       await loadApplications(selectedApplication.id)
     } catch (error) {
       console.error('Failed to reject partner application:', error)
-      setPageError(error instanceof Error ? error.message : 'Failed to reject partner application')
+      setPageError(getErrorMessage(error, 'Failed to reject partner application'))
     } finally {
       setSavingAction(null)
     }
@@ -434,6 +473,11 @@ export default function PartnerApplications() {
   }
 
   const handleSaveStore = async () => {
+    if (!canManagePartnerStores) {
+      setStoresError('You need partners.provision, partners.manage, or roles.manage access to create or edit partner stores.')
+      return
+    }
+
     const normalizedSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
     const displayName = storeForm.displayName.trim()
     const legalName = storeForm.legalName.trim()
@@ -486,13 +530,13 @@ export default function PartnerApplications() {
         }
 
         const updatedStore = data as PartnerStoreRow
-        setStoresSuccess(`Updated /org/${updatedStore.slug}.`)
+        setStoresSuccess(`Updated store "${updatedStore.slug}".`)
         setSelectedStoreId(updatedStore.id)
         setStoreForm(storeFormFromRow(updatedStore))
         await loadStores(updatedStore.id)
       } catch (error) {
         console.error('Failed to update partner store:', error)
-        setStoresError(error instanceof Error ? error.message : 'Failed to update partner store')
+        setStoresError(getStoreActionErrorMessage(error, 'Failed to update partner store'))
       } finally {
         setStoreSavingAction(null)
       }
@@ -525,9 +569,9 @@ export default function PartnerApplications() {
       const createdStoreId = result?.partner_store_id ?? null
 
       setStoresSuccess(result?.invite_url
-        ? `Created /org/${createdSlug} and generated an owner invite link.`
-        : `Created /org/${createdSlug}.`)
-      setCreatedInviteUrl(result?.invite_url ?? '')
+        ? `Created store "${createdSlug}" and generated an owner invite link.`
+        : `Created store "${createdSlug}".`)
+      setCreatedInviteUrl(result?.invite_url ? result.invite_url.replace(/^\/org\//, '/') : '')
 
       if (createdStoreId) {
         await loadStores(createdStoreId)
@@ -542,7 +586,7 @@ export default function PartnerApplications() {
       setActiveSection('stores')
     } catch (error) {
       console.error('Failed to create partner store:', error)
-      setStoresError(error instanceof Error ? error.message : 'Failed to create partner store')
+      setStoresError(getStoreActionErrorMessage(error, 'Failed to create partner store'))
     } finally {
       setStoreSavingAction(null)
     }
@@ -682,7 +726,7 @@ export default function PartnerApplications() {
                               </div>
                               {application.slug ? (
                                 <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
-                                  <Store className="w-3.5 h-3.5" /> /org/{application.slug}
+                                  <Store className="w-3.5 h-3.5" /> /{application.slug}
                                 </div>
                               ) : null}
                             </div>
@@ -723,7 +767,7 @@ export default function PartnerApplications() {
 
                     <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
                       <div className="font-medium text-slate-900">Current slug</div>
-                      <div className="mt-1 font-mono text-xs">{selectedApplication.slug ? `/org/${selectedApplication.slug}` : 'Pending approval'}</div>
+                      <div className="mt-1 font-mono text-xs">{selectedApplication.slug ? `/${selectedApplication.slug}` : 'Pending approval'}</div>
                     </div>
                   </div>
 
@@ -919,7 +963,7 @@ export default function PartnerApplications() {
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">{store.primary_email}</p>
                                 <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
-                                  <Store className="w-3.5 h-3.5" /> /org/{store.slug}
+                                  <Store className="w-3.5 h-3.5" /> /{store.slug}
                                 </div>
                               </div>
                               <ArrowUpRight className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`} />
@@ -937,7 +981,7 @@ export default function PartnerApplications() {
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <h2 className="text-2xl font-semibold text-slate-900">
-                        {selectedStore ? `Edit /org/${selectedStore.slug}` : 'Create a partner store'}
+                        {selectedStore ? `Edit ${selectedStore.slug}` : 'Create a partner store'}
                       </h2>
                       {selectedStore ? (
                         <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -952,7 +996,7 @@ export default function PartnerApplications() {
 
                   {selectedStore ? (
                     <Link
-                      to={`/org/${selectedStore.slug}`}
+                      to={getTenantRootPath(selectedStore.slug)}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
                     >
                       Open tenant portal <ExternalLink className="w-4 h-4" />
@@ -966,9 +1010,15 @@ export default function PartnerApplications() {
                       <ShieldCheck className="w-4 h-4 text-indigo-600" /> Slug-based partner setup
                     </div>
                     <p>
-                      The slug becomes the public tenant key for /org/:slug. If you provide an owner email, the master admin flow will also generate the first invite link so you can claim the tenant immediately.
+                      The slug becomes the public tenant key for admin.carecraftz.com/[slug]/*. The /org prefix is just an internal routing namespace, not a security boundary. If you provide an owner email, the master admin flow will also generate the first invite link so you can claim the tenant immediately.
                     </p>
                   </div>
+
+                  {!canManagePartnerStores ? (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                      You can view partner stores, but you need partners.provision, partners.manage, or roles.manage access to create or edit them.
+                    </div>
+                  ) : null}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -979,9 +1029,9 @@ export default function PartnerApplications() {
                         placeholder="my-partner-store"
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                       />
-                      <p className="mt-2 text-xs text-slate-500">Normalized to a safe slug automatically. The final tenant URL becomes /org/slug.</p>
+                      <p className="mt-2 text-xs text-slate-500">Normalized to a safe slug automatically. The public preview uses the direct slug path.</p>
                       <p className="mt-1 text-xs font-medium text-slate-700">
-                        Preview: <span className="font-mono">/org/{slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')}</span>
+                        Preview: <span className="font-mono">admin.carecraftz.com/{storePreviewSlug}/*</span>
                       </p>
                     </div>
 
@@ -1083,7 +1133,7 @@ export default function PartnerApplications() {
                     <button
                       type="button"
                       onClick={handleSaveStore}
-                      disabled={storeSavingAction !== null}
+                      disabled={storeSavingAction !== null || !canManagePartnerStores}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {storeSavingAction === 'create'

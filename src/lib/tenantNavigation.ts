@@ -76,9 +76,9 @@ export const TENANT_MODULE_PERMISSIONS = {
   settings: TENANT_SETTINGS_PERMISSIONS,
 } as const
 
-export const getTenantRootPath = (slug: string) => `/org/${slug}`
+export const getTenantRootPath = (slug: string) => `/${slug}`
 
-export const getTenantPath = (slug: string, segment = 'dashboard') => `/org/${slug}/${segment}`
+export const getTenantPath = (slug: string, segment = 'dashboard') => `/${slug}/${segment}`
 
 export const hasAnyPermission = (permissionSet: Set<string>, requiredAnyPermissions: string[]) => {
   if (requiredAnyPermissions.length === 0) {

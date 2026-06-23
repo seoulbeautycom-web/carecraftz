@@ -1035,7 +1035,7 @@ export function TenantClaimInvitePage() {
             <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-5 text-sm text-emerald-200">
               {success}
               {claimedStoreSlug ? (
-                <p className="mt-2 text-xs text-emerald-100">Redirecting to /org/{claimedStoreSlug}/dashboard</p>
+                <p className="mt-2 text-xs text-emerald-100">Redirecting to /{claimedStoreSlug}/dashboard</p>
               ) : null}
             </div>
           ) : null}
