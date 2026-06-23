@@ -5,6 +5,10 @@
       "destination": "/api/whatsapp/webhook"
     },
     {
+      "source": "/api/partner-store-admin",
+      "destination": "/api/partner-store-admin"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -72,6 +72,8 @@ interface PartnerStoreRow {
   commission_rate: number
   branding_json: Record<string, unknown>
   settings_json: Record<string, unknown>
+  master_admin_email: string | null
+  master_admin_user_id: string | null
   approved_by_staff_id: string | null
   approved_at: string | null
   created_at: string
@@ -81,30 +83,28 @@ interface PartnerStoreRow {
 type ApplicationFilter = 'all' | PartnerApplicationRow['status']
 type MarketplaceSection = 'applications' | 'stores'
 type SaveAction = 'review' | 'approve' | 'reject' | null
-type StoreSaveAction = 'create' | 'update' | null
+type StoreSaveAction = 'create' | 'update' | 'delete' | null
 
 interface StoreFormState {
   slug: string
   displayName: string
   legalName: string
   primaryEmail: string
-  ownerInviteEmail: string
+  masterAdminEmail: string
+  masterAdminPassword: string
   status: PartnerStoreRow['status']
   approvalStatus: PartnerStoreRow['approval_status']
   commissionRate: string
 }
 
-interface ProvisionStoreResult {
-  partner_store_id?: string
-  slug?: string
-  display_name?: string
-  legal_name?: string
-  primary_email?: string
-  tenant_type?: string
-  status?: string
-  approval_status?: string
-  invite_id?: string | null
-  invite_url?: string | null
+interface PartnerStoreAdminApiResponse {
+  ok?: boolean
+  storeId?: string
+  master_admin_email?: string
+  master_admin_user_id?: string
+  partner_member_id?: string
+  partner_store_slug?: string
+  error?: string
 }
 
 const STATUS_LABELS: Record<PartnerApplicationRow['status'], string> = {
@@ -169,7 +169,42 @@ const getStoreActionErrorMessage = (error: unknown, fallback: string) => {
     return 'You need partners.provision, partners.manage, or roles.manage access to create or edit partner stores.'
   }
 
+  if (
+    normalizedMessage.includes('/api/partner-store-admin')
+    && (normalizedMessage.includes('not found') || normalizedMessage.includes('404'))
+  ) {
+    return 'The partner store master admin API route is not deployed yet. Wait for the Vercel deployment to finish, then try again.'
+  }
+
   return message
+}
+
+const partnerStoreAdminEndpoint = '/api/partner-store-admin'
+
+const callPartnerStoreAdminApi = async (method: 'POST' | 'DELETE', body: Record<string, unknown>) => {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData.session?.access_token
+
+  if (!accessToken) {
+    throw new Error('You must be signed in to manage partner store credentials.')
+  }
+
+  const response = await fetch(partnerStoreAdminEndpoint, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: method === 'DELETE' ? JSON.stringify(body) : JSON.stringify(body),
+  })
+
+  const payload = (await response.json().catch(() => ({}))) as PartnerStoreAdminApiResponse
+
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || 'Failed to manage the master admin account.')
+  }
+
+  return payload
 }
 
 const emptyStoreForm = (): StoreFormState => ({
@@ -177,7 +212,8 @@ const emptyStoreForm = (): StoreFormState => ({
   displayName: '',
   legalName: '',
   primaryEmail: '',
-  ownerInviteEmail: '',
+  masterAdminEmail: '',
+  masterAdminPassword: '',
   status: 'active',
   approvalStatus: 'approved',
   commissionRate: '0',
@@ -188,7 +224,8 @@ const storeFormFromRow = (store: PartnerStoreRow): StoreFormState => ({
   displayName: store.display_name,
   legalName: store.legal_name,
   primaryEmail: store.primary_email,
-  ownerInviteEmail: '',
+  masterAdminEmail: store.master_admin_email ?? '',
+  masterAdminPassword: '',
   status: store.status,
   approvalStatus: store.approval_status,
   commissionRate: String(store.commission_rate ?? 0),
@@ -214,7 +251,6 @@ export default function PartnerApplications() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const [storeForm, setStoreForm] = useState<StoreFormState>(emptyStoreForm())
   const [storeSavingAction, setStoreSavingAction] = useState<StoreSaveAction>(null)
-  const [createdInviteUrl, setCreatedInviteUrl] = useState('')
 
   const loadApplications = useCallback(async (preferredId?: string | null) => {
     setLoading(true)
@@ -364,6 +400,24 @@ export default function PartnerApplications() {
   const canManagePartnerStores = hasAdminAnyPermission(['partners.provision', 'partners.manage', 'roles.manage'])
   const storePreviewSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
 
+  const syncMasterAdminCredentials = useCallback(
+    async (storeId: string, masterAdminEmail: string, masterAdminPassword: string) => {
+      return callPartnerStoreAdminApi('POST', {
+        action: 'sync',
+        storeId,
+        masterAdminEmail,
+        masterAdminPassword: masterAdminPassword || undefined,
+      })
+    },
+    [],
+  )
+
+  const deleteMasterAdminCredentials = useCallback(async (storeId: string) => {
+    return callPartnerStoreAdminApi('DELETE', {
+      storeId,
+    })
+  }, [])
+
   const metrics = useMemo(() => {
     return {
       total: applications.length,
@@ -457,7 +511,6 @@ export default function PartnerApplications() {
   const startNewStoreDraft = () => {
     setSelectedStoreId(null)
     setStoreForm(emptyStoreForm())
-    setCreatedInviteUrl('')
     setStoresError('')
     setStoresSuccess('')
     setActiveSection('stores')
@@ -466,10 +519,39 @@ export default function PartnerApplications() {
   const selectStoreForEdit = (store: PartnerStoreRow) => {
     setSelectedStoreId(store.id)
     setStoreForm(storeFormFromRow(store))
-    setCreatedInviteUrl('')
     setStoresError('')
     setStoresSuccess('')
     setActiveSection('stores')
+  }
+
+  const handleDeleteStore = async () => {
+    if (!selectedStore) return
+
+    if (!window.confirm(`Delete ${selectedStore.display_name}? This removes the partner store and its master admin account.`)) {
+      return
+    }
+
+    setStoreSavingAction('delete')
+    setStoresError('')
+    setStoresSuccess('')
+
+    try {
+      await deleteMasterAdminCredentials(selectedStore.id)
+
+      const { error } = await supabase.from('partner_stores').delete().eq('id', selectedStore.id)
+
+      if (error) throw error
+
+      setStoresSuccess(`Deleted store "${selectedStore.slug}" and removed its master admin account.`)
+      setSelectedStoreId(null)
+      setStoreForm(emptyStoreForm())
+      await loadStores()
+    } catch (error) {
+      console.error('Failed to delete partner store:', error)
+      setStoresError(getStoreActionErrorMessage(error, 'Failed to delete partner store'))
+    } finally {
+      setStoreSavingAction(null)
+    }
   }
 
   const handleSaveStore = async () => {
@@ -482,8 +564,10 @@ export default function PartnerApplications() {
     const displayName = storeForm.displayName.trim()
     const legalName = storeForm.legalName.trim()
     const primaryEmail = storeForm.primaryEmail.trim().toLowerCase()
-    const ownerEmail = storeForm.ownerInviteEmail.trim().toLowerCase()
+    const masterAdminEmail = storeForm.masterAdminEmail.trim().toLowerCase()
+    const masterAdminPassword = storeForm.masterAdminPassword.trim()
     const commissionRate = Number.parseFloat(storeForm.commissionRate)
+    const resolvedMasterAdminEmail = masterAdminEmail || selectedStore?.master_admin_email?.trim().toLowerCase() || ''
 
     if (!displayName) {
       setStoresError('Display name is required.')
@@ -500,12 +584,23 @@ export default function PartnerApplications() {
       return
     }
 
+    if (!resolvedMasterAdminEmail) {
+      setStoresError('Master admin email is required.')
+      return
+    }
+
+    if (!selectedStoreId && !masterAdminPassword) {
+      setStoresError('Master admin password is required when creating a new store.')
+      return
+    }
+
     setStoresError('')
     setStoresSuccess('')
-    setCreatedInviteUrl('')
 
     if (selectedStoreId) {
       setStoreSavingAction('update')
+
+      const previousStore = selectedStore
 
       try {
         const { data, error } = await supabase
@@ -530,10 +625,51 @@ export default function PartnerApplications() {
         }
 
         const updatedStore = data as PartnerStoreRow
-        setStoresSuccess(`Updated store "${updatedStore.slug}".`)
-        setSelectedStoreId(updatedStore.id)
-        setStoreForm(storeFormFromRow(updatedStore))
-        await loadStores(updatedStore.id)
+
+        try {
+          const syncResult = await syncMasterAdminCredentials(updatedStore.id, resolvedMasterAdminEmail, masterAdminPassword)
+          const syncedStore = {
+            ...updatedStore,
+            master_admin_email: syncResult.master_admin_email ?? resolvedMasterAdminEmail,
+            master_admin_user_id: syncResult.master_admin_user_id ?? updatedStore.master_admin_user_id,
+          } satisfies PartnerStoreRow
+
+          setStoresSuccess(`Updated store "${syncedStore.slug}" and synced the master admin account.`)
+          setSelectedStoreId(syncedStore.id)
+          setStoreForm({
+            ...storeFormFromRow(syncedStore),
+            masterAdminPassword: '',
+          })
+          await loadStores(syncedStore.id)
+        } catch (syncError) {
+          if (previousStore) {
+            const { error: rollbackError } = await supabase
+              .from('partner_stores')
+              .update({
+                slug: previousStore.slug,
+                display_name: previousStore.display_name,
+                legal_name: previousStore.legal_name,
+                primary_email: previousStore.primary_email,
+                status: previousStore.status,
+                approval_status: previousStore.approval_status,
+                commission_rate: previousStore.commission_rate,
+              })
+              .eq('id', previousStore.id)
+
+            if (rollbackError) {
+              console.error('Failed to roll back partner store update after master admin sync failure:', rollbackError)
+            }
+
+            setSelectedStoreId(previousStore.id)
+            setStoreForm({
+              ...storeFormFromRow(previousStore),
+              masterAdminPassword: '',
+            })
+            await loadStores(previousStore.id)
+          }
+
+          throw syncError
+        }
       } catch (error) {
         console.error('Failed to update partner store:', error)
         setStoresError(getStoreActionErrorMessage(error, 'Failed to update partner store'))
@@ -552,7 +688,7 @@ export default function PartnerApplications() {
         display_name: displayName,
         legal_name: legalName,
         primary_email: primaryEmail,
-        owner_email: ownerEmail || null,
+        owner_email: null,
         invite_role_code: 'store_owner',
         tenant_type: 'partner',
         status: storeForm.status,
@@ -564,26 +700,28 @@ export default function PartnerApplications() {
 
       if (error) throw error
 
-      const result = data as ProvisionStoreResult | null
+      const result = data as { partner_store_id?: string; slug?: string } | null
       const createdSlug = result?.slug ?? normalizedSlug
       const createdStoreId = result?.partner_store_id ?? null
 
-      setStoresSuccess(result?.invite_url
-        ? `Created store "${createdSlug}" and generated an owner invite link.`
-        : `Created store "${createdSlug}".`)
-      setCreatedInviteUrl(result?.invite_url ? result.invite_url.replace(/^\/org\//, '/') : '')
-
-      if (createdStoreId) {
-        await loadStores(createdStoreId)
-      } else {
-        await loadStores()
+      if (!createdStoreId) {
+        throw new Error('The partner store was created, but no store id was returned.')
       }
 
-      setStoreForm((current) => ({
-        ...current,
-        ownerInviteEmail: '',
-      }))
-      setActiveSection('stores')
+      try {
+        await syncMasterAdminCredentials(createdStoreId, resolvedMasterAdminEmail, masterAdminPassword)
+        setStoresSuccess(`Created store "${createdSlug}" and synced the master admin account.`)
+        await loadStores(createdStoreId)
+        setActiveSection('stores')
+      } catch (syncError) {
+        const { error: rollbackError } = await supabase.from('partner_stores').delete().eq('id', createdStoreId)
+
+        if (rollbackError) {
+          console.error('Failed to roll back partner store creation after master admin sync failure:', rollbackError)
+        }
+
+        throw syncError
+      }
     } catch (error) {
       console.error('Failed to create partner store:', error)
       setStoresError(getStoreActionErrorMessage(error, 'Failed to create partner store'))
@@ -838,7 +976,7 @@ export default function PartnerApplications() {
                         <li>Creates the partner store record</li>
                         <li>Reserves the slug as the tenant identifier</li>
                         <li>Marks the application as approved for audit purposes</li>
-                        <li>Sets us up to invite the partner owner into their own store</li>
+                        <li>Prepares the store for direct master admin provisioning</li>
                       </ul>
                     </div>
                   </div>
@@ -896,11 +1034,6 @@ export default function PartnerApplications() {
                 <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
                   <p>{storesSuccess}</p>
-                  {createdInviteUrl ? (
-                    <Link to={createdInviteUrl} className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1.5 font-semibold text-emerald-700 hover:bg-emerald-50">
-                      Open owner invite <ExternalLink className="w-4 h-4" />
-                    </Link>
-                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -962,6 +1095,9 @@ export default function PartnerApplications() {
                                   </span>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">{store.primary_email}</p>
+                                {store.master_admin_email ? (
+                                  <p className="mt-1 text-xs font-medium text-slate-600">Master admin: {store.master_admin_email}</p>
+                                ) : null}
                                 <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
                                   <Store className="w-3.5 h-3.5" /> /{store.slug}
                                 </div>
@@ -990,7 +1126,9 @@ export default function PartnerApplications() {
                       ) : null}
                     </div>
                     <p className="mt-2 text-sm text-slate-500">
-                      {selectedStore ? 'Update the slug or tenant metadata for an existing partner store.' : 'Create your own slug, optional owner invite, and a partner tenant record.'}
+                      {selectedStore
+                        ? 'Update the slug, tenant metadata, or master admin account for an existing partner store.'
+                        : 'Create your own slug, tenant metadata, and the initial master admin account.'}
                     </p>
                   </div>
 
@@ -1010,7 +1148,7 @@ export default function PartnerApplications() {
                       <ShieldCheck className="w-4 h-4 text-indigo-600" /> Slug-based partner setup
                     </div>
                     <p>
-                      The slug becomes the public tenant key for admin.carecraftz.com/[slug]/*. The /org prefix is just an internal routing namespace, not a security boundary. If you provide an owner email, the master admin flow will also generate the first invite link so you can claim the tenant immediately.
+                      The slug becomes the public tenant key for admin.carecraftz.com/[slug]/*. The /org prefix is just an internal routing namespace, not a security boundary. Provide a master admin email and password to provision the initial owner directly.
                     </p>
                   </div>
 
@@ -1066,16 +1204,31 @@ export default function PartnerApplications() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Owner invite email (new store only)</label>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">Master admin email</label>
                       <input
-                        value={storeForm.ownerInviteEmail}
-                        disabled={selectedStoreId !== null}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, ownerInviteEmail: event.target.value }))}
-                        placeholder="Optional invite email for the first owner"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                        value={storeForm.masterAdminEmail}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, masterAdminEmail: event.target.value }))}
+                        placeholder="admin@example.com"
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                       />
                       <p className="mt-2 text-xs text-slate-500">
-                        Leave this blank if you only want to reserve the slug for now.
+                        This account will be linked as the store owner and can be updated later.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 mb-2">
+                        Master admin password {selectedStore ? '(leave blank to keep the current password)' : '(required)'}
+                      </label>
+                      <input
+                        type="password"
+                        value={storeForm.masterAdminPassword}
+                        onChange={(event) => setStoreForm((current) => ({ ...current, masterAdminPassword: event.target.value }))}
+                        placeholder={selectedStore ? 'Enter a new password to rotate it' : 'Set an initial password'}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Password changes are applied through the admin API and only when you provide a new value.
                       </p>
                     </div>
 
@@ -1130,6 +1283,17 @@ export default function PartnerApplications() {
                       </button>
                     ) : null}
 
+                    {selectedStore ? (
+                      <button
+                        type="button"
+                        onClick={handleDeleteStore}
+                        disabled={storeSavingAction !== null || !canManagePartnerStores}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-5 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {storeSavingAction === 'delete' ? 'Deleting...' : 'Delete store'}
+                      </button>
+                    ) : null}
+
                     <button
                       type="button"
                       onClick={handleSaveStore}
@@ -1142,9 +1306,7 @@ export default function PartnerApplications() {
                           ? 'Saving...'
                           : selectedStore
                             ? 'Save store'
-                            : storeForm.ownerInviteEmail.trim()
-                              ? 'Create store & invite owner'
-                              : 'Create store'}
+                            : 'Create store & master admin'}
                     </button>
                   </div>
                 </div>
