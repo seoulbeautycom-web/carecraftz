@@ -143,7 +143,7 @@ BEGIN
     'approval_status', approval_status,
     'invite_id', invite_row.id,
     'invite_url', CASE
-      WHEN resolved_owner_email <> '' THEN '/org/' || resolved_slug || '/claim?token=' || token
+      WHEN resolved_owner_email <> '' THEN '/' || resolved_slug || '/claim?token=' || token
       ELSE NULL
     END
   );

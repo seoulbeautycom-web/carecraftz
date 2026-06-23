@@ -404,8 +404,8 @@ BEGIN
     'permissions', to_jsonb(COALESCE(selected_permissions, ARRAY[]::text[])),
     'accessible_stores', accessible_stores,
     'landing_path', CASE
-      WHEN normalized_slug IS NOT NULL THEN '/org/' || selected_slug || '/dashboard'
-      WHEN accessible_store_count = 1 THEN '/org/' || selected_slug || '/dashboard'
+      WHEN normalized_slug IS NOT NULL THEN '/' || selected_slug || '/dashboard'
+      WHEN accessible_store_count = 1 THEN '/' || selected_slug || '/dashboard'
       ELSE NULL
     END
   );
@@ -626,7 +626,7 @@ BEGIN
     'role_code', invite_row.role_code,
     'email', invite_row.email,
     'token', token,
-    'invite_url', '/org/' || normalized_slug || '/claim?token=' || token,
+    'invite_url', '/' || normalized_slug || '/claim?token=' || token,
     'expires_at', invite_row.expires_at
   );
 END;
@@ -930,60 +930,70 @@ BEFORE INSERT ON public.products
 FOR EACH ROW
 EXECUTE FUNCTION public.assign_default_partner_store_id();
 
-WITH flagship_store AS (
-  INSERT INTO public.partner_stores (
-    application_id,
-    slug,
-    tenant_type,
-    display_name,
-    legal_name,
-    primary_email,
-    status,
-    approval_status,
-    commission_rate,
-    branding_json,
-    settings_json,
-    approved_by_staff_id,
-    approved_at,
-    created_at,
-    updated_at
-  ) VALUES (
-    NULL,
-    'carecraftz',
-    'flagship',
-    'CareCraftz',
-    'CareCraftz',
-    'admin@carecraftz.com',
-    'active',
-    'approved',
-    0,
-    '{}'::jsonb,
-    '{}'::jsonb,
-    NULL,
-    NOW(),
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (slug) DO UPDATE SET
-    tenant_type = EXCLUDED.tenant_type,
-    display_name = EXCLUDED.display_name,
-    legal_name = EXCLUDED.legal_name,
-    primary_email = EXCLUDED.primary_email,
-    status = 'active',
-    approval_status = 'approved',
-    approved_at = COALESCE(public.partner_stores.approved_at, NOW()),
-    updated_at = NOW()
-  RETURNING id
+INSERT INTO public.partner_stores (
+  application_id,
+  slug,
+  tenant_type,
+  display_name,
+  legal_name,
+  primary_email,
+  status,
+  approval_status,
+  commission_rate,
+  branding_json,
+  settings_json,
+  approved_by_staff_id,
+  approved_at,
+  created_at,
+  updated_at
+) VALUES (
+  NULL,
+  'carecraftz',
+  'flagship',
+  'CareCraftz',
+  'CareCraftz',
+  'admin@carecraftz.com',
+  'active',
+  'approved',
+  0,
+  '{}'::jsonb,
+  '{}'::jsonb,
+  NULL,
+  NOW(),
+  NOW(),
+  NOW()
 )
+ON CONFLICT (slug) DO UPDATE SET
+  tenant_type = EXCLUDED.tenant_type,
+  display_name = EXCLUDED.display_name,
+  legal_name = EXCLUDED.legal_name,
+  primary_email = EXCLUDED.primary_email,
+  status = 'active',
+  approval_status = 'approved',
+  approved_at = COALESCE(public.partner_stores.approved_at, NOW()),
+  updated_at = NOW();
+
 UPDATE public.products
 SET partner_store_id = flagship_store.id
-FROM flagship_store
-WHERE public.products.partner_store_id IS NULL;
+FROM (
+  SELECT id
+  FROM public.partner_stores
+  WHERE slug = 'carecraftz'
+  LIMIT 1
+) AS flagship_store
+WHERE public.products.partner_store_id IS NULL
+  AND flagship_store.id IS NOT NULL;
 
 UPDATE public.orders
 SET partner_store_id = flagship_store.id
-FROM flagship_store
-WHERE public.orders.partner_store_id IS NULL;
+FROM (
+  SELECT id
+  FROM public.partner_stores
+  WHERE slug = 'carecraftz'
+  LIMIT 1
+) AS flagship_store
+WHERE public.orders.partner_store_id IS NULL
+  AND flagship_store.id IS NOT NULL;
 
 INSERT INTO public.partner_permissions (code, name, description, module, sort_order)
 VALUES
