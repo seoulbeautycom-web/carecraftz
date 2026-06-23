@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Sparkles, Lock, Mail, ArrowRight, Store } from 'lucide-react'
 
@@ -10,6 +10,12 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const nextPath = useMemo(() => {
+    const next = new URLSearchParams(location.search).get('next')
+    return typeof next === 'string' && next.startsWith('/') ? next : '/'
+  }, [location.search])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,7 +34,7 @@ export default function AdminLogin() {
         await supabase.rpc('bump_my_last_signed_in')
       }
       
-      navigate('/', { replace: true })
+      navigate(nextPath, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {

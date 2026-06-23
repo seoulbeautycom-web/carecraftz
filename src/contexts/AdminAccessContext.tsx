@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { getFirstAccessibleAdminPath, hasAllPermissions, hasAnyPermission } from '../lib/adminNavigation'
-import { useAuth } from './AuthContext'
+import { useAuth } from './auth-context'
 import { AdminAccessContext } from './admin-access-context'
 import type { AdminAccessSnapshot, AdminAccessState } from './admin-access-context'
 
@@ -35,7 +35,7 @@ const normalizeSnapshot = (value: unknown): AdminAccessSnapshot => {
 }
 
 export function AdminAccessProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [snapshot, setSnapshot] = useState<AdminAccessSnapshot | null>(null)
@@ -69,7 +69,6 @@ export function AdminAccessProvider({ children }: { children: React.ReactNode })
         setError(nextSnapshot.reason === 'staff_inactive'
           ? 'Your staff account is inactive. Please contact an administrator.'
           : 'No staff record was found for this account.')
-        await signOut()
       }
     } catch (rpcError) {
       const message = rpcError instanceof Error ? rpcError.message : 'Failed to load admin access state.'
@@ -78,7 +77,7 @@ export function AdminAccessProvider({ children }: { children: React.ReactNode })
     } finally {
       setLoading(false)
     }
-  }, [authLoading, signOut, user])
+  }, [authLoading, user])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

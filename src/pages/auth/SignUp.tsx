@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/auth-context'
 import { Mail, Lock, User, Eye, EyeOff, Leaf } from 'lucide-react'
 import PageFrame from '../../components/PageFrame'
 

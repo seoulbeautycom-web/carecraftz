@@ -58,6 +58,7 @@ const CONTENT_PERMISSIONS = [
 ]
 
 const REVIEW_PERMISSIONS = ['reviews.view', 'reviews.moderate', 'reviews.delete']
+const PARTNER_PERMISSIONS = ['partners.view', 'partners.review', 'partners.approve', 'partners.reject', 'partners.provision', 'partners.manage']
 const STAFF_PERMISSIONS = ['staff.view', 'staff.invite', 'staff.edit', 'staff.disable', 'staff.delete']
 const SETTINGS_PERMISSIONS = ['settings.view', 'settings.edit', 'billing.view']
 const ANALYTICS_PERMISSIONS = ['analytics.view', 'analytics.export']
@@ -84,6 +85,13 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     label: 'Reviews',
     icon: Star,
     requiredAnyPermissions: REVIEW_PERMISSIONS,
+    showInNavigation: true,
+  },
+  {
+    path: '/master/partners',
+    label: 'Partners',
+    icon: Users,
+    requiredAnyPermissions: PARTNER_PERMISSIONS,
     showInNavigation: true,
   },
   {
@@ -183,6 +191,7 @@ export const ADMIN_MODULE_PERMISSIONS = {
   dashboard: DASHBOARD_PERMISSIONS,
   content: CONTENT_PERMISSIONS,
   reviews: REVIEW_PERMISSIONS,
+  partners: PARTNER_PERMISSIONS,
   orders: ORDER_PERMISSIONS,
   products: PRODUCT_PERMISSIONS,
   productsNew: PRODUCT_CREATE_PERMISSIONS,

@@ -1,13 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { sendWhatsAppOTP, verifyWhatsAppOTP } from '../lib/whatsapp'
 
-interface User {
-  id: string
-  email: string
-  phone?: string
-  full_name?: string
-}
+import { AuthContext, type User } from './auth-context'
 
 const userFromSession = (sessionUser: { id: string; email?: string | null; phone?: string | null } | null): User | null => {
   if (!sessionUser?.email) {
@@ -20,20 +15,6 @@ const userFromSession = (sessionUser: { id: string; email?: string | null; phone
     phone: sessionUser.phone || undefined,
   }
 }
-
-interface AuthContextType {
-  user: User | null
-  loading: boolean
-  signInWithEmail: (email: string, password: string) => Promise<{ error: any }>
-  signInWithPhone: (phone: string) => Promise<{ error: any; confirmationRequired?: boolean }>
-  verifyPhoneOtp: (phone: string, token: string) => Promise<{ error: any }>
-  signInWithOAuth: (provider: 'google' | 'apple') => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>
-  signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<{ error: any }>
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -112,10 +93,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signInWithOAuth = async (provider: 'google' | 'apple') => {
+    const searchParams = new URLSearchParams(window.location.search)
+    searchParams.set('signin', window.location.pathname.startsWith('/login') ? '/login' : '/signin')
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?${searchParams.toString()}`,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
@@ -168,12 +152,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
 }

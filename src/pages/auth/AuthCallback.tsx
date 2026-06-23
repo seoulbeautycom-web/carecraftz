@@ -1,11 +1,25 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const signInPath = (() => {
+    const hint = new URLSearchParams(location.search).get('signin')
+    if (hint === '/login' || hint === '/signin') {
+      return hint
+    }
+
+    return window.location.hostname.startsWith('admin.') ? '/login' : '/signin'
+  })()
+
+  const nextPath = (() => {
+    const next = new URLSearchParams(location.search).get('next')
+    return typeof next === 'string' && next.startsWith('/') ? next : '/'
+  })()
 
   useEffect(() => {
     // Handle the OAuth callback
@@ -21,7 +35,7 @@ export default function AuthCallback() {
 
         if (data.session) {
           // Successfully authenticated
-          navigate('/profile')
+          navigate(nextPath, { replace: true })
         } else {
           // Check if there's an error in the URL
           const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -31,10 +45,10 @@ export default function AuthCallback() {
             setError(errorDescription)
           } else {
             // No session, redirect to signin
-            navigate('/signin')
+            navigate(signInPath)
           }
         }
-      } catch (err) {
+      } catch {
         setError('An unexpected error occurred')
       } finally {
         setLoading(false)
@@ -42,7 +56,7 @@ export default function AuthCallback() {
     }
 
     handleAuthCallback()
-  }, [navigate])
+  }, [navigate, nextPath, signInPath])
 
   if (loading) {
     return (
@@ -67,7 +81,7 @@ export default function AuthCallback() {
           <h2 className="text-xl font-medium mb-2">Authentication Failed</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={() => navigate('/signin')}
+            onClick={() => navigate(signInPath)}
             className="px-6 py-3 bg-black text-white rounded-full font-medium hover:bg-gray-800"
           >
             Back to Sign In

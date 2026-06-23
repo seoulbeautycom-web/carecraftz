@@ -1,13 +1,16 @@
 import { LogOut, ShieldAlert } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../contexts/auth-context'
 import { useAdminAccess } from '../../contexts/admin-access-context'
+import { useTenantAccess } from '../../contexts/tenant-access-context'
+import { getTenantRootPath } from '../../lib/tenantNavigation'
 
 export default function AdminEntryRedirect() {
   const { user, loading: authLoading, signOut } = useAuth()
   const { loading: accessLoading, landingPath } = useAdminAccess()
+  const { loading: tenantAccessLoading, landingPath: tenantLandingPath, slug: tenantSlug, isAuthorized: tenantIsAuthorized } = useTenantAccess()
 
-  if (authLoading || accessLoading) {
+  if (authLoading || accessLoading || tenantAccessLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
         <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-5 py-4 text-slate-300 shadow-2xl backdrop-blur">
@@ -24,6 +27,14 @@ export default function AdminEntryRedirect() {
 
   if (landingPath) {
     return <Navigate to={landingPath} replace />
+  }
+
+  if (tenantLandingPath) {
+    return <Navigate to={tenantLandingPath} replace />
+  }
+
+  if (tenantIsAuthorized && tenantSlug) {
+    return <Navigate to={getTenantRootPath(tenantSlug)} replace />
   }
 
   const handleSignOut = async () => {

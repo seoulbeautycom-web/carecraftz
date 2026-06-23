@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/auth-context'
 import { supabase } from '../lib/supabase'
 import { ArrowLeft, CreditCard, Truck, Shield, MapPin, Phone, Mail, User, CheckCircle, Package, Send, Home, AlertCircle } from 'lucide-react'
 import PageFrame from '../components/PageFrame'

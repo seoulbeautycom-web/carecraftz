@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Check, ArrowRight, Building2, Globe, Mail, FileText, Shield, Star } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
+import { supabase } from '../lib/supabase'
 
 function PartnersInner() {
   const [step, setStep] = useState(1)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [formData, setFormData] = useState({
     // Step 1: Company Info
     companyName: '',
@@ -63,11 +66,48 @@ function PartnersInner() {
     if (step > 1) setStep(step - 1)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // In production, this would submit to Supabase or API
-    console.log('Partner application submitted:', formData)
-    setStep(7) // Success state
+    setIsSubmitting(true)
+    setSubmitError('')
+
+    try {
+      const { error } = await supabase.from('partner_applications').insert({
+        company_name: formData.companyName.trim(),
+        business_type: formData.businessType.trim(),
+        website: formData.website.trim(),
+        founded_year: formData.foundedYear ? Number.parseInt(formData.foundedYear, 10) : null,
+        company_size: formData.companySize.trim(),
+        contact_name: formData.contactName.trim(),
+        contact_email: formData.contactEmail.trim(),
+        contact_phone: formData.contactPhone.trim(),
+        contact_role: formData.contactRole.trim(),
+        product_categories: formData.productCategories,
+        product_description: formData.productDescription.trim(),
+        certifications: formData.certifications,
+        testing_methods: formData.testingMethods,
+        ingredients_policy: formData.ingredientsPolicy.trim(),
+        packaging_sustainability: formData.packagingSustainability.trim(),
+        wholesale_margin: formData.wholesaleMargin.trim(),
+        minimum_order: formData.minimumOrder.trim(),
+        lead_time: formData.leadTime.trim(),
+        shipping_locations: formData.shippingLocations,
+        why_partner: formData.whyPartner.trim(),
+        other_info: formData.otherInfo.trim(),
+        terms_accepted: formData.agreeTerms,
+        terms_accepted_at: formData.agreeTerms ? new Date().toISOString() : null,
+        status: 'submitted',
+      })
+
+      if (error) throw error
+
+      setStep(7)
+    } catch (error) {
+      console.error('Partner application submission failed:', error)
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit partner application. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (step === 7) {
@@ -113,6 +153,12 @@ function PartnersInner() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+
+        {submitError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {submitError}
+          </div>
+        ) : null}
 
         {/* Step 1: Company Info */}
         {step === 1 && (
@@ -466,9 +512,10 @@ function PartnersInner() {
           ) : (
             <button
               type="submit"
+              disabled={isSubmitting}
               className="px-6 py-3 rounded-full bg-[#2b2b2b] text-white font-medium hover:bg-black transition-colors flex items-center gap-2"
             >
-              Submit Application <Check className="w-4 h-4" />
+              {isSubmitting ? 'Submitting...' : <>Submit Application <Check className="w-4 h-4" /></>}
             </button>
           )}
         </div>

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useCart } from '../contexts/CartContext'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../contexts/auth-context'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
