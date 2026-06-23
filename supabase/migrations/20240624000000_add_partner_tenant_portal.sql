@@ -540,7 +540,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, extensions
 AS $$
 DECLARE
   normalized_slug TEXT := public.normalize_partner_slug(target_slug);
@@ -611,7 +611,7 @@ BEGIN
     store_row.store_id,
     lower(trim(invite_email)),
     resolved_role.code,
-    token_hash,
+    invite_token_hash,
     NULL,
     NOW(),
     NOW() + INTERVAL '7 days',
@@ -640,7 +640,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, extensions
 AS $$
 DECLARE
   invite_token_hash TEXT := encode(digest(trim(invite_token), 'sha256'), 'hex');

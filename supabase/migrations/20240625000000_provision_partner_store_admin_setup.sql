@@ -17,7 +17,7 @@ CREATE OR REPLACE FUNCTION public.provision_partner_store(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, extensions
 AS $$
 DECLARE
   resolving_staff_id UUID;
