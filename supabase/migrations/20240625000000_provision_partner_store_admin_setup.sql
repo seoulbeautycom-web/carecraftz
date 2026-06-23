@@ -103,8 +103,8 @@ BEGIN
       RAISE EXCEPTION 'Partner role not found' USING ERRCODE = 'P0002';
     END IF;
 
-    token := encode(gen_random_bytes(24), 'hex');
-    invite_token_hash := encode(digest(token, 'sha256'), 'hex');
+    token := encode(extensions.gen_random_bytes(24), 'hex');
+    invite_token_hash := encode(extensions.digest(token, 'sha256'), 'hex');
 
     INSERT INTO public.partner_invites (
       partner_store_id,
