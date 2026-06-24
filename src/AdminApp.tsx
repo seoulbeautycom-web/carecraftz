@@ -99,108 +99,114 @@ function AdminApp() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <TenantAccessProvider>
-          <AdminAccessProvider>
-            <Routes>
-              {/* Shared auth callback */}
-              <Route path="/auth/callback" element={<AuthCallback />} />
+        <AdminAccessProvider>
+          <Routes>
+            {/* Shared auth callback */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
 
-              {/* Admin Login - No protected route */}
-              <Route path="/login" element={<AdminLogin />} />
+            {/* Admin Login - No protected route */}
+            <Route path="/login" element={<AdminLogin />} />
 
-              {/* Partner tenant portal */}
-              <Route path="/org/:slug/claim" element={<TenantClaimInvitePage />} />
-              <Route path="/:slug/claim" element={<TenantClaimInvitePage />} />
-              <Route path="/org/:slug" element={<TenantRouteScope />}>
-                {tenantPortalRouteChildren}
-              </Route>
-              <Route path="/:slug" element={<TenantRouteScope />}>
-                {tenantPortalRouteChildren}
-              </Route>
+            {/* Partner tenant portal */}
+            <Route path="/org/:slug/claim" element={<TenantClaimInvitePage />} />
+            <Route path="/:slug/claim" element={<TenantClaimInvitePage />} />
+            <Route path="/org/:slug" element={<TenantRouteScope />}>
+              {tenantPortalRouteChildren}
+            </Route>
+            <Route path="/:slug" element={<TenantRouteScope />}>
+              {tenantPortalRouteChildren}
+            </Route>
 
-              {/* Protected Admin Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.dashboard}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/orders" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.orders}>
-                  <AdminOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/staff" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.staff}>
-                  <StaffManagement />
-                </ProtectedRoute>
-              } />
-              <Route path="/products/new" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.productsNew}>
-                  <ProductEditor />
-                </ProtectedRoute>
-              } />
-              <Route path="/products/:productId" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.productsEdit}>
-                  <ProductEditor />
-                </ProtectedRoute>
-              } />
-              <Route path="/access-control" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.accessControl}>
-                  <AccessControl />
-                </ProtectedRoute>
-              } />
-              <Route path="/products" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.products}>
-                  <Products />
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.settings}>
-                  <Settings />
-                </ProtectedRoute>
-              } />
-              <Route path="/analytics" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.analytics}>
-                  <Analytics />
-                </ProtectedRoute>
-              } />
-              <Route path="/reviews" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.reviews}>
-                  <Reviews />
-                </ProtectedRoute>
-              } />
-              <Route path="/partners" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.partners}>
-                  <PartnerApplications />
-                </ProtectedRoute>
-              } />
-              <Route path="/master/partners" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.partners}>
-                  <PartnerApplications />
-                </ProtectedRoute>
-              } />
-              <Route path="/content" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.content}>
-                  <BlogPosts />
-                </ProtectedRoute>
-              } />
-              <Route path="/social" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.settings}>
-                  <SocialMedia />
-                </ProtectedRoute>
-              } />
-              <Route path="/skin-types" element={
-                <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.products}>
-                  <SkinTypes />
-                </ProtectedRoute>
-              } />
+            {/* Protected Admin Routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.dashboard}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/orders" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.orders}>
+                <AdminOrders />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.staff}>
+                <StaffManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/products/new" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.productsNew}>
+                <ProductEditor />
+              </ProtectedRoute>
+            } />
+            <Route path="/products/:productId" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.productsEdit}>
+                <ProductEditor />
+              </ProtectedRoute>
+            } />
+            <Route path="/access-control" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.accessControl}>
+                <AccessControl />
+              </ProtectedRoute>
+            } />
+            <Route path="/products" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.products}>
+                <Products />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.settings}>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.analytics}>
+                <Analytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviews" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.reviews}>
+                <Reviews />
+              </ProtectedRoute>
+            } />
+            <Route path="/partners" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.partners}>
+                <PartnerApplications />
+              </ProtectedRoute>
+            } />
+            <Route path="/master/partners" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.partners}>
+                <PartnerApplications />
+              </ProtectedRoute>
+            } />
+            <Route path="/content" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.content}>
+                <BlogPosts />
+              </ProtectedRoute>
+            } />
+            <Route path="/social" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.settings}>
+                <SocialMedia />
+              </ProtectedRoute>
+            } />
+            <Route path="/skin-types" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.products}>
+                <SkinTypes />
+              </ProtectedRoute>
+            } />
 
-              {/* Redirect root and unknown paths to the safest landing page */}
-              <Route path="/" element={<AdminEntryRedirect />} />
-              <Route path="*" element={<AdminEntryRedirect />} />
-            </Routes>
-          </AdminAccessProvider>
-        </TenantAccessProvider>
+            {/* Redirect root and unknown paths to the safest landing page */}
+            <Route path="/" element={
+              <TenantAccessProvider>
+                <AdminEntryRedirect />
+              </TenantAccessProvider>
+            } />
+            <Route path="*" element={
+              <TenantAccessProvider>
+                <AdminEntryRedirect />
+              </TenantAccessProvider>
+            } />
+          </Routes>
+        </AdminAccessProvider>
       </AuthProvider>
     </BrowserRouter>
   )

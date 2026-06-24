@@ -180,6 +180,213 @@ async function authorizeRequest(req) {
   }
 }
 
+async function restorePartnerMemberRow(adminClient, previousMemberRow, storeId, userId) {
+  if (previousMemberRow?.id) {
+    const { error } = await adminClient
+      .from('partner_members')
+      .update({
+        email: previousMemberRow.email,
+        full_name: previousMemberRow.full_name,
+        status: previousMemberRow.status,
+        invited_by_staff_id: previousMemberRow.invited_by_staff_id,
+        invited_by_member_id: previousMemberRow.invited_by_member_id,
+        invited_at: previousMemberRow.invited_at,
+        joined_at: previousMemberRow.joined_at,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', previousMemberRow.id)
+
+    if (error) {
+      console.warn('[partner-store-admin] Failed to restore partner member row after a sync error:', error)
+    }
+
+    return
+  }
+
+  const { error } = await adminClient
+    .from('partner_members')
+    .delete()
+    .eq('partner_store_id', storeId)
+    .eq('user_id', userId)
+
+  if (error) {
+    console.warn('[partner-store-admin] Failed to delete partner member row after a sync error:', error)
+  }
+}
+
+async function syncExistingMasterAdmin(adminClient, storeRow, storeId, resolvedEmail, requestedPassword, resolvedUserId) {
+  const currentMasterAdminEmail = normalizeEmail(storeRow.master_admin_email)
+  const currentMasterAdminUserId = normalizeText(storeRow.master_admin_user_id)
+  const shouldUpdateAuthUser = requestedPassword || resolvedEmail !== currentMasterAdminEmail
+
+  const { data: storeOwnerRole, error: roleError } = await adminClient
+    .from('partner_roles')
+    .select('id')
+    .eq('code', 'store_owner')
+    .maybeSingle()
+
+  if (roleError || !storeOwnerRole?.id) {
+    return {
+      statusCode: 500,
+      message: roleError?.message || 'Unable to resolve the store owner role.',
+    }
+  }
+
+  const { data: previousMemberRow, error: previousMemberError } = await adminClient
+    .from('partner_members')
+    .select('*')
+    .eq('partner_store_id', storeId)
+    .eq('user_id', resolvedUserId)
+    .maybeSingle()
+
+  if (previousMemberError) {
+    return {
+      statusCode: 500,
+      message: previousMemberError.message || 'Failed to load the current master admin membership.',
+    }
+  }
+
+  const { data: existingConflict, error: conflictError } = await adminClient
+    .from('partner_members')
+    .select('id, user_id, email')
+    .eq('partner_store_id', storeId)
+    .eq('email', resolvedEmail)
+
+  if (conflictError) {
+    return {
+      statusCode: 500,
+      message: conflictError.message || 'Unable to check for an existing master admin membership.',
+    }
+  }
+
+  const conflictingMembership = (existingConflict ?? []).find((memberRow) => normalizeText(memberRow.user_id) !== resolvedUserId)
+  if (conflictingMembership) {
+    return {
+      statusCode: 409,
+      message: 'Another partner member already uses that email for this store.',
+    }
+  }
+
+  const { data: memberData, error: memberError } = await adminClient
+    .from('partner_members')
+    .upsert(
+      {
+        partner_store_id: storeId,
+        user_id: resolvedUserId,
+        email: resolvedEmail,
+        full_name: '',
+        status: 'active',
+        invited_at: new Date().toISOString(),
+        joined_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'partner_store_id,user_id',
+      },
+    )
+    .select('id, partner_store_id, user_id, email')
+    .maybeSingle()
+
+  if (memberError || !memberData?.id) {
+    return {
+      statusCode: 500,
+      message: memberError?.message || 'Failed to create the partner store membership.',
+    }
+  }
+
+  const { error: roleLinkError } = await adminClient.from('partner_member_roles').upsert(
+    {
+      partner_member_id: memberData.id,
+      partner_role_id: storeOwnerRole.id,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: 'partner_member_id,partner_role_id',
+    },
+  )
+
+  if (roleLinkError) {
+    await restorePartnerMemberRow(adminClient, previousMemberRow, storeId, resolvedUserId)
+    return {
+      statusCode: 500,
+      message: roleLinkError.message || 'Failed to assign the store owner role.',
+    }
+  }
+
+  const { error: storeUpdateError } = await adminClient
+    .from('partner_stores')
+    .update({
+      master_admin_email: resolvedEmail,
+      master_admin_user_id: resolvedUserId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', storeId)
+
+  if (storeUpdateError) {
+    await restorePartnerMemberRow(adminClient, previousMemberRow, storeId, resolvedUserId)
+    return {
+      statusCode: 500,
+      message: storeUpdateError.message || 'Failed to save the master admin metadata.',
+    }
+  }
+
+  const updatePayload = {
+    email: resolvedEmail,
+    email_confirm: true,
+    ...(requestedPassword ? { password: requestedPassword } : {}),
+  }
+
+  if (!shouldUpdateAuthUser) {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        storeId,
+        master_admin_email: resolvedEmail,
+        master_admin_user_id: resolvedUserId,
+        partner_member_id: memberData.id,
+        partner_store_slug: storeRow.slug,
+      },
+    }
+  }
+
+  const { data: updatedUserData, error: updateUserError } = await adminClient.auth.admin.updateUserById(resolvedUserId, updatePayload)
+
+  if (updateUserError || !updatedUserData?.user) {
+    await restorePartnerMemberRow(adminClient, previousMemberRow, storeId, resolvedUserId)
+
+    const { error: restoreStoreError } = await adminClient
+      .from('partner_stores')
+      .update({
+        master_admin_email: currentMasterAdminEmail || null,
+        master_admin_user_id: currentMasterAdminUserId || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', storeId)
+
+    if (restoreStoreError) {
+      console.warn('[partner-store-admin] Failed to restore partner store metadata after a sync error:', restoreStoreError)
+    }
+
+    return {
+      statusCode: 500,
+      message: updateUserError?.message || 'Failed to update the master admin account.',
+    }
+  }
+
+  return {
+    statusCode: 200,
+    payload: {
+      ok: true,
+      storeId,
+      master_admin_email: resolvedEmail,
+      master_admin_user_id: updatedUserData.user.id,
+      partner_member_id: memberData.id,
+      partner_store_slug: storeRow.slug,
+    },
+  }
+}
+
 async function syncMasterAdmin(body, req) {
   const authorization = await authorizeRequest(req)
   if (authorization.error) {
@@ -218,7 +425,6 @@ async function syncMasterAdmin(body, req) {
   }
 
   let resolvedUserId = currentUserId || ''
-  let previousUserId = currentUserId || ''
   let userCreatedThisRequest = false
 
   if (resolvedUserId) {
@@ -230,43 +436,28 @@ async function syncMasterAdmin(body, req) {
   }
 
   if (resolvedUserId) {
-    const updatePayload = {
-      email: resolvedEmail,
-      email_confirm: true,
-      ...(requestedPassword ? { password: requestedPassword } : {}),
-    }
-
-    const { data: updatedUserData, error: updateUserError } = await adminClient.auth.admin.updateUserById(resolvedUserId, updatePayload)
-
-    if (updateUserError || !updatedUserData?.user) {
-      return {
-        statusCode: 500,
-        message: updateUserError?.message || 'Failed to update the master admin account.',
-      }
-    }
-
-    resolvedUserId = updatedUserData.user.id
-  } else {
-    if (!requestedPassword) {
-      return { statusCode: 400, message: 'A master admin password is required when creating a new account.' }
-    }
-
-    const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
-      email: resolvedEmail,
-      password: requestedPassword,
-      email_confirm: true,
-    })
-
-    if (createUserError || !createdUserData?.user) {
-      return {
-        statusCode: 500,
-        message: createUserError?.message || 'Failed to create the master admin account.',
-      }
-    }
-
-    resolvedUserId = createdUserData.user.id
-    userCreatedThisRequest = true
+    return syncExistingMasterAdmin(adminClient, storeRow, storeId, resolvedEmail, requestedPassword, resolvedUserId)
   }
+
+  if (!requestedPassword) {
+    return { statusCode: 400, message: 'A master admin password is required when creating a new account.' }
+  }
+
+  const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
+    email: resolvedEmail,
+    password: requestedPassword,
+    email_confirm: true,
+  })
+
+  if (createUserError || !createdUserData?.user) {
+    return {
+      statusCode: 500,
+      message: createUserError?.message || 'Failed to create the master admin account.',
+    }
+  }
+
+  resolvedUserId = createdUserData.user.id
+  userCreatedThisRequest = true
 
   const { data: storeOwnerRole, error: roleError } = await adminClient
     .from('partner_roles')
@@ -387,14 +578,6 @@ async function syncMasterAdmin(body, req) {
     }
   }
 
-  if (previousUserId && previousUserId !== resolvedUserId) {
-    await adminClient.auth.admin.deleteUser(previousUserId).catch((error) => {
-      if (!isNotFoundError(error)) {
-        console.warn('[partner-store-admin] Failed to delete previous master admin user:', error)
-      }
-    })
-  }
-
   return {
     statusCode: 200,
     payload: {
@@ -408,7 +591,178 @@ async function syncMasterAdmin(body, req) {
   }
 }
 
-async function deleteMasterAdmin(body, req) {
+async function restorePartnerStoreRow(adminClient, previousStoreRow) {
+  const { error } = await adminClient
+    .from('partner_stores')
+    .update({
+      slug: previousStoreRow.slug,
+      tenant_type: previousStoreRow.tenant_type,
+      display_name: previousStoreRow.display_name,
+      legal_name: previousStoreRow.legal_name,
+      primary_email: previousStoreRow.primary_email,
+      status: previousStoreRow.status,
+      approval_status: previousStoreRow.approval_status,
+      commission_rate: previousStoreRow.commission_rate,
+      branding_json: previousStoreRow.branding_json,
+      settings_json: previousStoreRow.settings_json,
+      master_admin_email: previousStoreRow.master_admin_email,
+      master_admin_user_id: previousStoreRow.master_admin_user_id,
+      approved_by_staff_id: previousStoreRow.approved_by_staff_id,
+      approved_at: previousStoreRow.approved_at,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', previousStoreRow.id)
+
+  if (error) {
+    console.warn('[partner-store-admin] Failed to restore partner store row after a sync error:', error)
+  }
+}
+
+async function savePartnerStore(body, req) {
+  const authorization = await authorizeRequest(req)
+  if (authorization.error) {
+    return authorization.error
+  }
+
+  const userClient = authorization.userClient
+  const adminClient = createServiceClient()
+  const storeId = normalizeText(body?.storeId)
+  const targetSlug = normalizeText(body?.slug)
+  const displayName = normalizeText(body?.displayName)
+  const legalName = normalizeText(body?.legalName)
+  const primaryEmail = normalizeEmail(body?.primaryEmail)
+  const masterAdminEmail = normalizeEmail(body?.masterAdminEmail)
+  const masterAdminPassword = normalizeText(body?.masterAdminPassword)
+  const status = normalizeText(body?.status) || 'active'
+  const approvalStatus = normalizeText(body?.approvalStatus) || 'approved'
+  const commissionRateValue = Number.parseFloat(body?.commissionRate)
+  const commissionRate = Number.isFinite(commissionRateValue) ? commissionRateValue : 0
+
+  if (!targetSlug) {
+    return { statusCode: 400, message: 'slug is required.' }
+  }
+
+  if (!displayName) {
+    return { statusCode: 400, message: 'displayName is required.' }
+  }
+
+  if (!legalName) {
+    return { statusCode: 400, message: 'legalName is required.' }
+  }
+
+  if (!primaryEmail) {
+    return { statusCode: 400, message: 'primaryEmail is required.' }
+  }
+
+  if (!masterAdminEmail) {
+    return { statusCode: 400, message: 'masterAdminEmail is required.' }
+  }
+
+  if (!storeId && !masterAdminPassword) {
+    return { statusCode: 400, message: 'A master admin password is required when creating a new account.' }
+  }
+
+  if (storeId) {
+    const { data: previousStoreRow, error: previousStoreError } = await adminClient
+      .from('partner_stores')
+      .select('*')
+      .eq('id', storeId)
+      .maybeSingle()
+
+    if (previousStoreError) {
+      return { statusCode: 500, message: previousStoreError.message || 'Failed to load the partner store.' }
+    }
+
+    if (!previousStoreRow?.id) {
+      return { statusCode: 404, message: 'Partner store not found.' }
+    }
+
+    const { data: updatedStoreRow, error: storeUpdateError } = await adminClient
+      .from('partner_stores')
+      .update({
+        slug: targetSlug,
+        display_name: displayName,
+        legal_name: legalName,
+        primary_email: primaryEmail,
+        status,
+        approval_status: approvalStatus,
+        commission_rate: commissionRate,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', storeId)
+      .select('*')
+      .maybeSingle()
+
+    if (storeUpdateError || !updatedStoreRow?.id) {
+      return {
+        statusCode: 500,
+        message: storeUpdateError?.message || 'No partner store record was updated.',
+      }
+    }
+
+    const syncResult = await syncMasterAdmin({
+      ...body,
+      storeId: updatedStoreRow.id,
+      masterAdminEmail,
+      masterAdminPassword,
+    }, req)
+
+    if (syncResult.statusCode !== 200) {
+      await restorePartnerStoreRow(adminClient, previousStoreRow)
+      return syncResult
+    }
+
+    return syncResult
+  }
+
+  const { data: createResult, error: createError } = await userClient.rpc('provision_partner_store', {
+    target_slug: targetSlug,
+    display_name: displayName,
+    legal_name: legalName,
+    primary_email: primaryEmail,
+    owner_email: null,
+    invite_role_code: 'store_owner',
+    tenant_type: 'partner',
+    status,
+    approval_status: approvalStatus,
+    commission_rate: commissionRate,
+    branding_json: {},
+    settings_json: {},
+  })
+
+  if (createError) {
+    return { statusCode: 500, message: createError.message || 'Failed to create the partner store.' }
+  }
+
+  const createdStoreId = createResult?.partner_store_id
+  if (!createdStoreId) {
+    return { statusCode: 500, message: 'The partner store was created, but no store id was returned.' }
+  }
+
+  const syncResult = await syncMasterAdmin({
+    ...body,
+    storeId: createdStoreId,
+    masterAdminEmail,
+    masterAdminPassword,
+  }, req)
+
+  if (syncResult.statusCode !== 200) {
+    const { error: rollbackError } = await adminClient
+      .from('partner_stores')
+      .delete()
+      .eq('id', createdStoreId)
+
+    if (rollbackError) {
+      console.error('[partner-store-admin] Failed to roll back partner store creation after a sync error:', rollbackError)
+    }
+
+    return syncResult
+  }
+
+  return syncResult
+}
+
+async function deletePartnerStore(body, req) {
   const authorization = await authorizeRequest(req)
   if (authorization.error) {
     return authorization.error
@@ -435,14 +789,31 @@ async function deleteMasterAdmin(body, req) {
     return { statusCode: 404, message: 'Partner store not found.' }
   }
 
+  const { error: deleteStoreError } = await adminClient
+    .from('partner_stores')
+    .delete()
+    .eq('id', storeId)
+
+  if (deleteStoreError) {
+    return { statusCode: 500, message: deleteStoreError.message || 'Failed to delete the partner store.' }
+  }
+
   const masterAdminUserId = normalizeText(storeRow.master_admin_user_id)
+  let warning = ''
   if (masterAdminUserId) {
-    await adminClient.auth.admin.deleteUser(masterAdminUserId).catch((error) => {
-      if (!isNotFoundError(error)) {
-        console.warn('[partner-store-admin] Failed to delete master admin user:', error)
-        throw error
+    try {
+      const { error: deleteUserError } = await adminClient.auth.admin.deleteUser(masterAdminUserId)
+
+      if (deleteUserError && !isNotFoundError(deleteUserError)) {
+        warning = deleteUserError.message || 'The partner store was deleted, but the master admin account could not be removed.'
+        console.warn('[partner-store-admin] Failed to delete master admin user:', deleteUserError)
       }
-    })
+    } catch (error) {
+      if (!isNotFoundError(error)) {
+        warning = error instanceof Error && error.message ? error.message : 'The partner store was deleted, but the master admin account could not be removed.'
+        console.warn('[partner-store-admin] Failed to delete master admin user:', error)
+      }
+    }
   }
 
   return {
@@ -450,6 +821,7 @@ async function deleteMasterAdmin(body, req) {
     payload: {
       ok: true,
       storeId,
+      warning: warning || undefined,
       partner_store_slug: storeRow.slug,
     },
   }
@@ -480,6 +852,18 @@ export default async function handler(req, res) {
     if (method === 'POST') {
       const action = normalizeText(body?.action || url.searchParams.get('action') || 'sync').toLowerCase()
 
+      if (action === 'save-store') {
+        const result = await savePartnerStore(body, req)
+        if (result.statusCode !== 200) {
+          return sendJson(res, result.statusCode, {
+            ok: false,
+            error: result.message,
+          })
+        }
+
+        return sendJson(res, result.statusCode, result.payload)
+      }
+
       if (action !== 'sync') {
         return sendJson(res, 400, {
           ok: false,
@@ -499,7 +883,7 @@ export default async function handler(req, res) {
     }
 
     if (method === 'DELETE') {
-      const result = await deleteMasterAdmin(body, req)
+      const result = await deletePartnerStore(body, req)
       if (result.statusCode !== 200) {
         return sendJson(res, result.statusCode, {
           ok: false,

@@ -104,6 +104,7 @@ interface PartnerStoreAdminApiResponse {
   master_admin_user_id?: string
   partner_member_id?: string
   partner_store_slug?: string
+  warning?: string
   error?: string
 }
 
@@ -400,24 +401,6 @@ export default function PartnerApplications() {
   const canManagePartnerStores = hasAdminAnyPermission(['partners.provision', 'partners.manage', 'roles.manage'])
   const storePreviewSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
 
-  const syncMasterAdminCredentials = useCallback(
-    async (storeId: string, masterAdminEmail: string, masterAdminPassword: string) => {
-      return callPartnerStoreAdminApi('POST', {
-        action: 'sync',
-        storeId,
-        masterAdminEmail,
-        masterAdminPassword: masterAdminPassword || undefined,
-      })
-    },
-    [],
-  )
-
-  const deleteMasterAdminCredentials = useCallback(async (storeId: string) => {
-    return callPartnerStoreAdminApi('DELETE', {
-      storeId,
-    })
-  }, [])
-
   const metrics = useMemo(() => {
     return {
       total: applications.length,
@@ -536,13 +519,14 @@ export default function PartnerApplications() {
     setStoresSuccess('')
 
     try {
-      await deleteMasterAdminCredentials(selectedStore.id)
+      const payload = (await callPartnerStoreAdminApi('DELETE', {
+        storeId: selectedStore.id,
+      })) as PartnerStoreAdminApiResponse
 
-      const { error } = await supabase.from('partner_stores').delete().eq('id', selectedStore.id)
+      const deletedSlug = payload.partner_store_slug ?? selectedStore.slug
+      const warningSuffix = payload.warning ? ` ${payload.warning}` : ''
 
-      if (error) throw error
-
-      setStoresSuccess(`Deleted store "${selectedStore.slug}" and removed its master admin account.`)
+      setStoresSuccess(`Deleted store "${deletedSlug}" and removed its master admin account.${warningSuffix}`)
       setSelectedStoreId(null)
       setStoreForm(emptyStoreForm())
       await loadStores()
@@ -597,134 +581,41 @@ export default function PartnerApplications() {
     setStoresError('')
     setStoresSuccess('')
 
-    if (selectedStoreId) {
-      setStoreSavingAction('update')
-
-      const previousStore = selectedStore
-
-      try {
-        const { data, error } = await supabase
-          .from('partner_stores')
-          .update({
-            slug: normalizedSlug,
-            display_name: displayName,
-            legal_name: legalName,
-            primary_email: primaryEmail,
-            status: storeForm.status,
-            approval_status: storeForm.approvalStatus,
-            commission_rate: Number.isFinite(commissionRate) ? commissionRate : 0,
-          })
-          .eq('id', selectedStoreId)
-          .select('*')
-          .maybeSingle()
-
-        if (error) throw error
-
-        if (!data?.id) {
-          throw new Error('No partner store record was updated.')
-        }
-
-        const updatedStore = data as PartnerStoreRow
-
-        try {
-          const syncResult = await syncMasterAdminCredentials(updatedStore.id, resolvedMasterAdminEmail, masterAdminPassword)
-          const syncedStore = {
-            ...updatedStore,
-            master_admin_email: syncResult.master_admin_email ?? resolvedMasterAdminEmail,
-            master_admin_user_id: syncResult.master_admin_user_id ?? updatedStore.master_admin_user_id,
-          } satisfies PartnerStoreRow
-
-          setStoresSuccess(`Updated store "${syncedStore.slug}" and synced the master admin account.`)
-          setSelectedStoreId(syncedStore.id)
-          setStoreForm({
-            ...storeFormFromRow(syncedStore),
-            masterAdminPassword: '',
-          })
-          await loadStores(syncedStore.id)
-        } catch (syncError) {
-          if (previousStore) {
-            const { error: rollbackError } = await supabase
-              .from('partner_stores')
-              .update({
-                slug: previousStore.slug,
-                display_name: previousStore.display_name,
-                legal_name: previousStore.legal_name,
-                primary_email: previousStore.primary_email,
-                status: previousStore.status,
-                approval_status: previousStore.approval_status,
-                commission_rate: previousStore.commission_rate,
-              })
-              .eq('id', previousStore.id)
-
-            if (rollbackError) {
-              console.error('Failed to roll back partner store update after master admin sync failure:', rollbackError)
-            }
-
-            setSelectedStoreId(previousStore.id)
-            setStoreForm({
-              ...storeFormFromRow(previousStore),
-              masterAdminPassword: '',
-            })
-            await loadStores(previousStore.id)
-          }
-
-          throw syncError
-        }
-      } catch (error) {
-        console.error('Failed to update partner store:', error)
-        setStoresError(getStoreActionErrorMessage(error, 'Failed to update partner store'))
-      } finally {
-        setStoreSavingAction(null)
-      }
-
-      return
-    }
-
-    setStoreSavingAction('create')
+    setStoreSavingAction(selectedStoreId ? 'update' : 'create')
 
     try {
-      const { data, error } = await supabase.rpc('provision_partner_store', {
-        target_slug: normalizedSlug,
-        display_name: displayName,
-        legal_name: legalName,
-        primary_email: primaryEmail,
-        owner_email: null,
-        invite_role_code: 'store_owner',
-        tenant_type: 'partner',
+      const payload = (await callPartnerStoreAdminApi('POST', {
+        action: 'save-store',
+        storeId: selectedStoreId ?? undefined,
+        slug: normalizedSlug,
+        displayName,
+        legalName,
+        primaryEmail,
+        masterAdminEmail: resolvedMasterAdminEmail,
+        masterAdminPassword: masterAdminPassword || undefined,
         status: storeForm.status,
-        approval_status: storeForm.approvalStatus,
-        commission_rate: Number.isFinite(commissionRate) ? commissionRate : 0,
-        branding_json: {},
-        settings_json: {},
-      })
+        approvalStatus: storeForm.approvalStatus,
+        commissionRate: Number.isFinite(commissionRate) ? commissionRate : 0,
+      })) as PartnerStoreAdminApiResponse
 
-      if (error) throw error
+      const savedStoreId = payload.storeId ?? selectedStoreId ?? null
+      const savedSlug = payload.partner_store_slug ?? normalizedSlug
+      const actionLabel = selectedStoreId ? 'Updated' : 'Created'
+      const warningSuffix = payload.warning ? ` ${payload.warning}` : ''
 
-      const result = data as { partner_store_id?: string; slug?: string } | null
-      const createdSlug = result?.slug ?? normalizedSlug
-      const createdStoreId = result?.partner_store_id ?? null
+      setStoresSuccess(`${actionLabel} store "${savedSlug}" and synced the master admin account.${warningSuffix}`)
 
-      if (!createdStoreId) {
-        throw new Error('The partner store was created, but no store id was returned.')
+      if (savedStoreId) {
+        setSelectedStoreId(savedStoreId)
+        await loadStores(savedStoreId)
+      } else {
+        await loadStores()
       }
 
-      try {
-        await syncMasterAdminCredentials(createdStoreId, resolvedMasterAdminEmail, masterAdminPassword)
-        setStoresSuccess(`Created store "${createdSlug}" and synced the master admin account.`)
-        await loadStores(createdStoreId)
-        setActiveSection('stores')
-      } catch (syncError) {
-        const { error: rollbackError } = await supabase.from('partner_stores').delete().eq('id', createdStoreId)
-
-        if (rollbackError) {
-          console.error('Failed to roll back partner store creation after master admin sync failure:', rollbackError)
-        }
-
-        throw syncError
-      }
+      setActiveSection('stores')
     } catch (error) {
-      console.error('Failed to create partner store:', error)
-      setStoresError(getStoreActionErrorMessage(error, 'Failed to create partner store'))
+      console.error(selectedStoreId ? 'Failed to update partner store:' : 'Failed to create partner store:', error)
+      setStoresError(getStoreActionErrorMessage(error, selectedStoreId ? 'Failed to update partner store' : 'Failed to create partner store'))
     } finally {
       setStoreSavingAction(null)
     }
