@@ -281,7 +281,7 @@ function ShopInner() {
               verified sellers,<br />authentic products.
             </h2>
             <p className="text-sm text-white/80 mb-8 max-w-sm">We vet every seller — credentials, certifications, and testing — so you can shop with confidence.</p>
-            <button onClick={() => navigate('/craft')} className="self-start px-8 py-3 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors">
+            <button onClick={() => navigate('/about')} className="self-start px-8 py-3 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors">
               about us
             </button>
           </div>

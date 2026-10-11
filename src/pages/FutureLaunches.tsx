@@ -8,32 +8,32 @@ const TARGET_RADIUS = 650
 
 const orbitImagesData = [
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390315/BL1996-Beyond_wild_vetiver_Flakon_100ml_300dpi_a55ie5.webp',
+    src: '/s1.png',
     title: 'Wild Vetiver',
     desc: 'Smoky vetiver wrapped in saffron and leather — a grounded, untamed signature.',
   },
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390315/BL2156_BEYOND_RADIANT_OSMANTHUS_hoc3up.webp',
+    src: '/s2.png',
     title: 'Radiant Osmanthus',
     desc: 'Apricot-tinged osmanthus over soft musks. Quietly luminous, never loud.',
   },
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390315/BL2157_BEYOND_VIBRANT_HIBISCUS_pgiehq.webp',
+    src: '/s3.png',
     title: 'Vibrant Hibiscus',
     desc: 'Bright hibiscus and pink pepper resting on creamy sandalwood.',
   },
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390315/BL2158_BEYOND_MELLOW_HELIOTROPE_agqych.webp',
+    src: '/s4.png',
     title: 'Mellow Heliotrope',
     desc: 'Almond, vanilla and heliotrope petals — a powdery, hushed warmth.',
   },
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390317/BL2371-BL2372-BL2373-Magnetic-Amber_web_2_dbmtpy.webp',
+    src: '/facewash.png',
     title: 'Magnetic Amber',
     desc: 'Resinous amber, oud and rich woods. The collection\'s deepest note.',
   },
   {
-    src: 'https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780390315/BL2156_BEYOND_RADIANT_OSMANTHUS_1_hlc4v1.webp',
+    src: '/deepclean.png',
     title: 'Crystal Edition',
     desc: 'A limited cut of the bottle — etched facets, lavender pour, leather collar.',
   },
@@ -350,7 +350,7 @@ function StaySection() {
   return (
     <section className="relative w-full overflow-hidden" style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}>
       <img
-        src="https://res.cloudinary.com/dsdhxhhqh/image/upload/v1780401858/pasted-1779282335552-1_gmztyi.png"
+        src="/bestseller-lifestyle.png"
         alt=""
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 w-full pointer-events-none select-none"

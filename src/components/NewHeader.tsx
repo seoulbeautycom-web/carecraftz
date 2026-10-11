@@ -6,7 +6,7 @@ import { usePageShellOptional } from '../contexts/PageShellContext'
 
 const NAV_ITEMS = [
   { label: 'Shop',            path: '/shop',           activeColor: 'bg-[#ffb347] text-white',  hoverColor: 'hover:bg-[#ffb347]/20' },
-  { label: 'Who We Are',      path: '/craft',          activeColor: 'bg-[#a78bfa] text-white',  hoverColor: 'hover:bg-[#a78bfa]/20' },
+  { label: 'Who We Are',      path: '/about',          activeColor: 'bg-[#a78bfa] text-white',  hoverColor: 'hover:bg-[#a78bfa]/20' },
   { label: 'Blog',            path: '/blog',           activeColor: 'bg-[#34d399] text-white',  hoverColor: 'hover:bg-[#34d399]/20' },
   { label: 'Future Launches', path: '/future-launches', activeColor: 'bg-[#f87171] text-white',  hoverColor: 'hover:bg-[#f87171]/20' },
   { label: 'Why Us',          path: '/why-us',         activeColor: 'bg-[#60a5fa] text-white',  hoverColor: 'hover:bg-[#60a5fa]/20' },

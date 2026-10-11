@@ -20,12 +20,11 @@ export default function Navbar() {
   }, [])
 
   const isAboutPage = location.pathname === '/about' || location.pathname === '/about-us'
-  const isCraftPage = location.pathname === '/craft'
 
   const navLinks = [
-    { label: 'Craft', href: '/craft', isLink: true },
     { label: 'Experience', href: '#hands' },
     { label: 'About', href: '/about', isLink: true },
+    { label: 'Why Us', href: '/why-us', isLink: true },
     { label: 'Future Launches', href: '/future-launches', isLink: true },
   ]
 
@@ -44,7 +43,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2.5 group">
             <img src="/cclogo.png" alt="CareCraftz" className="w-[68px] h-12 transition-transform duration-300 group-hover:rotate-12" />
-            <span className={`font-['Poppins',sans-serif] text-xl tracking-wide font-bold ${scrolled ? 'text-charcoal' : isAboutPage || isCraftPage ? 'text-white' : 'text-charcoal'}`}>
+            <span className={`font-['Poppins',sans-serif] text-xl tracking-wide font-bold ${scrolled ? 'text-charcoal' : isAboutPage ? 'text-white' : 'text-charcoal'}`}>
               Care<span className="font-bold">Craftz</span>
             </span>
           </Link>
@@ -56,7 +55,7 @@ export default function Navbar() {
                   <Link
                     key={link.label}
                     to={link.href}
-                    className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                    className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
                   >
                     {link.label}
                     <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
@@ -67,7 +66,7 @@ export default function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                  className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 relative group ${scrolled ? 'text-charcoal/70 hover:text-charcoal' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
                 >
                   {link.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-px bg-sage-dark transition-all duration-300 group-hover:w-full" />
@@ -76,7 +75,7 @@ export default function Navbar() {
             })}
             <Link
               to="/seoul-beauty"
-              className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+              className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
               Seoul Beauty
             </Link>
@@ -86,7 +85,7 @@ export default function Navbar() {
             {/* Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className={`relative font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 ${scrolled ? 'text-charcoal hover:bg-gray-100 hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:bg-white/20 hover:text-white' : 'text-charcoal hover:bg-gray-100 hover:text-forest'}`}
+              className={`relative font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 ${scrolled ? 'text-charcoal hover:bg-gray-100 hover:text-forest' : isAboutPage ? 'text-white hover:bg-white/20 hover:text-white' : 'text-charcoal hover:bg-gray-100 hover:text-forest'}`}
               aria-label="Shopping Cart"
             >
               <ShoppingCart className="w-5 h-5" />
@@ -103,14 +102,14 @@ export default function Navbar() {
             {user ? (
               <button
                 onClick={() => navigate('/profile')}
-                className={`font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}
+                className={`font-['Poppins',sans-serif] inline-flex items-center justify-center p-2.5 transition-colors duration-300 ${scrolled ? 'text-charcoal hover:text-forest' : isAboutPage ? 'text-white hover:text-white/80' : 'text-charcoal hover:text-forest'}`}
               >
                 <User className="w-5 h-5" />
               </button>
             ) : (
               <button
                 onClick={() => navigate('/signin')}
-                className={`font-['Poppins',sans-serif] text-sm font-bold px-4 py-2 rounded-full transition-colors duration-300 ${scrolled ? 'bg-black text-white hover:bg-gray-800' : isAboutPage || isCraftPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-gray-800'}`}
+                className={`font-['Poppins',sans-serif] text-sm font-bold px-4 py-2 rounded-full transition-colors duration-300 ${scrolled ? 'bg-black text-white hover:bg-gray-800' : isAboutPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-gray-800'}`}
               >
                 Sign In
               </button>
@@ -151,7 +150,7 @@ export default function Navbar() {
                     key={link.label}
                     to={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                    className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
                   >
                     {link.label}
                   </Link>
@@ -162,7 +161,7 @@ export default function Navbar() {
                   key={link.label}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+                  className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-charcoal/80 hover:text-charcoal' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
                 >
                   {link.label}
                 </a>
@@ -171,7 +170,7 @@ export default function Navbar() {
             <Link
               to="/seoul-beauty"
               onClick={() => setMobileOpen(false)}
-              className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage || isCraftPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
+              className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
               Seoul Beauty
             </Link>

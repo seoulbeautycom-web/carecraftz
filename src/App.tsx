@@ -7,7 +7,6 @@ import PageFrame from './components/PageFrame'
 import Shop from './pages/Shop'
 import ProductDetail from './pages/ProductDetail'
 import FutureLaunches from './pages/FutureLaunches'
-import Craft from './pages/Craft'
 import Blog from './pages/Blog'
 import WhyUs from './pages/WhyUs'
 import Partners from './pages/Partners'
@@ -42,7 +41,7 @@ function App() {
             <Route path="/about-us"     element={<AboutUsPage />} />
             <Route path="/shop"         element={<Shop />} />           {/* #FF8C69 coral */}
             <Route path="/product/:id"  element={<ProductDetail />} />  {/* #FFAFC5 rose */}
-            <Route path="/craft"        element={<Craft />} />          {/* #8DEBD1 mint */}
+            <Route path="/craft"        element={<Navigate to="/about" replace />} />
             <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky */}
             <Route path="/blog"         element={<Blog />} />           {/* #FFD94A yellow */}
             <Route path="/why-us"       element={<WhyUs />} />          {/* #1F2A24 forest */}
