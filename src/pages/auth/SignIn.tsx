@@ -173,7 +173,7 @@ function SignInInner() {
 
 export default function SignIn() {
   return (
-    <PageFrame frameColor="#C9B8FF" showFooter={false}>
+    <PageFrame frameColor="#C9B8FF">
       <SignInInner />
     </PageFrame>
   )

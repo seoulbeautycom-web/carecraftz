@@ -156,7 +156,7 @@ function BlogInner() {
 
 export default function Blog() {
   return (
-    <PageFrame frameColor="#FFD94A" showFooter={true}>
+    <PageFrame frameColor="#FFD94A">
       <BlogInner />
     </PageFrame>
   )

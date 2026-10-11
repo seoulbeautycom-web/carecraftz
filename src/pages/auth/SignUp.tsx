@@ -146,7 +146,7 @@ function SignUpInner() {
 
 export default function SignUp() {
   return (
-    <PageFrame frameColor="#A8E6CF" showFooter={false}>
+    <PageFrame frameColor="#A8E6CF">
       <SignUpInner />
     </PageFrame>
   )

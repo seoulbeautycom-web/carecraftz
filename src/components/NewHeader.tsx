@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
+import { usePageShellOptional } from '../contexts/PageShellContext'
 
 const NAV_ITEMS = [
   { label: 'Shop',            path: '/shop',           activeColor: 'bg-[#ffb347] text-white',  hoverColor: 'hover:bg-[#ffb347]/20' },
@@ -16,14 +17,28 @@ export default function NewHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { items } = useCart()
+  const pageShell = usePageShellOptional()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
+    const scrollEl = pageShell?.scrollRef.current
+
+    const onScroll = () => {
+      const offset = scrollEl ? scrollEl.scrollTop : window.scrollY
+      setScrolled(offset > 10)
+    }
+
+    onScroll()
+
+    if (scrollEl) {
+      scrollEl.addEventListener('scroll', onScroll, { passive: true })
+      return () => scrollEl.removeEventListener('scroll', onScroll)
+    }
+
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [pageShell])
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
 
@@ -32,8 +47,8 @@ export default function NewHeader() {
     : 'bg-white border border-gray-200 shadow-md'
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 font-['Poppins'] transition-all duration-300">
-      <div className="flex items-center justify-between gap-3 mx-auto max-w-[92%] mt-4">
+    <header className="fixed top-3 left-3 right-3 z-50 font-['Poppins'] transition-all duration-300 pointer-events-none">
+      <div className="pointer-events-auto flex items-center justify-between gap-3 mx-auto max-w-[92%] mt-1">
 
         {/* Logo Pill */}
         <button

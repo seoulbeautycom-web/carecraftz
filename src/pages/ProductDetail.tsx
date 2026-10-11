@@ -603,7 +603,7 @@ function ProductDetailInner() {
 
 export default function ProductDetail() {
   return (
-    <PageFrame frameColor="#FFAFC5" scrollDriven={true}>
+    <PageFrame frameColor="#FFAFC5">
       <ProductDetailInner />
     </PageFrame>
   )

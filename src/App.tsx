@@ -23,10 +23,10 @@ import NewHomePage from './components/NewHomePage'
 
 // Inline page wrappers for components that are not yet standalone pages
 function SeoulBeautyPage() {
-  return <PageFrame frameColor="#F7B2BD" scrollDriven={true}><SeoulBeauty /></PageFrame>
+  return <PageFrame frameColor="#F7B2BD"><SeoulBeauty /></PageFrame>
 }
 function AboutUsPage() {
-  return <PageFrame frameColor="#B2D8B2" scrollDriven={true}><AboutUs /></PageFrame>
+  return <PageFrame frameColor="#B2D8B2"><AboutUs /></PageFrame>
 }
 
 function App() {
@@ -35,17 +35,15 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <Routes>
-            {/* Home — uses its own self-contained frame (pink #E8A4E0) */}
-            <Route path="/" element={<NewHomePage />} />
-
-            {/* All other pages — PageFrame is the single source of truth for frame/header/footer */}
+            {/* All storefront routes use PageFrame (global header/footer + home shell). Only frameColor differs. */}
+            <Route path="/" element={<NewHomePage />} />               {/* #E8A4E0 lilac */}
             <Route path="/seoul-beauty" element={<SeoulBeautyPage />} />
             <Route path="/about"        element={<AboutUsPage />} />
             <Route path="/about-us"     element={<AboutUsPage />} />
-            <Route path="/shop"         element={<Shop />} />           {/* #FF8C69 coral — scrollDriven */}
-            <Route path="/product/:id"  element={<ProductDetail />} />  {/* #FFAFC5 rose  — scrollDriven */}
-            <Route path="/craft"        element={<Craft />} />          {/* #8DEBD1 mint  — scrollDriven */}
-            <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky — scrollDriven */}
+            <Route path="/shop"         element={<Shop />} />           {/* #FF8C69 coral */}
+            <Route path="/product/:id"  element={<ProductDetail />} />  {/* #FFAFC5 rose */}
+            <Route path="/craft"        element={<Craft />} />          {/* #8DEBD1 mint */}
+            <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky */}
             <Route path="/blog"         element={<Blog />} />           {/* #FFD94A yellow */}
             <Route path="/refill"       element={<Refill />} />         {/* #F4956A peach */}
             <Route path="/partners"     element={<Partners />} />       {/* #E8A4E0 lilac */}

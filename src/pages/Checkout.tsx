@@ -622,7 +622,7 @@ function CheckoutInner() {
 
 export default function Checkout() {
   return (
-    <PageFrame frameColor="#B5C7EB" showFooter={false}>
+    <PageFrame frameColor="#B5C7EB">
       <CheckoutInner />
     </PageFrame>
   )

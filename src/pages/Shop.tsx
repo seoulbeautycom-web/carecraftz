@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 import PageFrame from '../components/PageFrame'
 import VerifiedSellerBadge, { isVerifiedSeller, type SellerTrustInfo } from '../components/VerifiedSellerBadge'
+import { usePageShellOptional } from '../contexts/PageShellContext'
 
 interface Product {
   id: string
@@ -66,6 +67,7 @@ const BOTTOM_COLORS = [
 function ShopInner() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
+  const pageShell = usePageShellOptional()
   const [products, setProducts] = useState<Product[]>([])
   const [storeMap, setStoreMap] = useState<Record<string, SellerTrustInfo>>({})
   const [loading, setLoading] = useState(true)
@@ -77,6 +79,15 @@ function ShopInner() {
   const [isPaused, setIsPaused] = useState(false)
   const [scrollProgress, setScrollProgress] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
+
+  const scrollToTop = () => {
+    const shell = pageShell?.scrollRef.current
+    if (shell) {
+      shell.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     if (isPaused) return
@@ -361,7 +372,7 @@ function ShopInner() {
                   style={{writingMode:'vertical-lr', transform:'rotate(180deg)'}}>
                   {cat.name}
                 </div>
-                <button onClick={() => { setActiveFilter(cat.name); window.scrollTo({top:0,behavior:'smooth'}) }}
+                <button onClick={() => { setActiveFilter(cat.name); scrollToTop() }}
                   className="self-start px-7 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors">
                   shop {cat.name}
                 </button>
@@ -377,7 +388,7 @@ function ShopInner() {
 
 export default function Shop() {
   return (
-    <PageFrame frameColor="#FF8C69" showFooter={true} scrollDriven={true}>
+    <PageFrame frameColor="#FF8C69">
       <ShopInner />
     </PageFrame>
   )

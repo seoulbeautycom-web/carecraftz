@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageFrame from '../components/PageFrame'
+import { usePageShell } from '../contexts/PageShellContext'
 
 const PORTAL_BG = "https://res.cloudinary.com/dy5er7kv5/image/upload/q_auto/f_auto/v1779707217/image_1_vdzwae.png"
 const CURTAIN_LEFT = "https://res.cloudinary.com/dy5er7kv5/image/upload/q_auto/f_auto/v1779706559/curtain_left_znkmva.png"
@@ -119,6 +120,7 @@ function ArcCardSlider({ cards, rotationOffset, isMobile }: ArcCardSliderProps) 
 
 function CraftInner() {
   const navigate = useNavigate()
+  const { scrollRef } = usePageShell()
   const [scrollProgress, setScrollProgress] = useState(0)
   const [curtainsOpen, setCurtainsOpen] = useState(false)
   const [uiVisible, setUiVisible] = useState(false)
@@ -135,17 +137,21 @@ function CraftInner() {
   const curtainRRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+
     const handleScroll = () => {
       if (!containerRef.current) return
       const containerHeight = containerRef.current.scrollHeight
-      const windowHeight = window.innerHeight
-      const progress = window.scrollY / (containerHeight - windowHeight)
+      const viewportHeight = scrollEl.clientHeight
+      const maxScroll = Math.max(1, containerHeight - viewportHeight)
+      const progress = scrollEl.scrollTop / maxScroll
       setScrollProgress(clamp(progress, 0, 1))
     }
-    window.addEventListener('scroll', handleScroll)
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
     handleScroll()
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    return () => scrollEl.removeEventListener('scroll', handleScroll)
+  }, [scrollRef])
 
   useEffect(() => {
     const t1 = setTimeout(() => setCurtainsOpen(true), 100)
@@ -430,7 +436,7 @@ function CraftInner() {
 
 export default function Craft() {
   return (
-    <PageFrame frameColor="#8DEBD1" showFooter={true} scrollDriven={true}>
+    <PageFrame frameColor="#8DEBD1">
       <CraftInner />
     </PageFrame>
   )

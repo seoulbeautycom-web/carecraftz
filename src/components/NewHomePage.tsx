@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import NewHeader from './NewHeader'
-import SiteFooter from './SiteFooter'
 import AnnouncementBar from './AnnouncementBar'
+import PageFrame from './PageFrame'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 
@@ -167,18 +166,9 @@ export default function NewHomePage() {
   }
 
   return (
-    <div className="h-screen w-screen bg-[#E8A4E0] p-3 overflow-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {/* Inner Container */}
-      <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden">
-
-        {/* Scrollable Content - hero is first, header floats over it */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide relative">
-
-          {/* ── SECTION 1: HERO - full bleed, header floats above ── */}
+    <PageFrame frameColor="#E8A4E0">
+          {/* ── SECTION 1: HERO - full bleed, global header floats above ── */}
           <section className="relative w-full">
-            {/* Header floats over hero */}
-            <NewHeader />
-
             <img
               src="/herosec.png"
               alt="CareCraftz Hero"
@@ -785,10 +775,6 @@ export default function NewHomePage() {
             </div>
           </section>
 
-          <SiteFooter />
-
-        </div>
-      </div>
-    </div>
+    </PageFrame>
   )
 }

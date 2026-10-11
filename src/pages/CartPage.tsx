@@ -147,7 +147,7 @@ function CartInner() {
 
 export default function CartPage() {
   return (
-    <PageFrame frameColor="#B0E4FF" showFooter={false}>
+    <PageFrame frameColor="#B0E4FF">
       <CartInner />
     </PageFrame>
   )

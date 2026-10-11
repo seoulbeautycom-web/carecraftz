@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import PageFrame from '../../components/PageFrame'
 import { supabase } from '../../lib/supabase'
 
 export default function AuthCallback() {
@@ -60,34 +61,38 @@ export default function AuthCallback() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F9F4F0] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Completing sign in...</p>
+      <PageFrame frameColor="#C9B8FF">
+        <div className="min-h-[70vh] flex items-center justify-center pt-24 pb-16">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Completing sign in...</p>
+          </div>
         </div>
-      </div>
+      </PageFrame>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F9F4F0] flex items-center justify-center">
-        <div className="text-center max-w-md px-4">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <PageFrame frameColor="#C9B8FF">
+        <div className="min-h-[70vh] flex items-center justify-center pt-24 pb-16">
+          <div className="text-center max-w-md px-4">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-medium mb-2">Authentication Failed</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={() => navigate(signInPath)}
+              className="px-6 py-3 bg-black text-white rounded-full font-medium hover:bg-gray-800"
+            >
+              Back to Sign In
+            </button>
           </div>
-          <h2 className="text-xl font-medium mb-2">Authentication Failed</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate(signInPath)}
-            className="px-6 py-3 bg-black text-white rounded-full font-medium hover:bg-gray-800"
-          >
-            Back to Sign In
-          </button>
         </div>
-      </div>
+      </PageFrame>
     )
   }
 

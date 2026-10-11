@@ -132,7 +132,7 @@ function RefillInner() {
 
 export default function Refill() {
   return (
-    <PageFrame frameColor="#F4956A" showFooter={true}>
+    <PageFrame frameColor="#F4956A">
       <RefillInner />
     </PageFrame>
   )

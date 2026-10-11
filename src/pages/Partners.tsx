@@ -613,7 +613,7 @@ function PartnersInner() {
 
 export default function Partners() {
   return (
-    <PageFrame frameColor="#E8A4E0" showFooter={true}>
+    <PageFrame frameColor="#E8A4E0">
       <PartnersInner />
     </PageFrame>
   )

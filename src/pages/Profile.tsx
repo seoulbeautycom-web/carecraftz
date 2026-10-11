@@ -397,7 +397,7 @@ function ProfileInner() {
 
 export default function Profile() {
   return (
-    <PageFrame frameColor="#FFD6B0" showFooter={false}>
+    <PageFrame frameColor="#FFD6B0">
       <ProfileInner />
     </PageFrame>
   )
