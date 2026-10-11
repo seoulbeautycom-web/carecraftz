@@ -1,10 +1,10 @@
 import { Sparkles, Leaf, FlaskConical, Globe } from 'lucide-react'
 
 const items = [
-  { icon: Sparkles, text: 'For your skin — carefully researched and designed in Dubai' },
-  { icon: Leaf, text: 'Handmade natural collection of products' },
-  { icon: FlaskConical, text: 'Korean skincare hydrating formulas' },
-  { icon: Globe, text: 'Launching in Pakistan and the UK' },
+  { icon: Sparkles, text: 'Every seller is verified before products go live' },
+  { icon: Leaf, text: 'Authentic skincare — curated for UAE and Pakistan' },
+  { icon: FlaskConical, text: 'Business docs, certs, and testing reviewed by our team' },
+  { icon: Globe, text: 'CareCraftz Official is one verified seller among many' },
 ]
 
 export default function AnnouncementBar() {

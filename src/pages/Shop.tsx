@@ -1,14 +1,18 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Check, Pause, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 import PageFrame from '../components/PageFrame'
+import VerifiedSellerBadge, { isVerifiedSeller, type SellerTrustInfo } from '../components/VerifiedSellerBadge'
 
 interface Product {
   id: string
   name: string
   subtitle?: string | null
+  brand_name?: string | null
+  seller_name?: string | null
+  partner_store_id?: string | null
   price: number
   price_pkr?: number | null
   price_aed?: number | null
@@ -63,9 +67,11 @@ function ShopInner() {
   const navigate = useNavigate()
   const { addToCart } = useCart()
   const [products, setProducts] = useState<Product[]>([])
+  const [storeMap, setStoreMap] = useState<Record<string, SellerTrustInfo>>({})
   const [loading, setLoading] = useState(true)
   const [addedToCart, setAddedToCart] = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState('All')
+  const [verifiedOnly, setVerifiedOnly] = useState(false)
   const [categories, setCategories] = useState<string[]>([])  
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -95,10 +101,25 @@ function ShopInner() {
           .eq('is_active', true)
           .order('created_at', { ascending: false })
         if (error) { console.error(error); return }
-        const prods = data || []
+        const prods = (data || []) as Product[]
         setProducts(prods)
         const cats = Array.from(new Set(prods.map((p: Product) => p.category).filter(Boolean))) as string[]
         setCategories(cats)
+
+        const storeIds = Array.from(new Set(prods.map((p) => p.partner_store_id).filter(Boolean))) as string[]
+        if (storeIds.length > 0) {
+          const { data: stores } = await supabase
+            .from('partner_stores')
+            .select('id, display_name, tenant_type, status, approval_status, verified_at, public_certifications')
+            .in('id', storeIds)
+          const nextMap: Record<string, SellerTrustInfo> = {}
+          for (const store of (stores ?? []) as SellerTrustInfo[]) {
+            nextMap[store.id] = store
+          }
+          setStoreMap(nextMap)
+        } else {
+          setStoreMap({})
+        }
       } catch (e) {
         console.error(e)
       } finally {
@@ -110,9 +131,15 @@ function ShopInner() {
 
   const filters = ['All', ...categories]
 
-  const filtered = activeFilter === 'All'
-    ? products
-    : products.filter(p => p.category === activeFilter)
+  const filtered = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory = activeFilter === 'All' || product.category === activeFilter
+      if (!matchesCategory) return false
+      if (!verifiedOnly) return true
+      const store = product.partner_store_id ? storeMap[product.partner_store_id] : null
+      return isVerifiedSeller(store)
+    })
+  }, [products, activeFilter, verifiedOnly, storeMap])
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation()
@@ -135,7 +162,7 @@ function ShopInner() {
     <div className="min-h-screen bg-white font-['Poppins']">
 
       {/* Filter Tabs */}
-      <div className="pt-24 pb-4 flex justify-center">
+      <div className="pt-24 pb-4 flex flex-col items-center gap-3">
         <div className="flex items-center gap-2 flex-wrap justify-center px-4">
           {filters.map((f) => (
             <button
@@ -150,6 +177,16 @@ function ShopInner() {
               {f}
             </button>
           ))}
+          <button
+            onClick={() => setVerifiedOnly((current) => !current)}
+            className={`px-5 py-1.5 rounded-full text-sm font-medium transition-all border ${
+              verifiedOnly
+                ? 'bg-emerald-700 text-white border-emerald-700'
+                : 'bg-white text-[#2b2b2b] border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            Verified sellers
+          </button>
         </div>
       </div>
 
@@ -194,6 +231,17 @@ function ShopInner() {
 
                 {/* Info area with slightly darker pastel bottom */}
                 <div className={`${bottom} px-4 py-4 flex flex-col`}>
+                  <div className="mb-1.5">
+                    <VerifiedSellerBadge
+                      store={product.partner_store_id ? storeMap[product.partner_store_id] : null}
+                      size="sm"
+                    />
+                  </div>
+                  {(product.brand_name || (product.partner_store_id && storeMap[product.partner_store_id]?.display_name)) && (
+                    <p className="text-[11px] font-medium text-[#2b2b2b]/70 mb-0.5 truncate">
+                      {product.brand_name || storeMap[product.partner_store_id!]?.display_name}
+                    </p>
+                  )}
                   <p className="font-semibold text-[#2b2b2b] text-sm leading-tight">{product.name}</p>
                   {product.subtitle && (
                     <p className="text-xs text-[#696a67] italic mt-0.5">{product.subtitle}</p>
@@ -219,9 +267,9 @@ function ShopInner() {
           <img src={HERO_BG_IMAGE} alt="" className="absolute inset-0 w-full h-full object-cover" />
           <div className="relative z-10 p-8 lg:p-14 flex flex-col justify-end h-full min-h-[60vh]">
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-light leading-tight mb-4 text-white">
-              ethical beauty,<br />sustainable impact.
+              verified sellers,<br />authentic products.
             </h2>
-            <p className="text-sm text-white/80 mb-8 max-w-sm">Committed to sustainable beauty and minimise our impact on the planet.</p>
+            <p className="text-sm text-white/80 mb-8 max-w-sm">We vet every seller — credentials, certifications, and testing — so you can shop with confidence.</p>
             <button onClick={() => navigate('/craft')} className="self-start px-8 py-3 bg-white text-black rounded-full text-sm font-medium hover:bg-white/90 transition-colors">
               about us
             </button>
@@ -249,7 +297,12 @@ function ShopInner() {
 
       {/* ── BEST SELLERS CAROUSEL ─────────────────── */}
       <section className="bg-[#F9F4F0] py-12 px-4 sm:px-8 lg:px-12">
-        <h2 className="text-4xl md:text-5xl font-medium text-[#1a1a1a] mb-8">best sellers</h2>
+        <div className="mb-8">
+          <h2 className="text-4xl md:text-5xl font-medium text-[#1a1a1a]">best sellers</h2>
+          <p className="mt-3 text-sm text-gray-600 max-w-xl">
+            Curated skincare from verified sellers. Every brand on CareCraftz is reviewed for authenticity before it appears here.
+          </p>
+        </div>
         <div ref={carouselRef} className="flex overflow-x-auto gap-0 pb-4" style={{scrollbarWidth:'none', msOverflowStyle:'none'}}>
           {loading ? (
             <div className="flex-shrink-0 w-full py-12 text-center text-gray-500">Loading products...</div>

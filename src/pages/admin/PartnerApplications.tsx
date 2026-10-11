@@ -23,6 +23,14 @@ import { useAdminAccess } from '../../contexts/admin-access-context'
 import { supabase } from '../../lib/supabase'
 import { getTenantRootPath } from '../../lib/tenantNavigation'
 
+interface VerificationChecklist {
+  identity_business?: boolean
+  formula_safety?: boolean
+  claims_accuracy?: boolean
+  packaging?: boolean
+  docs_reviewed?: boolean
+}
+
 interface PartnerApplicationRow {
   id: string
   company_name: string
@@ -50,6 +58,7 @@ interface PartnerApplicationRow {
   terms_accepted_at: string | null
   status: 'submitted' | 'in_review' | 'needs_info' | 'approved' | 'rejected'
   review_notes: string
+  verification_checklist: VerificationChecklist
   slug: string | null
   reviewed_by_staff_id: string | null
   reviewed_at: string | null
@@ -58,6 +67,42 @@ interface PartnerApplicationRow {
   created_at: string
   updated_at: string
 }
+
+interface PartnerApplicationDocument {
+  id: string
+  application_id: string
+  document_type: 'business_license' | 'certifications' | 'lab_reports'
+  file_name: string
+  storage_path: string
+  mime_type: string
+  file_size: number
+  uploaded_at: string
+}
+
+const CHECKLIST_ITEMS: { key: keyof VerificationChecklist; label: string }[] = [
+  { key: 'identity_business', label: 'Business identity & license verified' },
+  { key: 'formula_safety', label: 'Formula safety & testing methods reviewed' },
+  { key: 'claims_accuracy', label: 'Claims accuracy checked against evidence' },
+  { key: 'packaging', label: 'Packaging & sustainability standards reviewed' },
+  { key: 'docs_reviewed', label: 'Uploaded documents reviewed' },
+]
+
+const DOC_TYPE_LABELS: Record<PartnerApplicationDocument['document_type'], string> = {
+  business_license: 'Business license',
+  certifications: 'Certifications',
+  lab_reports: 'Lab / testing reports',
+}
+
+const emptyChecklist = (): VerificationChecklist => ({
+  identity_business: false,
+  formula_safety: false,
+  claims_accuracy: false,
+  packaging: false,
+  docs_reviewed: false,
+})
+
+const isChecklistComplete = (checklist: VerificationChecklist) =>
+  CHECKLIST_ITEMS.every((item) => Boolean(checklist[item.key]))
 
 interface PartnerStoreRow {
   id: string
@@ -82,7 +127,7 @@ interface PartnerStoreRow {
 
 type ApplicationFilter = 'all' | PartnerApplicationRow['status']
 type MarketplaceSection = 'applications' | 'stores'
-type SaveAction = 'review' | 'approve' | 'reject' | null
+type SaveAction = 'review' | 'approve' | 'reject' | 'needs_info' | 'checklist' | null
 type StoreSaveAction = 'create' | 'update' | 'delete' | null
 
 interface StoreFormState {
@@ -243,6 +288,9 @@ export default function PartnerApplications() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [slugInput, setSlugInput] = useState('')
   const [reviewNotes, setReviewNotes] = useState('')
+  const [checklist, setChecklist] = useState<VerificationChecklist>(emptyChecklist())
+  const [documents, setDocuments] = useState<PartnerApplicationDocument[]>([])
+  const [documentsLoading, setDocumentsLoading] = useState(false)
   const [savingAction, setSavingAction] = useState<SaveAction>(null)
   const [activeSection, setActiveSection] = useState<MarketplaceSection>('applications')
   const [stores, setStores] = useState<PartnerStoreRow[]>([])
@@ -385,13 +433,60 @@ export default function PartnerApplications() {
       if (!selectedApplication) {
         setSlugInput('')
         setReviewNotes('')
+        setChecklist(emptyChecklist())
+        setDocuments([])
         return
       }
 
       setSlugInput(selectedApplication.slug ?? slugifyPreview(selectedApplication.company_name))
       setReviewNotes(selectedApplication.review_notes ?? '')
+      setChecklist({
+        ...emptyChecklist(),
+        ...(selectedApplication.verification_checklist ?? {}),
+      })
     })
   }, [selectedApplication])
+
+  useEffect(() => {
+    const applicationId = selectedApplication?.id
+    if (!applicationId) {
+      setDocuments([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadDocuments = async () => {
+      setDocumentsLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('partner_application_documents')
+          .select('*')
+          .eq('application_id', applicationId)
+          .order('uploaded_at', { ascending: true })
+
+        if (error) throw error
+        if (!cancelled) {
+          setDocuments((data ?? []) as PartnerApplicationDocument[])
+        }
+      } catch (error) {
+        console.error('Failed to load partner application documents:', error)
+        if (!cancelled) {
+          setDocuments([])
+        }
+      } finally {
+        if (!cancelled) {
+          setDocumentsLoading(false)
+        }
+      }
+    }
+
+    void loadDocuments()
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedApplication?.id])
 
   const selectedStore = useMemo(
     () => stores.find((store) => store.id === selectedStoreId) ?? null,
@@ -437,8 +532,74 @@ export default function PartnerApplications() {
     }
   }
 
+  const handleSaveChecklist = async () => {
+    if (!selectedApplication) return
+
+    setSavingAction('checklist')
+    setPageError('')
+    setPageSuccess('')
+
+    try {
+      const { error } = await supabase.rpc('save_partner_verification_checklist', {
+        application_id: selectedApplication.id,
+        p_checklist: checklist,
+      })
+
+      if (error) throw error
+
+      setPageSuccess(`Saved verification checklist for ${selectedApplication.company_name}.`)
+      await loadApplications(selectedApplication.id)
+    } catch (error) {
+      console.error('Failed to save verification checklist:', error)
+      setPageError(getErrorMessage(error, 'Failed to save verification checklist'))
+    } finally {
+      setSavingAction(null)
+    }
+  }
+
+  const handleNeedsInfo = async () => {
+    if (!selectedApplication) return
+
+    if (!reviewNotes.trim()) {
+      setPageError('Add review notes explaining what information is still needed.')
+      return
+    }
+
+    setSavingAction('needs_info')
+    setPageError('')
+    setPageSuccess('')
+
+    try {
+      const { data, error } = await supabase.rpc('mark_partner_application_needs_info', {
+        application_id: selectedApplication.id,
+        p_review_notes: reviewNotes.trim(),
+      })
+
+      if (error) throw error
+
+      const result = data as { status?: string } | null
+      setPageSuccess(`Marked ${selectedApplication.company_name} as needs info${result?.status ? ` (${result.status})` : ''}.`)
+      await loadApplications(selectedApplication.id)
+    } catch (error) {
+      console.error('Failed to mark partner application as needs info:', error)
+      setPageError(getErrorMessage(error, 'Failed to mark partner application as needs info'))
+    } finally {
+      setSavingAction(null)
+    }
+  }
+
   const handleApprove = async () => {
     if (!selectedApplication) return
+
+    if (!isChecklistComplete(checklist)) {
+      setPageError('Complete the verification checklist before approving.')
+      return
+    }
+
+    if (!documents.some((doc) => doc.document_type === 'business_license')) {
+      setPageError('A business license document is required before approval.')
+      return
+    }
 
     setSavingAction('approve')
     setPageError('')
@@ -449,14 +610,16 @@ export default function PartnerApplications() {
         application_id: selectedApplication.id,
         slug_override: slugInput.trim() || null,
         p_review_notes: reviewNotes.trim() || null,
+        p_verification_checklist: checklist,
       })
 
       if (error) throw error
 
       const result = data as { slug?: string } | null
       const approvedSlug = result?.slug ?? slugInput.trim() ?? selectedApplication.slug ?? slugifyPreview(selectedApplication.company_name)
-      setPageSuccess(`Approved ${selectedApplication.company_name} and provisioned store slug ${approvedSlug}.`)
+      setPageSuccess(`Approved ${selectedApplication.company_name} and provisioned verified store slug ${approvedSlug}.`)
       await loadApplications(selectedApplication.id)
+      await loadStores()
     } catch (error) {
       console.error('Failed to approve partner application:', error)
       setPageError(getErrorMessage(error, 'Failed to approve partner application'))
@@ -488,6 +651,22 @@ export default function PartnerApplications() {
       setPageError(getErrorMessage(error, 'Failed to reject partner application'))
     } finally {
       setSavingAction(null)
+    }
+  }
+
+  const openDocument = async (doc: PartnerApplicationDocument) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('partner-documents')
+        .createSignedUrl(doc.storage_path, 60 * 10)
+
+      if (error) throw error
+      if (!data?.signedUrl) throw new Error('Could not create a signed URL for this document.')
+
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error('Failed to open partner document:', error)
+      setPageError(getErrorMessage(error, 'Failed to open document'))
     }
   }
 
@@ -825,6 +1004,72 @@ export default function PartnerApplications() {
                       <TextBlock label="Other information" value={selectedApplication.other_info || '—'} />
                     </div>
 
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center gap-2 font-semibold text-slate-900 mb-3">
+                        <FileText className="w-4 h-4 text-indigo-600" /> Uploaded documents
+                      </div>
+                      {documentsLoading ? (
+                        <p className="text-sm text-slate-500">Loading documents...</p>
+                      ) : documents.length === 0 ? (
+                        <p className="text-sm text-slate-500">No documents uploaded yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {documents.map((doc) => (
+                            <button
+                              key={doc.id}
+                              type="button"
+                              onClick={() => void openDocument(doc)}
+                              className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left hover:bg-slate-100"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-slate-900">{DOC_TYPE_LABELS[doc.document_type]}</p>
+                                <p className="text-xs text-slate-500">{doc.file_name}</p>
+                              </div>
+                              <ExternalLink className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2 font-semibold text-slate-900">
+                          <ShieldCheck className="w-4 h-4 text-indigo-600" /> Verification checklist
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveChecklist()}
+                          disabled={savingAction !== null || selectedApplication.status === 'approved'}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        >
+                          {savingAction === 'checklist' ? 'Saving...' : 'Save checklist'}
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {CHECKLIST_ITEMS.map((item) => (
+                          <label key={item.key} className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(checklist[item.key])}
+                              disabled={selectedApplication.status === 'approved'}
+                              onChange={(event) =>
+                                setChecklist((current) => ({
+                                  ...current,
+                                  [item.key]: event.target.checked,
+                                }))
+                              }
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {!isChecklistComplete(checklist) && selectedApplication.status !== 'approved' ? (
+                        <p className="mt-3 text-xs text-amber-700">All checklist items must be complete before approval.</p>
+                      ) : null}
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <label className="block text-sm font-semibold text-slate-900 mb-2">Provisioned store slug</label>
@@ -845,7 +1090,7 @@ export default function PartnerApplications() {
                           value={reviewNotes}
                           onChange={(event) => setReviewNotes(event.target.value)}
                           rows={4}
-                          placeholder="Add approval notes, compliance checks, or rejection reasons here..."
+                          placeholder="Add approval notes, compliance checks, needs-info requests, or rejection reasons here..."
                           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                         />
                       </div>
@@ -864,10 +1109,10 @@ export default function PartnerApplications() {
                         <ShieldCheck className="w-4 h-4 text-indigo-600" /> What approval does
                       </div>
                       <ul className="space-y-1 list-disc list-inside">
-                        <li>Creates the partner store record</li>
+                        <li>Requires a complete verification checklist and business license</li>
+                        <li>Creates an active verified partner store</li>
                         <li>Reserves the slug as the tenant identifier</li>
-                        <li>Marks the application as approved for audit purposes</li>
-                        <li>Prepares the store for direct master admin provisioning</li>
+                        <li>Stamps verified_at for storefront trust badges</li>
                       </ul>
                     </div>
                   </div>
@@ -884,6 +1129,14 @@ export default function PartnerApplications() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => void handleNeedsInfo()}
+                        disabled={savingAction !== null || selectedApplication.status === 'approved'}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-white px-5 py-3 text-sm font-semibold text-orange-700 hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {savingAction === 'needs_info' ? 'Updating...' : <><AlertTriangle className="w-4 h-4" /> Needs info</>}
+                      </button>
+                      <button
+                        type="button"
                         onClick={handleReject}
                         disabled={savingAction !== null || selectedApplication.status === 'approved'}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-5 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -893,7 +1146,7 @@ export default function PartnerApplications() {
                       <button
                         type="button"
                         onClick={handleApprove}
-                        disabled={savingAction !== null || selectedApplication.status === 'approved'}
+                        disabled={savingAction !== null || selectedApplication.status === 'approved' || !isChecklistComplete(checklist)}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {savingAction === 'approve' ? 'Approving...' : <><BadgeCheck className="w-4 h-4" /> Approve & provision store</>}

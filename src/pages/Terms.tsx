@@ -21,9 +21,25 @@ function TermsInner() {
           <section>
             <h2 className="text-xl font-medium mb-4">2. Description of Services</h2>
             <p className="leading-relaxed">
-              CareCraftz provides an online platform for purchasing beauty and skincare products. 
+              CareCraftz operates a curated online marketplace for beauty and skincare products.
+              We verify sellers before they may list products, and CareCraftz Official is one verified seller among others on the platform.
               We reserve the right to modify, suspend, or discontinue any part of our services at any time.
             </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-medium mb-4">2A. Partner Quality and Authenticity</h2>
+            <p className="leading-relaxed mb-4">
+              Sellers who apply to join CareCraftz must provide accurate business information and supporting documents
+              (including business licenses, certifications, and lab or testing reports). Our team reviews applications against a
+              verification checklist covering business identity, formula safety, claims accuracy, packaging standards, and documentation.
+            </p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Only approved, active verified sellers may list products for sale</li>
+              <li>CareCraftz may request additional information, suspend, or remove sellers who fail to meet our standards</li>
+              <li>Product authenticity claims are subject to our review process; misrepresentation may result in removal and account termination</li>
+              <li>&quot;CareCraftz Verified Seller&quot; and &quot;CareCraftz Official&quot; badges indicate platform verification status, not third-party certification of every product claim</li>
+            </ul>
           </section>
 
           <section>

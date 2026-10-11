@@ -187,14 +187,22 @@ export default function NewHomePage() {
             />
             {/* Overlaid text card - bottom left */}
             <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-5 max-w-xs shadow-lg">
-              <h1 className="text-xl font-bold text-[#2b2b2b] mb-2">Natural Skincare,<br />Crafted With Care</h1>
-              <p className="text-sm text-[#696a67] mb-4">Handmade and Korean-inspired beauty. Crafted with care.</p>
-              <button
-                onClick={() => navigate('/shop')}
-                className="bg-[#ff9570] hover:bg-[#ff7a50] text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
-              >
-                Shop Now
-              </button>
+              <h1 className="text-xl font-bold text-[#2b2b2b] mb-2">Trusted Skincare,<br />Verified Sellers</h1>
+              <p className="text-sm text-[#696a67] mb-4">We vet every seller so you only shop authentic, carefully curated products.</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => navigate('/shop')}
+                  className="bg-[#ff9570] hover:bg-[#ff7a50] text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+                >
+                  Shop Curated
+                </button>
+                <button
+                  onClick={() => navigate('/partners')}
+                  className="bg-[#2b2b2b] hover:bg-black text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+                >
+                  Become a Seller
+                </button>
+              </div>
             </div>
           </section>
 
@@ -509,7 +517,7 @@ export default function NewHomePage() {
               <div className="relative z-10 text-center max-w-md mx-auto">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#2b2b2b] mb-4">We Are</h2>
                 <p className="text-[#5a4a3a] text-base md:text-lg leading-relaxed mb-8">
-                  Vegan personal care for every body. Always ethical, low-waste, handmade & cruelty-free.
+                  A trusted skincare marketplace. We verify sellers, curate authentic products, and put CareCraftz Official alongside partners who meet the same bar.
                 </p>
                 <button
                   onClick={() => navigate('/about')}
@@ -668,48 +676,26 @@ export default function NewHomePage() {
             )}
           </section>
 
-          {/* ── SECTION 10: THE OFFICIAL STUFF (CERTIFICATIONS) ── */}
+          {/* ── SECTION 10: HOW WE VERIFY ── */}
           <section className="mx-4 my-8 rounded-[60px] overflow-hidden py-12 px-8" style={{ backgroundColor: '#FF9A7A' }}>
-            <h2 className="text-center text-xl font-semibold text-[#2b2b2b] mb-8">The Official Stuff</h2>
-            
-            <div className="flex items-center justify-center gap-8 md:gap-16 flex-wrap">
-              {/* B Corp */}
-              <div className="flex flex-col items-center">
-                <svg viewBox="0 0 80 100" className="w-16 h-20 md:w-20 md:h-24">
-                  <circle cx="40" cy="50" r="35" fill="none" stroke="#2b2b2b" strokeWidth="3"/>
-                  <text x="40" y="58" textAnchor="middle" fontSize="32" fontWeight="bold" fill="#2b2b2b">B</text>
-                  <rect x="15" y="82" width="50" height="3" fill="#2b2b2b"/>
-                </svg>
-                <p className="text-[#2b2b2b] text-xs font-bold mt-1">Certified</p>
-                <p className="text-[#2b2b2b] text-xs font-bold">Corporation</p>
-              </div>
-
-              {/* Plastic Negative */}
-              <div className="flex flex-col items-center">
-                <svg viewBox="0 0 100 80" className="w-20 h-16 md:w-24 md:h-20">
-                  <rect x="10" y="10" width="80" height="60" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
-                  <text x="50" y="30" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2b2b2b">CERTIFIED</text>
-                  <text x="50" y="48" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#2b2b2b">PLASTIC</text>
-                  <text x="50" y="62" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#2b2b2b">NEGATIVE</text>
-                  <text x="50" y="74" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#2b2b2b">PRODUCT</text>
-                  <circle cx="35" cy="42" r="8" fill="none" stroke="#2b2b2b" strokeWidth="1.5"/>
-                  <path d="M32 42 L38 42 M35 39 L35 45" stroke="#2b2b2b" strokeWidth="1"/>
-                </svg>
-              </div>
-
-              {/* Leaping Bunny */}
-              <div className="flex flex-col items-center">
-                <svg viewBox="0 0 100 80" className="w-20 h-16 md:w-24 md:h-20">
-                  <ellipse cx="60" cy="50" rx="25" ry="18" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
-                  <circle cx="75" cy="35" r="10" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
-                  <circle cx="77" cy="32" r="1.5" fill="#2b2b2b"/>
-                  <ellipse cx="68" cy="38" rx="4" ry="2" fill="none" stroke="#2b2b2b" strokeWidth="1"/>
-                  <path d="M35 55 Q20 45 15 55 Q12 60 20 62" fill="none" stroke="#2b2b2b" strokeWidth="2"/>
-                  <path d="M50 32 L45 20 M52 30 L50 18 M58 30 L62 18" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M45 65 L35 75 M50 66 L50 78 M55 65 L62 75 M60 62 L68 70" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M82 42 L88 38" stroke="#2b2b2b" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </div>
+            <h2 className="text-center text-xl font-semibold text-[#2b2b2b] mb-3">How We Verify Sellers</h2>
+            <p className="text-center text-[#2b2b2b]/80 text-sm mb-8 max-w-lg mx-auto">
+              Before any brand lists on CareCraftz, our team completes a structured review.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
+              {[
+                { step: '01', label: 'Identity', desc: 'Business license & contact' },
+                { step: '02', label: 'Safety', desc: 'Formula & testing methods' },
+                { step: '03', label: 'Claims', desc: 'Evidence vs marketing' },
+                { step: '04', label: 'Packaging', desc: 'Standards & sustainability' },
+                { step: '05', label: 'Documents', desc: 'License, certs, lab reports' },
+              ].map((item) => (
+                <div key={item.step} className="bg-white/40 rounded-2xl px-4 py-5 text-center">
+                  <p className="text-[#2b2b2b]/50 text-xs font-bold tracking-widest mb-2">{item.step}</p>
+                  <p className="text-[#2b2b2b] text-sm font-bold">{item.label}</p>
+                  <p className="text-[#2b2b2b]/70 text-xs mt-1">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -717,13 +703,12 @@ export default function NewHomePage() {
           <section className="mx-4 my-8 rounded-full overflow-hidden py-4 px-6" style={{ backgroundColor: '#E8B800' }}>
             <div className="flex items-center gap-12 animate-marquee whitespace-nowrap">
               {[
-                { icon: '🐰', label: 'Cruelty Free' },
-                { icon: '🪐', label: 'For All Bodies' },
-                { icon: '♻️', label: 'Low Waste' },
-                { icon: '🌱', label: 'Vegan' },
-                { icon: '🖐️', label: 'Small Batch' },
-                { icon: '☀️', label: 'Give Back' },
-                { icon: '🌿', label: 'Plants for President' },
+                { icon: '✓', label: 'Verified Sellers' },
+                { icon: '◎', label: 'Authentic Products' },
+                { icon: '◇', label: 'Curated Assortment' },
+                { icon: '◆', label: 'Document Review' },
+                { icon: '○', label: 'CareCraftz Official' },
+                { icon: '✦', label: 'Trust First' },
               ].map((item, i) => (
                 <span key={i} className="inline-flex items-center gap-2 text-[#2b2b2b] text-sm font-semibold">
                   <span className="text-lg">{item.icon}</span>
@@ -731,13 +716,12 @@ export default function NewHomePage() {
                 </span>
               ))}
               {[
-                { icon: '🐰', label: 'Cruelty Free' },
-                { icon: '🪐', label: 'For All Bodies' },
-                { icon: '♻️', label: 'Low Waste' },
-                { icon: '🌱', label: 'Vegan' },
-                { icon: '🖐️', label: 'Small Batch' },
-                { icon: '☀️', label: 'Give Back' },
-                { icon: '🌿', label: 'Plants for President' },
+                { icon: '✓', label: 'Verified Sellers' },
+                { icon: '◎', label: 'Authentic Products' },
+                { icon: '◇', label: 'Curated Assortment' },
+                { icon: '◆', label: 'Document Review' },
+                { icon: '○', label: 'CareCraftz Official' },
+                { icon: '✦', label: 'Trust First' },
               ].map((item, i) => (
                 <span key={`dup-${i}`} className="inline-flex items-center gap-2 text-[#2b2b2b] text-sm font-semibold">
                   <span className="text-lg">{item.icon}</span>

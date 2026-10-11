@@ -1,12 +1,25 @@
 import { useState, type FormEvent } from 'react'
-import { Check, ArrowRight, Building2, Globe, Mail, FileText, Shield, Star } from 'lucide-react'
+import { Check, ArrowRight, Building2, Globe, Mail, FileText, Shield, Star, Upload } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
 import { supabase } from '../lib/supabase'
+
+type DocType = 'business_license' | 'certifications' | 'lab_reports'
+
+const REQUIRED_DOCS: { type: DocType; label: string; help: string }[] = [
+  { type: 'business_license', label: 'Business license', help: 'Trade license or company registration (PDF or image)' },
+  { type: 'certifications', label: 'Certifications', help: 'Organic, cruelty-free, GMP, or similar certificates' },
+  { type: 'lab_reports', label: 'Lab / testing reports', help: 'Safety assessments or third-party lab results' },
+]
 
 function PartnersInner() {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [documents, setDocuments] = useState<Partial<Record<DocType, File | null>>>({
+    business_license: null,
+    certifications: null,
+    lab_reports: null,
+  })
   const [formData, setFormData] = useState({
     // Step 1: Company Info
     companyName: '',
@@ -32,7 +45,7 @@ function PartnersInner() {
     minimumOrder: '',
     leadTime: '',
     shippingLocations: [] as string[],
-    // Step 6: Additional
+    // Step 6: Additional + docs
     whyPartner: '',
     otherInfo: '',
     agreeTerms: false
@@ -71,8 +84,15 @@ function PartnersInner() {
     setIsSubmitting(true)
     setSubmitError('')
 
+    const missingDocs = REQUIRED_DOCS.filter((doc) => !documents[doc.type])
+    if (missingDocs.length > 0) {
+      setSubmitError(`Please upload: ${missingDocs.map((d) => d.label).join(', ')}.`)
+      setIsSubmitting(false)
+      return
+    }
+
     try {
-      const { error } = await supabase.from('partner_applications').insert({
+      const { data: application, error } = await supabase.from('partner_applications').insert({
         company_name: formData.companyName.trim(),
         business_type: formData.businessType.trim(),
         website: formData.website.trim(),
@@ -97,9 +117,35 @@ function PartnersInner() {
         terms_accepted: formData.agreeTerms,
         terms_accepted_at: formData.agreeTerms ? new Date().toISOString() : null,
         status: 'submitted',
-      })
+      }).select('id').single()
 
       if (error) throw error
+      if (!application?.id) throw new Error('Application was created but no id was returned.')
+
+      for (const doc of REQUIRED_DOCS) {
+        const file = documents[doc.type]
+        if (!file) continue
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `applications/${application.id}/${doc.type}_${Date.now()}_${safeName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('partner-documents')
+          .upload(storagePath, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+
+        if (uploadError) throw uploadError
+
+        const { error: docError } = await supabase.from('partner_application_documents').insert({
+          application_id: application.id,
+          document_type: doc.type,
+          file_name: file.name,
+          storage_path: storagePath,
+          mime_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+        })
+
+        if (docError) throw docError
+      }
 
       setStep(7)
     } catch (error) {
@@ -135,10 +181,17 @@ function PartnersInner() {
 
       {/* Header */}
       <div className="text-center mb-12">
-        <h1 className="text-4xl md:text-5xl font-light text-[#2b2b2b] mb-4">Partner With Us</h1>
-        <p className="text-[#696a67] max-w-2xl mx-auto">
-          We're selective about who joins our platform. Only rigorously tested, high-quality products make it to CareCraftz. If you meet our standards, we'd love to hear from you.
+        <h1 className="text-4xl md:text-5xl font-light text-[#2b2b2b] mb-4">Sell on CareCraftz</h1>
+        <p className="text-[#696a67] max-w-2xl mx-auto mb-6">
+          CareCraftz is a trusted skincare marketplace. We verify every seller before products go live. Submit your credentials and evidence — our team reviews business identity, formula safety, claims accuracy, packaging, and documentation.
         </p>
+        <ul className="text-left max-w-xl mx-auto text-sm text-[#696a67] space-y-2 bg-white/60 border border-[#2b2b2b]/10 rounded-2xl px-5 py-4">
+          <li><span className="font-semibold text-[#2b2b2b]">1.</span> Business identity &amp; license</li>
+          <li><span className="font-semibold text-[#2b2b2b]">2.</span> Formula safety &amp; testing methods</li>
+          <li><span className="font-semibold text-[#2b2b2b]">3.</span> Claims accuracy vs product evidence</li>
+          <li><span className="font-semibold text-[#2b2b2b]">4.</span> Packaging &amp; sustainability standards</li>
+          <li><span className="font-semibold text-[#2b2b2b]">5.</span> Required documents (license, certs, lab reports)</li>
+        </ul>
       </div>
 
       {/* Progress indicator */}
@@ -450,10 +503,42 @@ function PartnersInner() {
           </div>
         )}
 
-        {/* Step 6: Additional */}
+        {/* Step 6: Documents + Additional */}
         {step === 6 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-[#2b2b2b] flex items-center gap-2">
+              <Upload className="w-6 h-6" /> Verification Documents
+            </h2>
+            <p className="text-sm text-[#696a67]">
+              Upload evidence for our verification checklist. All three document types are required before we can review your application.
+            </p>
+            <div className="space-y-4">
+              {REQUIRED_DOCS.map((doc) => {
+                const file = documents[doc.type]
+                return (
+                  <div key={doc.type} className="rounded-2xl border border-gray-200 bg-white px-4 py-4">
+                    <label className="block text-sm font-medium text-[#2b2b2b] mb-1">{doc.label} *</label>
+                    <p className="text-xs text-[#696a67] mb-3">{doc.help}</p>
+                    <input
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,application/pdf,image/*"
+                      required={!file}
+                      onChange={(e) => {
+                        const next = e.target.files?.[0] ?? null
+                        setDocuments((prev) => ({ ...prev, [doc.type]: next }))
+                      }}
+                      className="block w-full text-sm text-[#696a67] file:mr-4 file:rounded-full file:border-0 file:bg-[#2b2b2b] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-black"
+                    />
+                    {file ? (
+                      <p className="mt-2 text-xs font-medium text-emerald-700 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> {file.name}
+                      </p>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+            <h2 className="text-2xl font-semibold text-[#2b2b2b] flex items-center gap-2 pt-2">
               <FileText className="w-6 h-6" /> Additional Information
             </h2>
             <div>
@@ -485,7 +570,7 @@ function PartnersInner() {
                 className="mt-1 w-5 h-5 rounded border-gray-300"
               />
               <label htmlFor="agreeTerms" className="text-sm text-[#696a67]">
-                I confirm that all information provided is accurate and I agree to CareCraftz's partner terms and quality standards. I understand that only products meeting rigorous quality and testing requirements will be accepted.
+                I confirm that all information and documents are accurate and I agree to CareCraftz&apos;s partner terms, quality standards, and authenticity verification process. Only sellers who pass our checklist may list products.
               </label>
             </div>
           </div>

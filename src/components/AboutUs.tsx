@@ -46,16 +46,16 @@ export default function AboutUs() {
           <div className="flex-1 w-full flex flex-col md:grid md:grid-cols-12 md:grid-rows-[1fr_auto] gap-y-8 md:gap-y-0 md:gap-x-8">
             <Reveal delay={0.2} className="md:row-start-2 md:col-start-1 md:col-span-8 flex items-end">
               <h1 className="text-[clamp(2.5rem,6vw,5rem)] leading-[1.05] font-medium tracking-tight text-white whitespace-nowrap">
-                We Do The
+                We Verify
                 <br />
-                Heavy Lifting
+                Every Seller
               </h1>
             </Reveal>
 
             <Reveal delay={0.3} className="md:row-start-1 md:col-start-8 md:col-span-5 flex flex-col justify-center items-start md:items-end text-left md:text-right">
               <p className="text-[clamp(1rem,1.6vw,1.375rem)] text-white/64 leading-[1.3] font-normal max-w-[460px] relative -top-[90px]">
-                Extensive research into natural skincare, healing formulations, and ingredients that actually work.{' '}
-                <span className="font-semibold text-white">So you don't have to.</span>
+                CareCraftz is a curated skincare marketplace. We review business credentials, certifications, and testing before any seller goes live.{' '}
+                <span className="font-semibold text-white">So you shop authentic products with confidence.</span>
               </p>
             </Reveal>
 
@@ -94,7 +94,7 @@ export default function AboutUs() {
               blurStrength={4}
               textClassName="text-[clamp(2rem,4.5vw,4rem)] leading-[1.1] font-medium tracking-tight text-white w-full"
             >
-              Born in the UAE and Pakistan, we craft skincare that cares. Because your skin deserves the same love we put into ours.
+              Born in the UAE and Pakistan, CareCraftz curates trusted skincare. CareCraftz Official is one verified seller — every partner on the platform meets the same bar.
             </ScrollReveal>
 
             <div className="mt-24 grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8">
@@ -113,21 +113,21 @@ export default function AboutUs() {
                   </svg>
                 </div>
                 <p className="text-[11px] font-mono tracking-widest text-white/60 uppercase leading-relaxed">
-                  Research-driven formulations
+                  Verified seller standards
                 </p>
               </Reveal>
 
               <Reveal delay={0.2} className="md:col-span-4">
-                <h3 className="text-xl font-medium text-white mb-4">Natural Ingredients / Science-Backed</h3>
+                <h3 className="text-xl font-medium text-white mb-4">Credentials / Evidence</h3>
                 <p className="text-[15px] text-white/80 leading-relaxed">
-                  We blend traditional botanical wisdom with modern scientific research to create products that heal, nourish, and transform your skin naturally.
+                  Sellers submit business licenses, certifications, and lab or testing reports. Our team reviews the evidence before approval.
                 </p>
               </Reveal>
 
               <Reveal delay={0.3} className="md:col-span-4">
-                <h3 className="text-xl font-medium text-white mb-4">Crafted With Care / For Your Skin</h3>
+                <h3 className="text-xl font-medium text-white mb-4">Authenticity / For Your Skin</h3>
                 <p className="text-[15px] text-white/80 leading-relaxed">
-                  Every product is meticulously formulated and tested to ensure it delivers real results. Because we believe skincare should work as hard as you do.
+                  Only approved, active verified sellers can list. You shop knowing CareCraftz has already done the trust work.
                 </p>
               </Reveal>
             </div>

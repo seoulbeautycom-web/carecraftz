@@ -4,7 +4,7 @@ export default function SiteFooter() {
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-2">
           <h3 className="font-bold text-[#2b2b2b] text-base mb-2">CareCraftz</h3>
-          <p className="text-[#696a67] text-sm">Premium handmade and Korean-inspired skincare, crafted with care in Dubai.</p>
+          <p className="text-[#696a67] text-sm">A trusted skincare marketplace. We verify every seller so you can shop authentic products with confidence.</p>
         </div>
         <div>
           <h4 className="font-semibold text-[#2b2b2b] text-sm mb-3">Shop</h4>

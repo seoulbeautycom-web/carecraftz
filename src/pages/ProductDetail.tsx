@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
 import { ShoppingCart, Star, ChevronLeft, Check, Quote, ArrowRight } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
+import VerifiedSellerBadge, { isVerifiedSeller, type SellerTrustInfo } from '../components/VerifiedSellerBadge'
 
 interface Product {
   id: string
@@ -15,6 +16,7 @@ interface Product {
   brand_name: string | null
   brand_logo: string | null
   seller_name: string | null
+  partner_store_id: string | null
   price: number
   price_pkr: number | null
   price_aed: number | null
@@ -81,6 +83,7 @@ function ProductDetailInner() {
   const [sections, setSections] = useState<ProductSection[]>([])
   const [blogAssignment, setBlogAssignment] = useState<BlogAssignment | null>(null)
   const [reviews, setReviews] = useState<Review[]>([])
+  const [sellerStore, setSellerStore] = useState<SellerTrustInfo | null>(null)
 
   useEffect(() => {
     async function fetchAll() {
@@ -97,6 +100,17 @@ function ProductDetailInner() {
         setSections(sectionsRes.data || [])
         if (blogRes.data) setBlogAssignment(blogRes.data as BlogAssignment)
         setReviews(reviewsRes.data || [])
+
+        if (productRes.data?.partner_store_id) {
+          const { data: storeData } = await supabase
+            .from('partner_stores')
+            .select('id, display_name, tenant_type, status, approval_status, verified_at, public_certifications')
+            .eq('id', productRes.data.partner_store_id)
+            .maybeSingle()
+          setSellerStore((storeData as SellerTrustInfo | null) ?? null)
+        } else {
+          setSellerStore(null)
+        }
       } catch (error) {
         console.error('Error:', error)
       } finally {
@@ -222,26 +236,49 @@ function ProductDetailInner() {
                 {product.subtitle && (
                   <p className="text-[#696a67] italic mt-1">{product.subtitle}</p>
                 )}
-                {(product.brand_name || product.seller_name || product.brand_logo) && (
-                  <div className="mt-4 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
-                    <div className="h-12 w-12 overflow-hidden rounded-2xl bg-[#f0ece0] flex items-center justify-center">
-                      {product.brand_logo ? (
-                        <img src={product.brand_logo} alt={product.brand_name || product.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-semibold text-[#2b2b2b]">
-                          {(product.brand_name || product.name).charAt(0)}
-                        </span>
-                      )}
+                {(product.brand_name || product.seller_name || product.brand_logo || sellerStore) && (
+                  <div className="mt-4 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-2xl bg-[#f0ece0] flex items-center justify-center">
+                        {product.brand_logo ? (
+                          <img src={product.brand_logo} alt={product.brand_name || product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-semibold text-[#2b2b2b]">
+                            {(product.brand_name || sellerStore?.display_name || product.name).charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs uppercase tracking-wide text-[#696a67]">Brand & seller</p>
+                        <p className="text-sm font-semibold text-[#2b2b2b]">
+                          {product.brand_name || sellerStore?.display_name || 'Brand not set'}
+                        </p>
+                        <p className="text-xs text-[#696a67]">
+                          Sold by {product.seller_name || sellerStore?.display_name || 'CareCraftz'}
+                        </p>
+                      </div>
+                      <VerifiedSellerBadge store={sellerStore} />
                     </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-[#696a67]">Brand & seller</p>
-                      <p className="text-sm font-semibold text-[#2b2b2b]">
-                        {product.brand_name || 'Brand not set'}
-                      </p>
-                      {product.seller_name && (
-                        <p className="text-xs text-[#696a67]">Sold by {product.seller_name}</p>
-                      )}
-                    </div>
+                    {isVerifiedSeller(sellerStore) && (
+                      <div className="rounded-xl bg-[#fbfcf4] border border-[#2b2b2b]/8 px-3 py-2.5">
+                        <p className="text-xs font-semibold text-[#2b2b2b] mb-1">Authenticity trust panel</p>
+                        <p className="text-xs text-[#696a67]">
+                          {sellerStore?.display_name}
+                          {sellerStore?.verified_at
+                            ? ` · Verified ${new Date(sellerStore.verified_at).toLocaleDateString()}`
+                            : ' · Verified seller'}
+                        </p>
+                        {sellerStore?.public_certifications && sellerStore.public_certifications.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {sellerStore.public_certifications.slice(0, 4).map((cert) => (
+                              <span key={cert} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white border border-gray-200 text-[#2b2b2b]">
+                                {cert}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
