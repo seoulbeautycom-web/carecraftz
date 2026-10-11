@@ -210,13 +210,13 @@ export default function NewHomePage() {
               style={{ height: '70vh' }}
             />
             <div className="absolute bottom-8 left-8 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-5 max-w-xs shadow-lg">
-              <h2 className="text-xl font-bold text-[#2b2b2b] mb-2">Refill. Reuse. Rejoice.</h2>
-              <p className="text-sm text-[#696a67] mb-4">Our refill program cuts waste and saves you money. Because good skin shouldn't cost the earth.</p>
+              <h2 className="text-xl font-bold text-[#2b2b2b] mb-2">Why CareCraftz?</h2>
+              <p className="text-sm text-[#696a67] mb-4">We verify every seller so you shop authentic skincare with certainty — not guesswork.</p>
               <button
-                onClick={() => navigate('/refill')}
+                onClick={() => navigate('/why-us')}
                 className="bg-[#2b2b2b] hover:bg-black text-white text-xs font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
               >
-                Shop Refill Program
+                Discover Why Us
               </button>
             </div>
           </section>

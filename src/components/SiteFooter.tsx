@@ -18,7 +18,7 @@ export default function SiteFooter() {
         <div>
           <h4 className="font-semibold text-[#2b2b2b] text-sm mb-3">Help</h4>
           <ul className="space-y-2 text-sm text-[#696a67]">
-            <li><a href="/refill" className="hover:text-[#2b2b2b] transition-colors">Refill Program</a></li>
+            <li><a href="/why-us" className="hover:text-[#2b2b2b] transition-colors">Why Us</a></li>
             <li><a href="/partners" className="hover:text-[#2b2b2b] transition-colors">Partners</a></li>
             <li><a href="/privacy" className="hover:text-[#2b2b2b] transition-colors">Privacy</a></li>
             <li><a href="/terms" className="hover:text-[#2b2b2b] transition-colors">Terms</a></li>

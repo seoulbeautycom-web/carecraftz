@@ -9,7 +9,7 @@ import ProductDetail from './pages/ProductDetail'
 import FutureLaunches from './pages/FutureLaunches'
 import Craft from './pages/Craft'
 import Blog from './pages/Blog'
-import Refill from './pages/Refill'
+import WhyUs from './pages/WhyUs'
 import Partners from './pages/Partners'
 import CartPage from './pages/CartPage'
 import SignIn from './pages/auth/SignIn'
@@ -45,7 +45,8 @@ function App() {
             <Route path="/craft"        element={<Craft />} />          {/* #8DEBD1 mint */}
             <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky */}
             <Route path="/blog"         element={<Blog />} />           {/* #FFD94A yellow */}
-            <Route path="/refill"       element={<Refill />} />         {/* #F4956A peach */}
+            <Route path="/why-us"       element={<WhyUs />} />          {/* #1F2A24 forest */}
+            <Route path="/refill"       element={<Navigate to="/why-us" replace />} />
             <Route path="/partners"     element={<Partners />} />       {/* #E8A4E0 lilac */}
             <Route path="/rewards"      element={<Navigate to="/partners" replace />} />
             <Route path="/signin"       element={<SignIn />} />         {/* #C9B8FF purple */}
