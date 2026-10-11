@@ -1,7 +1,7 @@
 export default function SiteFooter() {
   return (
-    <footer className="bg-[#eeecfe] px-6 py-10 mt-8 flex-shrink-0">
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-[#eeecfe] px-6 sm:px-8 lg:px-10 py-10 mt-0 flex-shrink-0 w-full">
+      <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-2">
           <h3 className="font-bold text-[#2b2b2b] text-base mb-2">CareCraftz</h3>
           <p className="text-[#696a67] text-sm">A trusted skincare marketplace. We verify every seller so you can shop authentic products with confidence.</p>

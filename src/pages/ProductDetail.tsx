@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
-import { ShoppingCart, Star, ChevronLeft, Check, Quote, ArrowRight } from 'lucide-react'
+import { ShoppingCart, Star, Check, Quote, ArrowRight, Minus, Plus } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
 import VerifiedSellerBadge, { isVerifiedSeller, type SellerTrustInfo } from '../components/VerifiedSellerBadge'
 
@@ -73,10 +73,11 @@ type Tab = typeof TABS[number]
 function ProductDetailInner() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { addToCart, items } = useCart()
+  const { addToCart, items, setIsCartOpen } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedImage, setSelectedImage] = useState(0)
+  const [quantity, setQuantity] = useState(1)
   const [addedToCart, setAddedToCart] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('What It Is')
   const [purchaseType, setPurchaseType] = useState<'one-time' | 'subscribe'>('one-time')
@@ -120,6 +121,12 @@ function ProductDetailInner() {
     fetchAll()
   }, [id])
 
+  useEffect(() => {
+    setQuantity(1)
+    setSelectedImage(0)
+    setAddedToCart(false)
+  }, [id])
+
   const handleAddToCart = () => {
     if (!product) return
     const location = product.location as 'Pakistan' | 'UAE'
@@ -131,9 +138,11 @@ function ProductDetailInner() {
       image: product.images?.[0] || '',
       location: location || 'UAE',
       delivery_charge: product.delivery_charge || 0,
-      currency: currency
+      currency: currency,
+      quantity,
     })
     setAddedToCart(true)
+    setIsCartOpen(true)
     setTimeout(() => setAddedToCart(false), 2000)
   }
 
@@ -149,7 +158,8 @@ function ProductDetailInner() {
     return `${(p.price * 0.9).toFixed(2)}`
   }
 
-  const cartCount = items.reduce((acc, i) => acc + i.quantity, 0)
+  const inCartQty = product ? (items.find((i) => i.id === product.id)?.quantity ?? 0) : 0
+  const maxQty = product ? Math.max(1, product.inventory || 1) : 1
 
   if (loading) {
     return (
@@ -174,34 +184,20 @@ function ProductDetailInner() {
 
   return (
     <>
+        <div className="pt-20">
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto pt-16">
+          {/* Main product — compact */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 px-4 sm:px-5 lg:px-6 pb-5 max-w-6xl mx-auto">
 
-          {/* Back Nav */}
-          <div className="px-6 pt-6 pb-2">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-1.5 text-[#696a67] text-sm hover:text-[#2b2b2b] transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </button>
-          </div>
-
-          {/* Main Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 pb-12 max-w-6xl mx-auto">
-
-            {/* ── LEFT: Image Gallery ── */}
-            <div className="flex gap-3">
-              {/* Thumbnails */}
+            {/* Image gallery */}
+            <div className="flex gap-2">
               {product.images && product.images.length > 1 && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   {product.images.map((img, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(idx)}
-                      className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
+                      className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
                         selectedImage === idx ? 'border-[#2b2b2b]' : 'border-transparent'
                       }`}
                     >
@@ -211,8 +207,7 @@ function ProductDetailInner() {
                 </div>
               )}
 
-              {/* Main Image */}
-              <div className="flex-1 rounded-3xl overflow-hidden bg-[#f0ece0] aspect-square flex items-center justify-center">
+              <div className="flex-1 rounded-2xl overflow-hidden bg-[#f0ece0] aspect-square max-h-[420px] flex items-center justify-center">
                 {product.images?.[selectedImage] ? (
                   <img
                     src={product.images[selectedImage]}
@@ -220,102 +215,97 @@ function ProductDetailInner() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-24 h-24 bg-white/50 rounded-2xl flex items-center justify-center">
-                    <span className="text-5xl">🌿</span>
-                  </div>
+                  <div className="w-16 h-16 bg-white/50 rounded-xl" />
                 )}
               </div>
             </div>
 
-            {/* ── RIGHT: Product Info ── */}
-            <div className="flex flex-col gap-5 pt-2">
+            {/* Product info */}
+            <div className="flex flex-col gap-2.5">
 
-              {/* Title */}
               <div>
-                <h1 className="text-3xl font-bold text-[#2b2b2b]">{product.name}</h1>
+                <h1
+                  className="text-[#2b2b2b] leading-tight"
+                  style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.35rem, 2.4vw, 1.75rem)' }}
+                >
+                  {product.name}
+                </h1>
                 {product.subtitle && (
-                  <p className="text-[#696a67] italic mt-1">{product.subtitle}</p>
-                )}
-                {(product.brand_name || product.seller_name || product.brand_logo || sellerStore) && (
-                  <div className="mt-4 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-2xl bg-[#f0ece0] flex items-center justify-center">
-                        {product.brand_logo ? (
-                          <img src={product.brand_logo} alt={product.brand_name || product.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="text-sm font-semibold text-[#2b2b2b]">
-                            {(product.brand_name || sellerStore?.display_name || product.name).charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs uppercase tracking-wide text-[#696a67]">Brand & seller</p>
-                        <p className="text-sm font-semibold text-[#2b2b2b]">
-                          {product.brand_name || sellerStore?.display_name || 'Brand not set'}
-                        </p>
-                        <p className="text-xs text-[#696a67]">
-                          Sold by {product.seller_name || sellerStore?.display_name || 'CareCraftz'}
-                        </p>
-                      </div>
-                      <VerifiedSellerBadge store={sellerStore} />
-                    </div>
-                    {isVerifiedSeller(sellerStore) && (
-                      <div className="rounded-xl bg-[#fbfcf4] border border-[#2b2b2b]/8 px-3 py-2.5">
-                        <p className="text-xs font-semibold text-[#2b2b2b] mb-1">Authenticity trust panel</p>
-                        <p className="text-xs text-[#696a67]">
-                          {sellerStore?.display_name}
-                          {sellerStore?.verified_at
-                            ? ` · Verified ${new Date(sellerStore.verified_at).toLocaleDateString()}`
-                            : ' · Verified seller'}
-                        </p>
-                        {sellerStore?.public_certifications && sellerStore.public_certifications.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {sellerStore.public_certifications.slice(0, 4).map((cert) => (
-                              <span key={cert} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white border border-gray-200 text-[#2b2b2b]">
-                                {cert}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-[#696a67] text-sm italic mt-0.5">{product.subtitle}</p>
                 )}
               </div>
 
-              {/* Price */}
-              <div className="flex items-baseline gap-3">
-                <span className="text-2xl font-semibold text-[#2b2b2b]">{formatPrice(product)}</span>
+              {(product.brand_name || product.seller_name || product.brand_logo || sellerStore) && (
+                <div className="rounded-xl border border-[#2b2b2b]/08 bg-white px-3 py-2.5 space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 overflow-hidden rounded-lg bg-[#f0ece0] flex items-center justify-center shrink-0">
+                      {product.brand_logo ? (
+                        <img src={product.brand_logo} alt={product.brand_name || product.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-semibold text-[#2b2b2b]">
+                          {(product.brand_name || sellerStore?.display_name || product.name).charAt(0)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-[#696a67]">Brand & seller</p>
+                      <p className="text-xs font-semibold text-[#2b2b2b] truncate">
+                        {product.brand_name || sellerStore?.display_name || 'Brand not set'}
+                      </p>
+                      <p className="text-[11px] text-[#696a67] truncate">
+                        Sold by {product.seller_name || sellerStore?.display_name || 'CareCraftz'}
+                      </p>
+                    </div>
+                    <VerifiedSellerBadge store={sellerStore} />
+                  </div>
+                  {isVerifiedSeller(sellerStore) && (
+                    <div className="rounded-lg bg-[#fbfcf4] border border-[#2b2b2b]/08 px-2.5 py-2">
+                      <p className="text-[11px] font-semibold text-[#2b2b2b]">
+                        {sellerStore?.display_name}
+                        {sellerStore?.verified_at
+                          ? ` · Verified ${new Date(sellerStore.verified_at).toLocaleDateString()}`
+                          : ' · Verified seller'}
+                      </p>
+                      {sellerStore?.public_certifications && sellerStore.public_certifications.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {sellerStore.public_certifications.slice(0, 4).map((cert) => (
+                            <span key={cert} className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white border border-gray-200 text-[#2b2b2b]">
+                              {cert}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xl font-semibold text-[#2b2b2b]">{formatPrice(product)}</span>
                 {product.compare_at_price && product.compare_at_price > product.price && (
-                  <span className="text-base text-[#696a67] line-through">
+                  <span className="text-sm text-[#696a67] line-through">
                     AED {product.compare_at_price.toFixed(2)}
                   </span>
                 )}
-              </div>
-
-              {/* Star Rating placeholder */}
-              <div className="flex items-center gap-2">
-                <div className="flex gap-0.5">
-                  {[1,2,3,4,5].map(s => (
-                    <Star key={s} className="w-4 h-4 fill-[#E8B800] text-[#E8B800]" />
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex gap-0.5">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} className="w-3.5 h-3.5 fill-[#E8B800] text-[#E8B800]" />
+                    ))}
+                  </div>
+                  <span className="text-[#696a67] text-[11px]">
+                    {reviews.length > 0 ? `${reviews.length} reviews` : 'reviews'}
+                  </span>
                 </div>
-                <span className="text-[#696a67] text-sm">(reviews)</span>
               </div>
 
-              {/* Short description */}
-              {product.description && (
-                <p className="text-[#696a67] text-sm leading-relaxed">{product.description}</p>
-              )}
-
-              {/* Tabs: What It Is / How To Use / Ingredients */}
               <div>
-                <div className="flex gap-1 bg-[#f0ece0] rounded-full p-1 mb-4">
+                <div className="flex gap-1 bg-[#f0ece0] rounded-full p-0.5 mb-2">
                   {TABS.map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-2 text-xs font-semibold rounded-full transition-all ${
+                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-full transition-all ${
                         activeTab === tab
                           ? 'bg-[#eeecfe] text-[#2b2b2b] shadow-sm'
                           : 'text-[#696a67] hover:text-[#2b2b2b]'
@@ -326,7 +316,7 @@ function ProductDetailInner() {
                   ))}
                 </div>
 
-                <div className="text-sm text-[#696a67] leading-relaxed min-h-[80px]">
+                <div className="text-xs text-[#696a67] leading-snug min-h-[56px] line-clamp-4">
                   {activeTab === 'What It Is' && (
                     <p>{product.description || 'Product description coming soon.'}</p>
                   )}
@@ -339,66 +329,100 @@ function ProductDetailInner() {
                 </div>
               </div>
 
-              {/* Add to Cart Button */}
-              <button
-                onClick={handleAddToCart}
-                disabled={product.inventory <= 0 || addedToCart}
-                className={`w-full py-4 rounded-full font-semibold text-sm uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                  addedToCart
-                    ? 'bg-[#1db954] text-white'
-                    : product.inventory <= 0
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#eeecfe] text-[#2b2b2b] hover:bg-[#dddaf8]'
-                }`}
-              >
-                {addedToCart ? (
-                  <><Check className="w-4 h-4" /> Added to Cart</>
-                ) : product.inventory <= 0 ? (
-                  'Out of Stock'
-                ) : (
-                  <><ShoppingCart className="w-4 h-4" /> Add to Cart</>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-full border border-[#2b2b2b]/12 bg-white shrink-0">
+                  <button
+                    type="button"
+                    aria-label="Decrease quantity"
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 disabled:opacity-30"
+                  >
+                    <Minus className="w-3.5 h-3.5 text-[#2b2b2b]" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-semibold text-[#2b2b2b] tabular-nums">{quantity}</span>
+                  <button
+                    type="button"
+                    aria-label="Increase quantity"
+                    onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                    disabled={quantity >= maxQty}
+                    className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-black/5 disabled:opacity-30"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#2b2b2b]" />
+                  </button>
+                </div>
 
-              {/* Purchase Type Toggle */}
-              <div className="space-y-2">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.inventory <= 0 || addedToCart}
+                  className={`flex-1 py-3 rounded-full font-semibold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                    addedToCart
+                      ? 'bg-[#1db954] text-white'
+                      : product.inventory <= 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#eeecfe] text-[#2b2b2b] hover:bg-[#dddaf8]'
+                  }`}
+                >
+                  {addedToCart ? (
+                    <><Check className="w-4 h-4" /> Added ×{quantity}</>
+                  ) : product.inventory <= 0 ? (
+                    'Out of Stock'
+                  ) : (
+                    <><ShoppingCart className="w-4 h-4" /> Add {quantity > 1 ? `${quantity} ` : ''}to cart</>
+                  )}
+                </button>
+              </div>
+
+              {inCartQty > 0 && (
+                <p className="text-[11px] text-[#3d6b4a] font-medium">
+                  {inCartQty} in your cart
+                  <button
+                    type="button"
+                    onClick={() => setIsCartOpen(true)}
+                    className="ml-2 underline underline-offset-2 hover:opacity-70"
+                  >
+                    View cart
+                  </button>
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 <label
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    purchaseType === 'one-time' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-gray-200 bg-white'
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer transition-all ${
+                    purchaseType === 'one-time' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10 bg-white'
                   }`}
                   onClick={() => setPurchaseType('one-time')}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     purchaseType === 'one-time' ? 'border-[#E8B800] bg-[#E8B800]' : 'border-gray-300'
                   }`}>
-                    {purchaseType === 'one-time' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    {purchaseType === 'one-time' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
-                  <span className="text-sm font-medium text-[#2b2b2b]">
-                    One-time purchase {formatPrice(product)}
+                  <span className="text-[11px] font-medium text-[#2b2b2b]">
+                    One-time {formatPrice(product)}
                   </span>
                 </label>
 
                 <label
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                    purchaseType === 'subscribe' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-gray-200 bg-white'
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer transition-all ${
+                    purchaseType === 'subscribe' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10 bg-white'
                   }`}
                   onClick={() => setPurchaseType('subscribe')}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     purchaseType === 'subscribe' ? 'border-[#E8B800] bg-[#E8B800]' : 'border-gray-300'
                   }`}>
-                    {purchaseType === 'subscribe' && <div className="w-2 h-2 rounded-full bg-white" />}
+                    {purchaseType === 'subscribe' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
-                  <span className="text-sm font-medium text-[#2b2b2b]">
-                    Subscribe &amp; save 10% — {subscribePrice(product)}
+                  <span className="text-[11px] font-medium text-[#2b2b2b]">
+                    Subscribe −10% {subscribePrice(product)}
                   </span>
                 </label>
               </div>
 
-              {/* Stock / SKU */}
-              <div className="flex items-center gap-4 text-xs text-[#696a67]">
+              <div className="flex items-center gap-3 text-[11px] text-[#696a67]">
                 {product.inventory > 0
-                  ? <span className="text-[#1db954] font-medium">✓ In stock ({product.inventory} left)</span>
+                  ? <span className="text-[#1db954] font-medium">In stock ({product.inventory})</span>
                   : <span className="text-red-400 font-medium">Out of stock</span>
                 }
                 {product.sku && <span>SKU: {product.sku}</span>}
@@ -413,12 +437,15 @@ function ProductDetailInner() {
           {sections.length > 0 && sections.map((section) => {
             if (section.section_type === 'manifesto') {
               return (
-                <div key={section.id} className="mx-6 my-6">
-                  <div className="bg-[#eeecfe] rounded-[2rem] px-8 py-10 text-center max-w-6xl mx-auto">
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#2b2b2b] mb-3">
+                <div key={section.id} className="px-4 sm:px-5 lg:px-6 py-3 max-w-6xl mx-auto">
+                  <div className="bg-[#eeecfe] rounded-2xl px-5 py-5 text-center">
+                    <h2
+                      className="text-[#2b2b2b] leading-tight mb-1.5"
+                      style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.2rem, 2.2vw, 1.5rem)' }}
+                    >
                       {section.manifesto_title || 'Multipurpose Manifesto'}
                     </h2>
-                    <p className="text-[#696a67] text-sm md:text-base max-w-xl mx-auto">
+                    <p className="text-[#696a67] text-sm leading-snug max-w-xl mx-auto">
                       {section.manifesto_body || ''}
                     </p>
                   </div>
@@ -428,32 +455,28 @@ function ProductDetailInner() {
 
             if (section.section_type === 'breakdown') {
               return (
-                <div key={section.id} className="mx-6 my-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0 max-w-6xl mx-auto rounded-[2rem] overflow-hidden" style={{ minHeight: '360px' }}>
-                    {/* Left: lifestyle image */}
-                    <div className="bg-[#f0ece0] flex items-center justify-center overflow-hidden">
+                <div key={section.id} className="px-4 sm:px-5 lg:px-6 py-3 max-w-6xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 rounded-2xl overflow-hidden">
+                    <div className="bg-[#f0ece0] rounded-xl overflow-hidden aspect-[16/10] flex items-center justify-center">
                       {section.breakdown_left_image ? (
-                        <img src={section.breakdown_left_image} alt="" className="w-full h-full object-cover" style={{ minHeight: '360px' }} />
+                        <img src={section.breakdown_left_image} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="flex flex-col items-center gap-3 text-[#696a67] p-12">
-                          <span className="text-6xl">🌿</span>
-                          <span className="text-sm">Product image</span>
-                        </div>
+                        <div className="w-12 h-12 bg-white/50 rounded-lg" />
                       )}
                     </div>
-                    {/* Right: breakdown text on lavender blob */}
-                    <div className="bg-[#fbfcf4] flex items-end justify-end p-6 relative">
-                      <div className="bg-[#eeecfe] rounded-tl-[3rem] rounded-bl-[3rem] rounded-br-[3rem] p-8 md:p-10 w-full md:w-[85%] self-end">
-                        <h3 className="text-xl md:text-2xl font-bold text-[#2b2b2b] mb-3">
-                          {section.breakdown_title || 'The Breakdown'}
-                        </h3>
-                        <p className="text-[#696a67] text-sm leading-relaxed whitespace-pre-line">
-                          {section.breakdown_body || ''}
-                        </p>
-                        {section.breakdown_image && (
-                          <img src={section.breakdown_image} alt="Detail" className="mt-4 rounded-2xl w-full object-cover max-h-40" />
-                        )}
-                      </div>
+                    <div className="bg-[#eeecfe] rounded-xl px-4 py-4 flex flex-col justify-center">
+                      <h3
+                        className="text-[#2b2b2b] leading-tight mb-1.5"
+                        style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.1rem, 2vw, 1.35rem)' }}
+                      >
+                        {section.breakdown_title || 'The Breakdown'}
+                      </h3>
+                      <p className="text-[#696a67] text-xs leading-snug whitespace-pre-line">
+                        {section.breakdown_body || ''}
+                      </p>
+                      {section.breakdown_image && (
+                        <img src={section.breakdown_image} alt="Detail" className="mt-3 rounded-lg w-full object-cover max-h-28" />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -462,71 +485,33 @@ function ProductDetailInner() {
             return null
           })}
 
-          {/* Placeholder if no sections yet */}
-          {sections.length === 0 && (
-            <div className="mx-6 my-6 space-y-6 max-w-6xl mx-auto">
-              {/* Manifesto placeholder */}
-              <div className="bg-[#eeecfe] rounded-[2rem] px-8 py-10 text-center opacity-40 border-2 border-dashed border-[#bbb8f0]">
-                <p className="text-sm text-[#696a67] font-medium">✏️ Manifesto section — add in admin</p>
-              </div>
-              {/* Breakdown placeholder */}
-              <div className="grid grid-cols-2 gap-0 rounded-[2rem] overflow-hidden border-2 border-dashed border-[#d4d4d4] opacity-40" style={{ minHeight: '300px' }}>
-                <div className="bg-[#f0ece0] flex items-center justify-center">
-                  <p className="text-sm text-[#696a67]">📸 Left image</p>
-                </div>
-                <div className="bg-[#fbfcf4] flex items-end p-6">
-                  <div className="bg-[#eeecfe] rounded-tl-[3rem] rounded-bl-[3rem] rounded-br-[3rem] p-8 w-full">
-                    <p className="text-sm text-[#696a67]">📝 Breakdown text — add in admin</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════════
-              BLOG SECTION — assigned blog post
-          ══════════════════════════════════════════ */}
           {(() => {
             const bp = blogAssignment?.blog_posts
             const post: BlogPost | null = Array.isArray(bp) ? (bp[0] ?? null) : (bp ?? null)
-            if (!post) return (
-              <div className="mx-6 my-6 max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden border-2 border-dashed border-[#d4d4d4] opacity-40" style={{ minHeight: '320px' }}>
-                  <div className="bg-[#eeecfe] flex items-center justify-center p-10 rounded-bl-[2rem]">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-[#2b2b2b] mb-2">Blog title here</p>
-                      <p className="text-sm text-[#696a67] mb-4">Assign a blog post in admin</p>
-                      <span className="text-xs uppercase tracking-widest font-bold text-[#2b2b2b]">READ THE BLOG →</span>
-                    </div>
-                  </div>
-                  <div className="bg-[#f0ece0] flex items-center justify-center">
-                    <span className="text-6xl">📖</span>
-                  </div>
-                </div>
-              </div>
-            )
+            if (!post) return null
             return (
-              <div className="mx-6 my-6 max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden" style={{ minHeight: '320px' }}>
-                  {/* Left lavender blob */}
-                  <div className="bg-[#eeecfe] flex items-center p-10 md:p-12">
-                    <div>
-                      <h3 className="text-2xl md:text-3xl font-bold text-[#2b2b2b] mb-3 leading-tight">{post.title}</h3>
-                      {post.excerpt && <p className="text-[#696a67] text-sm mb-6 leading-relaxed">{post.excerpt}</p>}
-                      <button
-                        onClick={() => navigate(`/blog/${post.slug}`)}
-                        className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-[#2b2b2b] hover:gap-4 transition-all"
-                      >
-                        READ THE BLOG <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
+              <div className="px-4 sm:px-5 lg:px-6 py-3 max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 rounded-2xl overflow-hidden">
+                  <div className="bg-[#eeecfe] rounded-xl px-4 py-4 flex flex-col justify-center">
+                    <h3
+                      className="text-[#2b2b2b] leading-tight mb-1.5"
+                      style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.1rem, 2vw, 1.35rem)' }}
+                    >
+                      {post.title}
+                    </h3>
+                    {post.excerpt && <p className="text-[#696a67] text-xs leading-snug mb-3 line-clamp-3">{post.excerpt}</p>}
+                    <button
+                      onClick={() => navigate(`/blog/${post.slug}`)}
+                      className="inline-flex items-center gap-1.5 self-start text-[10px] uppercase tracking-widest font-bold text-[#2b2b2b] hover:opacity-70"
+                    >
+                      Read the blog <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  {/* Right: featured image */}
-                  <div className="bg-[#f0ece0] overflow-hidden flex items-center justify-center">
+                  <div className="bg-[#f0ece0] rounded-xl overflow-hidden aspect-[16/10] flex items-center justify-center">
                     {post.featured_image ? (
-                      <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover" style={{ minHeight: '320px' }} />
+                      <img src={post.featured_image} alt={post.title} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-6xl">📖</span>
+                      <div className="w-12 h-12 bg-white/50 rounded-lg" />
                     )}
                   </div>
                 </div>
@@ -534,50 +519,45 @@ function ProductDetailInner() {
             )
           })()}
 
-          {/* ══════════════════════════════════════════
-              REVIEWS SECTION
-          ══════════════════════════════════════════ */}
-          <div className="mx-6 my-8 max-w-6xl mx-auto pb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-[#2b2b2b]">Customer Reviews</h2>
+          <div className="px-4 sm:px-5 lg:px-6 py-5 max-w-6xl mx-auto pb-8">
+            <div className="flex items-end justify-between gap-2 mb-3">
+              <h2
+                className="text-[#2b2b2b] leading-tight"
+                style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.25rem, 2.4vw, 1.65rem)' }}
+              >
+                Customer reviews
+              </h2>
               {reviews.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-0.5">
-                    {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-[#E8B800] text-[#E8B800]" />)}
-                  </div>
-                  <span className="text-sm text-[#696a67]">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</span>
-                </div>
+                <span className="text-xs text-[#696a67]">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</span>
               )}
             </div>
 
             {reviews.length === 0 ? (
-              <div className="bg-[#f5f0e8] rounded-[2rem] p-12 text-center border-2 border-dashed border-[#d4d4d4]">
-                <p className="text-4xl mb-3">💬</p>
-                <p className="text-[#696a67] font-medium">No reviews yet — they'll appear here once approved in admin</p>
+              <div className="rounded-xl bg-[#f5f0e8] border border-[#2b2b2b]/08 px-4 py-6 text-center">
+                <p className="text-[#696a67] text-sm">No reviews yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {reviews.map((review) => (
-                  <div key={review.id} className="bg-white rounded-[1.5rem] p-6 shadow-sm border border-gray-100 flex flex-col gap-3">
-                    <div className="flex items-start justify-between">
+                  <div key={review.id} className="bg-white rounded-xl px-3.5 py-3 border border-[#2b2b2b]/08 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-[#2b2b2b] text-sm">{review.customer_name}</p>
+                        <p className="font-semibold text-[#2b2b2b] text-xs">{review.customer_name}</p>
                         {review.is_verified_purchase && (
-                          <span className="text-[10px] text-[#1db954] font-medium">✓ Verified Purchase</span>
+                          <span className="text-[10px] text-[#1db954] font-medium">Verified purchase</span>
                         )}
                       </div>
-                      <Quote className="w-5 h-5 text-[#eeecfe] flex-shrink-0" />
+                      <Quote className="w-4 h-4 text-[#eeecfe] flex-shrink-0" />
                     </div>
                     <div className="flex gap-0.5">
                       {[1,2,3,4,5].map(s => (
-                        <Star key={s} className={`w-3.5 h-3.5 ${s <= review.rating ? 'fill-[#E8B800] text-[#E8B800]' : 'text-gray-200'}`} />
+                        <Star key={s} className={`w-3 h-3 ${s <= review.rating ? 'fill-[#E8B800] text-[#E8B800]' : 'text-gray-200'}`} />
                       ))}
                     </div>
-                    <p className="text-[#696a67] text-sm leading-relaxed flex-1">{review.review_text}</p>
+                    <p className="text-[#696a67] text-xs leading-snug flex-1 line-clamp-4">{review.review_text}</p>
                     {review.image_url && (
-                      <img src={review.image_url} alt="Review" className="rounded-xl w-full object-cover max-h-40" />
+                      <img src={review.image_url} alt="Review" className="rounded-lg w-full object-cover max-h-28" />
                     )}
-                    <p className="text-[10px] text-[#696a67]">{new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                   </div>
                 ))}
               </div>
@@ -585,18 +565,6 @@ function ProductDetailInner() {
           </div>
 
         </div>
-
-        {/* Floating Cart Indicator */}
-        {cartCount > 0 && (
-          <button
-            onClick={() => navigate('/cart')}
-            className="fixed bottom-8 right-8 bg-[#2b2b2b] text-white rounded-full px-5 py-3 flex items-center gap-2 shadow-lg hover:bg-black transition-colors z-50"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            <span className="text-sm font-semibold">{cartCount} in cart</span>
-          </button>
-        )}
-
     </>
   )
 }

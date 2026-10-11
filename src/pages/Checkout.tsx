@@ -3,7 +3,23 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/auth-context'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, CreditCard, Truck, Shield, MapPin, Phone, Mail, User, CheckCircle, Package, Send, Home, AlertCircle } from 'lucide-react'
+import {
+  CreditCard,
+  Truck,
+  Shield,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+  CheckCircle,
+  Package,
+  Send,
+  Home,
+  AlertCircle,
+  Lock,
+  Eye,
+  EyeOff,
+} from 'lucide-react'
 import PageFrame from '../components/PageFrame'
 
 interface OrderForm {
@@ -17,43 +33,32 @@ interface OrderForm {
   paymentMethod: 'cod' | 'card'
 }
 
+function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.2 5.5l.1.1 6.3 5.3C39 37.3 44 33 44 24c0-1.2-.1-2.3-.4-3.5z" />
+    </svg>
+  )
+}
+
 function CheckoutInner() {
   const navigate = useNavigate()
   const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart } = useCart()
-  const { user } = useAuth()
-  
-  // Determine required country from cart items
-  const hasPKRItems = items.some(item => item.currency === 'PKR')
-  const hasAEDItems = items.some(item => item.currency === 'AED' || !item.currency)
-  const requiredCountry = hasPKRItems && !hasAEDItems ? 'Pakistan' : 
-                          hasAEDItems && !hasPKRItems ? 'UAE' : 
-                          hasPKRItems && hasAEDItems ? 'mixed' : 'UAE'
-  
-  // Fetch user profile data for prefilling
-  useEffect(() => {
-    async function fetchUserProfile() {
-      if (user?.id) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+  const { user, loading: authLoading, signInWithEmail, signInWithPhone, verifyPhoneOtp, signInWithOAuth, signUp, signOut } = useAuth()
 
-        if (data) {
-          setForm(prev => ({
-            ...prev,
-            fullName: data.full_name || prev.fullName,
-            email: user.email || prev.email,
-            phone: data.phone || prev.phone,
-            address: data.address || prev.address,
-            city: data.city || prev.city,
-            country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : (data.country || prev.country)
-          }))
-        }
-      }
-    }
-    fetchUserProfile()
-  }, [user, requiredCountry])
+  const hasPKRItems = items.some((item) => item.currency === 'PKR')
+  const hasAEDItems = items.some((item) => item.currency === 'AED' || !item.currency)
+  const requiredCountry =
+    hasPKRItems && !hasAEDItems
+      ? 'Pakistan'
+      : hasAEDItems && !hasPKRItems
+        ? 'UAE'
+        : hasPKRItems && hasAEDItems
+          ? 'mixed'
+          : 'UAE'
 
   const [form, setForm] = useState<OrderForm>({
     fullName: '',
@@ -61,87 +66,121 @@ function CheckoutInner() {
     phone: '',
     address: '',
     city: '',
-    country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : 'UAE',
+    country: requiredCountry === 'Pakistan' || requiredCountry === 'UAE' ? requiredCountry : 'UAE',
     postalCode: '',
-    paymentMethod: 'cod'
+    paymentMethod: 'cod',
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [orderId, setOrderId] = useState('')
 
-  // Group items by currency (fallback to AED for legacy items without currency)
-  const pkrItems = items.filter(item => item.currency === 'PKR')
-  const aedItems = items.filter(item => item.currency === 'AED' || !item.currency)
+  // Auth panel
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [authTab, setAuthTab] = useState<'email' | 'phone'>('email')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authPhone, setAuthPhone] = useState('')
+  const [authOtp, setAuthOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authError, setAuthError] = useState('')
 
-  // Fetch user profile data for prefilling
+  const pkrItems = items.filter((item) => item.currency === 'PKR')
+  const aedItems = items.filter((item) => item.currency === 'AED' || !item.currency)
+
   useEffect(() => {
     async function fetchUserProfile() {
-      if (user?.id) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (data) {
-          setForm(prev => ({
-            ...prev,
-            fullName: data.full_name || prev.fullName,
-            email: user.email || prev.email,
-            phone: data.phone || prev.phone,
-            address: data.address || prev.address,
-            city: data.city || prev.city,
-            country: (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? requiredCountry : (data.country || prev.country)
-          }))
-        }
-      }
+      if (!user?.id) return
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      setForm((prev) => ({
+        ...prev,
+        fullName: data?.full_name || user.full_name || prev.fullName,
+        email: user.email || prev.email,
+        phone: data?.phone || user.phone || prev.phone,
+        address: data?.address || prev.address,
+        city: data?.city || prev.city,
+        country:
+          requiredCountry === 'Pakistan' || requiredCountry === 'UAE'
+            ? requiredCountry
+            : data?.country || prev.country,
+      }))
     }
-    fetchUserProfile()
+    void fetchUserProfile()
   }, [user, requiredCountry])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
+    setForm((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Generate custom order ID (CC####)
-  const generateOrderId = async () => {
-    const prefix = 'CC'
-    const randomNum = Math.floor(1000 + Math.random() * 9000) // 1000-9999
-    const customId = `${prefix}${randomNum}`
-    
-    // Check if ID exists
-    const { data } = await supabase
-      .from('orders')
-      .select('order_code')
-      .eq('order_code', customId)
-      .single()
-    
-    if (data) {
-      // If exists, generate new one
-      return generateOrderId()
-    }
-    
+  const generateOrderId = async (): Promise<string> => {
+    const customId = `CC${Math.floor(1000 + Math.random() * 9000)}`
+    const { data } = await supabase.from('orders').select('order_code').eq('order_code', customId).single()
+    if (data) return generateOrderId()
     return customId
+  }
+
+  const handleAuthEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAuthBusy(true)
+    setAuthError('')
+    if (authMode === 'signup') {
+      const { error: err } = await signUp(authEmail, authPassword, authName)
+      if (err) setAuthError(err.message)
+      else setForm((prev) => ({ ...prev, fullName: authName, email: authEmail }))
+    } else {
+      const { error: err } = await signInWithEmail(authEmail, authPassword)
+      if (err) setAuthError(err.message)
+    }
+    setAuthBusy(false)
+  }
+
+  const handleAuthPhone = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAuthBusy(true)
+    setAuthError('')
+    if (!otpSent) {
+      const { error: err } = await signInWithPhone(authPhone)
+      if (err) setAuthError(err.message)
+      else setOtpSent(true)
+    } else {
+      const { error: err } = await verifyPhoneOtp(authPhone, authOtp)
+      if (err) setAuthError(err.message)
+      else setForm((prev) => ({ ...prev, phone: authPhone }))
+    }
+    setAuthBusy(false)
+  }
+
+  const handleGoogle = async () => {
+    setAuthBusy(true)
+    setAuthError('')
+    const { error: err } = await signInWithOAuth('google', { next: '/checkout' })
+    if (err) {
+      setAuthError(err.message)
+      setAuthBusy(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!user) {
+      setError('Sign in to continue checkout.')
+      return
+    }
     setLoading(true)
     setError('')
 
     try {
-      // Generate custom order code
       const orderCode = await generateOrderId()
-
-      // Create order in database
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           order_code: orderCode,
-          user_id: user?.id || null,
+          user_id: user.id,
           customer_email: form.email,
           customer_phone: form.phone,
           shipping_address: {
@@ -149,37 +188,36 @@ function CheckoutInner() {
             address: form.address,
             city: form.city,
             country: form.country,
-            postal_code: form.postalCode
+            postal_code: form.postalCode,
           },
-          items: items.map(item => ({
+          items: items.map((item) => ({
             product_id: item.id,
             name: item.name,
             price: item.price,
             quantity: item.quantity,
             currency: item.currency || 'AED',
             delivery_charge: item.delivery_charge || 0,
-            location: item.location || 'UAE'
+            location: item.location || 'UAE',
           })),
           totals: {
             pkr: {
               subtotal: totalPriceByCurrency.PKR,
               delivery: deliveryChargesByCurrency.PKR,
-              total: grandTotalByCurrency.PKR
+              total: grandTotalByCurrency.PKR,
             },
             aed: {
               subtotal: totalPriceByCurrency.AED,
               delivery: deliveryChargesByCurrency.AED,
-              total: grandTotalByCurrency.AED
-            }
+              total: grandTotalByCurrency.AED,
+            },
           },
           payment_method: form.paymentMethod,
-          status: 'Order Received'
+          status: 'Order Received',
         })
         .select()
         .single()
 
       if (orderError) throw orderError
-
       setOrderId(order.order_code)
       setOrderSuccess(true)
       clearCart()
@@ -191,22 +229,31 @@ function CheckoutInner() {
     }
   }
 
+  const formatCurrency = (amount: number, currency: 'PKR' | 'AED') =>
+    currency === 'PKR' ? `₨ ${amount.toLocaleString('en-PK')}` : `AED ${amount.toLocaleString('en-AE')}`
+
+  const inputClass =
+    'w-full px-3 py-2 text-sm border border-[#2b2b2b]/10 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1F331F]/20 focus:border-[#1F331F]/30'
+
   if (items.length === 0 && !orderSuccess) {
     return (
-      <div className="min-h-screen bg-[#F5F5F0] py-20">
-          <div className="max-w-2xl mx-auto px-6 text-center">
-            <div className="bg-white rounded-2xl p-12 shadow-sm">
-              <h1 className="text-2xl font-bold text-[#1F331F] mb-4">Your cart is empty</h1>
-              <p className="text-gray-600 mb-6">Add some products before checkout</p>
-              <button
-                onClick={() => navigate('/shop')}
-                className="bg-[#1F331F] text-white px-6 py-3 rounded-full hover:bg-[#1F331F]/90"
-              >
-                Continue Shopping
-              </button>
-            </div>
-          </div>
+      <div className="pt-20 pb-10 px-4 sm:px-5 lg:px-6 max-w-lg mx-auto text-center">
+        <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-5 py-8">
+          <h1
+            className="text-[#2b2b2b] mb-1"
+            style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.35rem' }}
+          >
+            Your cart is empty
+          </h1>
+          <p className="text-[#696a67] text-sm mb-4">Add products before checkout</p>
+          <button
+            onClick={() => navigate('/shop')}
+            className="bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full"
+          >
+            Continue shopping
+          </button>
         </div>
+      </div>
     )
   }
 
@@ -216,212 +263,357 @@ function CheckoutInner() {
       { id: 2, name: 'Order Confirmed', icon: AlertCircle, status: 'pending', description: 'Waiting for confirmation' },
       { id: 3, name: 'Being Packaged', icon: Package, status: 'pending', description: 'Items being prepared' },
       { id: 4, name: 'Dispatched', icon: Send, status: 'pending', description: 'Out for delivery' },
-      { id: 5, name: 'Delivered', icon: Home, status: 'pending', description: 'Order completed' }
+      { id: 5, name: 'Delivered', icon: Home, status: 'pending', description: 'Order completed' },
     ]
 
     return (
-      <>
-        <div className="min-h-screen bg-[#F5F5F0] py-12">
-          <div className="max-w-3xl mx-auto px-6">
-            {/* Success Header */}
-            <div className="bg-white rounded-2xl p-8 shadow-sm text-center mb-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-green-600" />
-              </div>
-              <h1 className="text-2xl font-bold text-[#1F331F] mb-2">Order Placed Successfully!</h1>
-              <p className="text-gray-600 mb-1">Order ID: <span className="font-mono font-bold text-lg text-[#1F331F]">{orderId}</span></p>
-              <p className="text-gray-500 text-sm">We'll send you a confirmation email shortly.</p>
-            </div>
+      <div className="pt-20 pb-10 px-4 sm:px-5 lg:px-6 max-w-xl mx-auto">
+        <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-5 py-6 text-center mb-3">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Shield className="w-6 h-6 text-green-600" />
+          </div>
+          <h1
+            className="text-[#2b2b2b] mb-1"
+            style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.35rem' }}
+          >
+            Order placed
+          </h1>
+          <p className="text-sm text-[#696a67]">
+            Order ID: <span className="font-mono font-bold text-[#2b2b2b]">{orderId}</span>
+          </p>
+        </div>
 
-            {/* Order Journey Roadmap */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
-              <h2 className="text-lg font-bold text-[#1F331F] mb-6">Order Journey</h2>
-              <div className="relative">
-                {/* Progress Line */}
-                <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-gray-200"></div>
-                
-                {/* Steps */}
-                <div className="space-y-6">
-                  {orderSteps.map((step) => (
-                    <div key={step.id} className="flex items-start gap-4 relative">
-                      {/* Step Icon */}
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
-                        step.status === 'completed' 
-                          ? 'bg-green-500 text-white' 
-                          : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        <step.icon className="w-5 h-5" />
-                      </div>
-                      
-                      {/* Step Content */}
-                      <div className="flex-1 pt-2">
-                        <div className="flex items-center gap-2">
-                          <h3 className={`font-semibold ${
-                            step.status === 'completed' ? 'text-[#1F331F]' : 'text-gray-500'
-                          }`}>
-                            {step.name}
-                          </h3>
-                          {step.status === 'completed' && (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">{step.description}</p>
-                      </div>
-                    </div>
-                  ))}
+        <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4 mb-3">
+          <h2 className="text-sm font-semibold text-[#2b2b2b] mb-3">Order journey</h2>
+          <div className="space-y-3">
+            {orderSteps.map((step) => (
+              <div key={step.id} className="flex items-start gap-3">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    step.status === 'completed' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  <step.icon className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <p className={`text-xs font-semibold ${step.status === 'completed' ? 'text-[#2b2b2b]' : 'text-gray-500'}`}>
+                    {step.name}
+                  </p>
+                  <p className="text-[11px] text-[#696a67]">{step.description}</p>
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-4">
-              <button
-                onClick={() => navigate('/shop')}
-                className="flex-1 bg-[#1F331F] text-white px-6 py-3 rounded-full hover:bg-[#1F331F]/90 font-medium"
-              >
-                Continue Shopping
-              </button>
-              <button
-                onClick={() => navigate('/profile')}
-                className="flex-1 bg-white text-[#1F331F] border-2 border-[#1F331F] px-6 py-3 rounded-full hover:bg-gray-50 font-medium"
-              >
-                View My Orders
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      </>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate('/shop')}
+            className="flex-1 bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full"
+          >
+            Continue shopping
+          </button>
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex-1 border border-[#1F331F] text-[#1F331F] text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full"
+          >
+            My orders
+          </button>
+        </div>
+      </div>
     )
   }
 
-  const formatCurrency = (amount: number, currency: 'PKR' | 'AED') => {
-    return currency === 'PKR' 
-      ? `₨ ${amount.toLocaleString('en-PK')}`
-      : `AED ${amount.toLocaleString('en-AE')}`
-  }
-
   return (
-    <>
-      <div className="min-h-screen bg-[#F5F5F0] py-8">
-        <div className="max-w-7xl mx-auto px-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-[#1F331F] hover:text-[#1F331F]/70 mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
+    <div className="pt-20 pb-8 px-4 sm:px-5 lg:px-6 max-w-6xl mx-auto">
+      <div className="flex items-end justify-between gap-2 mb-3">
+        <h1
+          className="text-[#2b2b2b] leading-tight"
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 'clamp(1.35rem, 2.4vw, 1.75rem)' }}
+        >
+          Checkout
+        </h1>
+      </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Order Form */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-[#1F331F] mb-6">Shipping Information</h2>
-              
-              {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-4">
-                  {error}
-                </div>
+      <div className="grid lg:grid-cols-2 gap-3">
+        {/* Left — account + shipping */}
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2
+                className="text-[#2b2b2b] leading-tight"
+                style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.05rem' }}
+              >
+                {user ? 'Account' : authMode === 'signup' ? 'Create account' : 'Sign in to checkout'}
+              </h2>
+              {!user && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'signup' : 'login')
+                    setAuthError('')
+                    setOtpSent(false)
+                  }}
+                  className="text-[10px] font-bold uppercase tracking-wider text-[#3d6b4a] hover:opacity-70"
+                >
+                  {authMode === 'login' ? 'Sign up' : 'Sign in'}
+                </button>
               )}
+            </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                    <User className="w-4 h-4" />
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={form.fullName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                    placeholder="Enter your full name"
-                  />
+            {authLoading ? (
+              <p className="text-xs text-[#696a67]">Checking session…</p>
+            ) : user ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fbfcf4] border border-[#2b2b2b]/08 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[#2b2b2b] truncate">{user.email || user.phone || 'Signed in'}</p>
+                  <p className="text-[11px] text-[#696a67]">Shipping details unlocked below</p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                      <Mail className="w-4 h-4" />
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] hover:text-[#2b2b2b] shrink-0"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <>
+                {authMode === 'login' && (
+                  <div className="flex gap-1 p-0.5 bg-[#f0ece0] rounded-full mb-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab('email')
+                        setOtpSent(false)
+                        setAuthError('')
+                      }}
+                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-full transition-all ${
+                        authTab === 'email' ? 'bg-white text-[#2b2b2b] shadow-sm' : 'text-[#696a67]'
+                      }`}
+                    >
+                      <Mail className="w-3 h-3 inline mr-1" />
                       Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                      placeholder="your@email.com"
-                    />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab('phone')
+                        setAuthError('')
+                      }}
+                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-full transition-all ${
+                        authTab === 'phone' ? 'bg-white text-[#2b2b2b] shadow-sm' : 'text-[#696a67]'
+                      }`}
+                    >
+                      <Phone className="w-3 h-3 inline mr-1" />
+                      Mobile
+                    </button>
                   </div>
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                      <Phone className="w-4 h-4" />
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={form.phone}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                      placeholder="+92... or +971..."
-                    />
-                  </div>
-                </div>
+                )}
 
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
-                    <MapPin className="w-4 h-4" />
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={form.address}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                    placeholder="Street address, apartment, suite"
-                  />
-                </div>
+                {authError && (
+                  <div className="mb-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{authError}</div>
+                )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">City</label>
+                {authMode === 'signup' ? (
+                  <form onSubmit={handleAuthEmail} className="space-y-2">
                     <input
                       type="text"
-                      name="city"
-                      value={form.city}
-                      onChange={handleInputChange}
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
                       required
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                      placeholder="City"
+                      placeholder="Full name"
+                      className={inputClass}
                     />
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      required
+                      placeholder="Email"
+                      className={inputClass}
+                    />
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        placeholder="Password"
+                        className={`${inputClass} pr-10`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={authBusy}
+                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
+                    >
+                      {authBusy ? 'Creating…' : 'Create account'}
+                    </button>
+                  </form>
+                ) : authTab === 'email' ? (
+                  <form onSubmit={handleAuthEmail} className="space-y-2">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        type="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        required
+                        placeholder="you@email.com"
+                        className={`${inputClass} pl-9`}
+                      />
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        required
+                        placeholder="Password"
+                        className={`${inputClass} pl-9 pr-10`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={authBusy}
+                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
+                    >
+                      {authBusy ? 'Signing in…' : 'Sign in'}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleAuthPhone} className="space-y-2">
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={authPhone}
+                        onChange={(e) => setAuthPhone(e.target.value)}
+                        required
+                        placeholder="+971… or +92…"
+                        className={`${inputClass} pl-9`}
+                        disabled={otpSent}
+                      />
+                    </div>
+                    {otpSent && (
+                      <input
+                        type="text"
+                        value={authOtp}
+                        onChange={(e) => setAuthOtp(e.target.value)}
+                        required
+                        placeholder="Enter OTP"
+                        className={inputClass}
+                      />
+                    )}
+                    <button
+                      type="submit"
+                      disabled={authBusy}
+                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
+                    >
+                      {authBusy ? 'Please wait…' : otpSent ? 'Verify OTP' : 'Send OTP'}
+                    </button>
+                  </form>
+                )}
+
+                {!user && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1 h-px bg-[#2b2b2b]/10" />
+                      <span className="text-[10px] uppercase tracking-wider text-[#696a67]">or</span>
+                      <div className="flex-1 h-px bg-[#2b2b2b]/10" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleGoogle()}
+                      disabled={authBusy}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full border border-[#2b2b2b]/12 bg-white text-xs font-semibold text-[#2b2b2b] hover:bg-[#fbfcf4] disabled:opacity-50"
+                    >
+                      <GoogleIcon />
+                      Continue with Google
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Shipping — only after auth */}
+          {user && (
+            <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4">
+              <h2
+                className="text-[#2b2b2b] leading-tight mb-3"
+                style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.05rem' }}
+              >
+                Shipping information
+              </h2>
+
+              {error && (
+                <div className="mb-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-2.5">
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1">
+                    <User className="w-3 h-3" /> Full name
+                  </label>
+                  <input type="text" name="fullName" value={form.fullName} onChange={handleInputChange} required className={inputClass} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1">
+                      <Mail className="w-3 h-3" /> Email
+                    </label>
+                    <input type="email" name="email" value={form.email} onChange={handleInputChange} required className={inputClass} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
-                      Country
-                      {requiredCountry !== 'mixed' && (
-                        <span className="text-xs text-gray-500 font-normal ml-2">(Locked based on products)</span>
-                      )}
+                    <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1">
+                      <Phone className="w-3 h-3" /> Phone
                     </label>
+                    <input type="tel" name="phone" value={form.phone} onChange={handleInputChange} required className={inputClass} placeholder="+971… / +92…" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1">
+                    <MapPin className="w-3 h-3" /> Address
+                  </label>
+                  <input type="text" name="address" value={form.address} onChange={handleInputChange} required className={inputClass} placeholder="Street, apartment" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1 block">City</label>
+                    <input type="text" name="city" value={form.city} onChange={handleInputChange} required className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1 block">Country</label>
                     {requiredCountry === 'mixed' ? (
-                      <div className="text-red-600 text-sm bg-red-50 p-2 rounded">
-                        ⚠️ You have products from both UAE and Pakistan. Please order them separately.
-                      </div>
+                      <p className="text-[11px] text-red-600 bg-red-50 rounded-lg px-2 py-2">Order UAE & Pakistan items separately.</p>
                     ) : (
                       <select
                         name="country"
                         value={form.country}
                         onChange={handleInputChange}
                         disabled={requiredCountry === 'Pakistan' || requiredCountry === 'UAE'}
-                        className={`w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent ${
-                          (requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? 'bg-gray-100 cursor-not-allowed' : ''
-                        }`}
+                        className={`${inputClass} ${(requiredCountry === 'Pakistan' || requiredCountry === 'UAE') ? 'bg-gray-50' : ''}`}
                       >
                         <option value="UAE">UAE</option>
                         <option value="Pakistan">Pakistan</option>
@@ -431,192 +623,143 @@ function CheckoutInner() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Postal Code <span className="text-gray-400 font-normal">(Optional)</span></label>
-                  <input
-                    type="text"
-                    name="postalCode"
-                    value={form.postalCode}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1F331F] focus:border-transparent"
-                    placeholder="Postal code (optional)"
-                  />
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1 block">
+                    Postal code <span className="font-normal normal-case tracking-normal">(optional)</span>
+                  </label>
+                  <input type="text" name="postalCode" value={form.postalCode} onChange={handleInputChange} className={inputClass} />
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700 mb-3 block">Payment Method</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="cod"
-                        checked={form.paymentMethod === 'cod'}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-[#1F331F]"
-                      />
-                      <Truck className="w-5 h-5 text-[#1F331F]" />
-                      <div>
-                        <p className="font-medium">Cash on Delivery</p>
-                        <p className="text-sm text-gray-500">Pay when you receive</p>
-                      </div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1.5">Payment</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <label
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer ${
+                        form.paymentMethod === 'cod' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'
+                      }`}
+                    >
+                      <input type="radio" name="paymentMethod" value="cod" checked={form.paymentMethod === 'cod'} onChange={handleInputChange} className="sr-only" />
+                      <Truck className="w-3.5 h-3.5 text-[#1F331F] shrink-0" />
+                      <span className="text-[11px] font-medium text-[#2b2b2b]">Cash on delivery</span>
                     </label>
-                    <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="card"
-                        checked={form.paymentMethod === 'card'}
-                        onChange={handleInputChange}
-                        className="w-4 h-4 text-[#1F331F]"
-                      />
-                      <CreditCard className="w-5 h-5 text-[#1F331F]" />
-                      <div>
-                        <p className="font-medium">Credit/Debit Card</p>
-                        <p className="text-sm text-gray-500">Coming soon</p>
-                      </div>
+                    <label
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-not-allowed opacity-60 ${
+                        form.paymentMethod === 'card' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'
+                      }`}
+                    >
+                      <input type="radio" name="paymentMethod" value="card" checked={form.paymentMethod === 'card'} onChange={handleInputChange} className="sr-only" disabled />
+                      <CreditCard className="w-3.5 h-3.5 text-[#1F331F] shrink-0" />
+                      <span className="text-[11px] font-medium text-[#2b2b2b]">Card soon</span>
                     </label>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading || form.paymentMethod === 'card'}
-                  className="w-full bg-[#1F331F] text-white py-4 rounded-full font-medium hover:bg-[#1F331F]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading || form.paymentMethod === 'card' || requiredCountry === 'mixed'}
+                  className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-3 rounded-full disabled:opacity-50"
                 >
-                  {loading ? 'Placing Order...' : 'Place Order'}
+                  {loading ? 'Placing order…' : 'Place order'}
                 </button>
               </form>
             </div>
+          )}
+        </div>
 
-            {/* Order Summary */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold text-[#1F331F] mb-4">Order Summary</h2>
-                
-                {/* PKR Items */}
-                {pkrItems.length > 0 && (
-                  <div className="mb-4 pb-4 border-b">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-medium">PKR</span>
-                      <span className="text-sm text-gray-500">Pakistan Products</span>
+        {/* Right — summary */}
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4">
+            <h2
+              className="text-[#2b2b2b] leading-tight mb-3"
+              style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.05rem' }}
+            >
+              Order summary
+            </h2>
+
+            {pkrItems.length > 0 && (
+              <div className="mb-3 pb-3 border-b border-[#2b2b2b]/08">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-2">Pakistan · PKR</p>
+                {pkrItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2.5 py-1.5">
+                    <img src={item.image} alt={item.name} className="w-11 h-11 object-cover rounded-lg bg-[#f0ece0]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#2b2b2b] truncate">{item.name}</p>
+                      <p className="text-[11px] text-[#696a67]">Qty {item.quantity}</p>
                     </div>
-                    {pkrItems.map(item => (
-                      <div key={item.id} className="flex items-center gap-4 py-2">
-                        <img 
-                          src={item.image} 
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-[#1F331F]">{item.name}</p>
-                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">{formatCurrency(item.price * item.quantity, 'PKR')}</p>
-                          <p className="text-xs text-gray-500">Delivery: {formatCurrency((item.delivery_charge || 0) * item.quantity, 'PKR')}</p>
-                        </div>
-                      </div>
-                    ))}
+                    <p className="text-xs font-semibold text-[#2b2b2b] shrink-0">{formatCurrency(item.price * item.quantity, 'PKR')}</p>
                   </div>
-                )}
-
-                {/* AED Items */}
-                {aedItems.length > 0 && (
-                  <div className="mb-4 pb-4 border-b">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm font-medium">AED</span>
-                      <span className="text-sm text-gray-500">UAE Products</span>
-                    </div>
-                    {aedItems.map(item => (
-                      <div key={item.id} className="flex items-center gap-4 py-2">
-                        <img 
-                          src={item.image} 
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-[#1F331F]">{item.name}</p>
-                          <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">{formatCurrency(item.price * item.quantity, 'AED')}</p>
-                          <p className="text-xs text-gray-500">Delivery: {formatCurrency((item.delivery_charge || 0) * item.quantity, 'AED')}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Totals */}
-                <div className="space-y-2 pt-2">
-                  {grandTotalByCurrency.PKR > 0 && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal (PKR)</span>
-                        <span>{formatCurrency(totalPriceByCurrency.PKR, 'PKR')}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Delivery (PKR)</span>
-                        <span>{formatCurrency(deliveryChargesByCurrency.PKR, 'PKR')}</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  {grandTotalByCurrency.AED > 0 && (
-                    <>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal (AED)</span>
-                        <span>{formatCurrency(totalPriceByCurrency.AED, 'AED')}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Delivery (AED)</span>
-                        <span>{formatCurrency(deliveryChargesByCurrency.AED, 'AED')}</span>
-                      </div>
-                    </>
-                  )}
-                  
-                  <div className="border-t pt-3 mt-3">
-                    {grandTotalByCurrency.PKR > 0 && (
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-bold text-[#1F331F]">Total (PKR)</span>
-                        <span className="text-xl font-bold text-[#1F331F]">
-                          {formatCurrency(grandTotalByCurrency.PKR, 'PKR')}
-                        </span>
-                      </div>
-                    )}
-                    {grandTotalByCurrency.AED > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-[#1F331F]">Total (AED)</span>
-                        <span className="text-xl font-bold text-[#1F331F]">
-                          {formatCurrency(grandTotalByCurrency.AED, 'AED')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                ))}
               </div>
+            )}
 
-              {/* Trust Badges */}
-              <div className="bg-white rounded-2xl p-6 shadow-sm space-y-3">
-                <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-green-600" />
-                    <span>Secure Checkout</span>
+            {aedItems.length > 0 && (
+              <div className="mb-3 pb-3 border-b border-[#2b2b2b]/08">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-2">UAE · AED</p>
+                {aedItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2.5 py-1.5">
+                    <img src={item.image} alt={item.name} className="w-11 h-11 object-cover rounded-lg bg-[#f0ece0]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#2b2b2b] truncate">{item.name}</p>
+                      <p className="text-[11px] text-[#696a67]">Qty {item.quantity}</p>
+                    </div>
+                    <p className="text-xs font-semibold text-[#2b2b2b] shrink-0">{formatCurrency(item.price * item.quantity, 'AED')}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Truck className="w-5 h-5 text-[#1F331F]" />
-                    <span>Fast Delivery</span>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-1 text-xs">
+              {grandTotalByCurrency.PKR > 0 && (
+                <>
+                  <div className="flex justify-between text-[#696a67]">
+                    <span>Subtotal (PKR)</span>
+                    <span>{formatCurrency(totalPriceByCurrency.PKR, 'PKR')}</span>
                   </div>
-                </div>
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  Sold by CareCraftz verified sellers. Every partner on this order passed our authenticity verification checklist before listing.
-                </p>
+                  <div className="flex justify-between text-[#696a67]">
+                    <span>Delivery (PKR)</span>
+                    <span>{formatCurrency(deliveryChargesByCurrency.PKR, 'PKR')}</span>
+                  </div>
+                </>
+              )}
+              {grandTotalByCurrency.AED > 0 && (
+                <>
+                  <div className="flex justify-between text-[#696a67]">
+                    <span>Subtotal (AED)</span>
+                    <span>{formatCurrency(totalPriceByCurrency.AED, 'AED')}</span>
+                  </div>
+                  <div className="flex justify-between text-[#696a67]">
+                    <span>Delivery (AED)</span>
+                    <span>{formatCurrency(deliveryChargesByCurrency.AED, 'AED')}</span>
+                  </div>
+                </>
+              )}
+              <div className="border-t border-[#2b2b2b]/08 pt-2 mt-2 space-y-1">
+                {grandTotalByCurrency.PKR > 0 && (
+                  <div className="flex justify-between font-semibold text-[#2b2b2b]">
+                    <span>Total (PKR)</span>
+                    <span>{formatCurrency(grandTotalByCurrency.PKR, 'PKR')}</span>
+                  </div>
+                )}
+                {grandTotalByCurrency.AED > 0 && (
+                  <div className="flex justify-between font-semibold text-[#2b2b2b]">
+                    <span>Total (AED)</span>
+                    <span>{formatCurrency(grandTotalByCurrency.AED, 'AED')}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-3 flex flex-wrap items-center gap-3 text-[11px] text-[#696a67]">
+            <span className="inline-flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-green-600" /> Secure checkout
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5 text-[#1F331F]" /> Verified sellers
+            </span>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

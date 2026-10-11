@@ -12,19 +12,19 @@ export default function AnnouncementBar() {
 
   return (
     <div
-      className="bg-[#7B68EE] text-white overflow-hidden"
-      style={{ fontFamily: "'Poppins', sans-serif", padding: '14px 0' }}
+      className="bg-[#7B68EE] text-white overflow-hidden border-0"
+      style={{ fontFamily: "'Poppins', sans-serif", padding: '8px 0' }}
     >
       <div className="flex whitespace-nowrap animate-marquee">
         {repeated.map((item, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-2.5 text-sm font-semibold"
-            style={{ paddingLeft: '72px' }}
+            className="inline-flex items-center gap-2 text-[11px] font-semibold"
+            style={{ paddingLeft: '56px' }}
           >
-            <item.icon className="w-4 h-4 flex-shrink-0 opacity-90" />
+            <item.icon className="w-3.5 h-3.5 flex-shrink-0 opacity-90" />
             {item.text}
-            <span className="opacity-40 ml-6">✦</span>
+            <span className="opacity-40 ml-5">✦</span>
           </span>
         ))}
       </div>

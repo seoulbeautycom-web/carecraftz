@@ -1,27 +1,29 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { ArrowRight, Heart, MapPin, ShieldCheck } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 
-const VALUES = [
-  {
-    title: 'Trust first',
-    body: 'Every seller on CareCraftz is reviewed before their products appear. Authenticity is not optional — it is the product.',
-  },
-  {
-    title: 'Curated with care',
-    body: 'We are selective on purpose. Fewer brands, higher standards, and an assortment you can browse without second-guessing.',
-  },
-  {
-    title: 'Built for real skin',
-    body: 'From Dubai research roots to shoppers across the UAE and Pakistan, we design the experience around what skin actually needs.',
-  },
+const ROTATING = [
+  'the best products',
+  'verified sellers only',
+  'skincare you can trust',
+  'proof before the cart',
 ]
 
-const MILESTONES = [
-  { label: 'Origins', text: 'Born between the UAE and Pakistan with a simple idea: make trusted skincare easier to find.' },
-  { label: 'Verification', text: 'We built a seller review process — licenses, testing evidence, and claims checked before approval.' },
-  { label: 'Marketplace', text: 'CareCraftz Official sits alongside verified partners under the same quality bar.' },
-  { label: 'Today', text: 'A curated storefront where shoppers buy with certainty, and good brands earn a place through proof.' },
+const SEALS = [
+  { icon: '/about/icons/shield.png', label: 'Seller verified' },
+  { icon: '/about/icons/lab.png', label: 'Lab reviewed' },
+  { icon: '/about/icons/check.png', label: 'Claims checked' },
+  { icon: '/about/icons/sparkle.png', label: 'Curated for you' },
+]
+
+const MARQUEE = [
+  'Best products',
+  'Verified sellers',
+  'Document review',
+  'CareCraftz Official',
+  'UAE · Pakistan',
+  'Shop with certainty',
 ]
 
 function Fade({
@@ -36,13 +38,63 @@ function Fade({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay }}
+      viewport={{ once: true, margin: '-20px' }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay }}
     >
       {children}
     </motion.div>
+  )
+}
+
+function RotatingLine() {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % ROTATING.length), 2200)
+    return () => window.clearInterval(id)
+  }, [])
+
+  return (
+    <span className="relative block h-[1.15em] overflow-hidden" style={{ minWidth: '18ch' }}>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={ROTATING[index]}
+          className="absolute inset-x-0 top-0 italic text-[#8DEBD1]"
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
+          initial={{ opacity: 0, y: '40%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '-40%' }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {ROTATING[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+function LoopVideo({
+  src,
+  poster,
+  className = '',
+}: {
+  src: string
+  poster?: string
+  className?: string
+}) {
+  return (
+    <video
+      autoPlay
+      muted
+      loop
+      playsInline
+      poster={poster}
+      className={`absolute inset-0 w-full h-full object-cover ${className}`}
+    >
+      <source src={src} type="video/mp4" />
+    </video>
   )
 }
 
@@ -50,244 +102,237 @@ export default function AboutUs() {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-[#fbfcf4]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {/* Hero — editorial split, typical of premium skincare About pages */}
-      <section className="pt-28 pb-16 md:pt-32 md:pb-24 px-6 sm:px-10 lg:px-16">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div>
-            <Fade>
-              <p className="text-xs font-semibold tracking-[0.28em] uppercase text-[#5a7a5a] mb-4">Our story</p>
-              <h1
-                className="text-[#1a1a1a] leading-[1.05] mb-6"
-                style={{
-                  fontFamily: "'Instrument Serif', Georgia, serif",
-                  fontSize: 'clamp(2.75rem, 6vw, 4.75rem)',
-                }}
+    <div className="bg-[#fbfcf4] w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Full-bleed video hero */}
+      <section className="relative w-full md:min-h-[calc(100dvh-24px)] md:max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col">
+        <div className="relative flex-1 min-h-[420px]">
+          <LoopVideo src="/about/video-cream.mp4?v=3" poster="/about/hero-people.jpg" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0f1611]/90 via-[#0f1611]/55 to-[#0f1611]/25" />
+
+          <div className="relative z-10 h-full flex flex-col justify-end px-5 sm:px-8 lg:px-10 pb-8 pt-24 max-w-3xl">
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8DEBD1] mb-2"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
+            >
+              CareCraftz
+            </motion.p>
+            <h1
+              className="text-white leading-[1.02] mb-3"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 'clamp(2.1rem, 5vw, 3.4rem)',
+              }}
+            >
+              Focused to bring you
+              <RotatingLine />
+            </h1>
+            <p className="text-white/75 text-sm leading-snug max-w-md mb-4">
+              We verify sellers and curate hard — so every product on CareCraftz earns its place.
+            </p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={() => navigate('/shop')}
+                className="inline-flex items-center gap-1.5 bg-[#8DEBD1] hover:bg-white text-[#142016] text-[10px] font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
               >
-                Skincare you can
-                <br />
-                <span className="italic text-[#2d4a2d]">trust to shop.</span>
-              </h1>
-              <p className="text-[#5a5a5a] text-base md:text-lg leading-relaxed max-w-md mb-8">
-                CareCraftz is a curated skincare marketplace. We verify sellers, protect authenticity, and make it simple to find products that care for your skin — and your confidence.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => navigate('/shop')}
-                  className="inline-flex items-center gap-2 bg-[#1F331F] hover:bg-black text-white text-xs font-semibold uppercase tracking-wider px-7 py-3.5 rounded-full transition-colors"
-                >
-                  Shop the collection <ArrowRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => navigate('/why-us')}
-                  className="inline-flex items-center gap-2 border border-[#1F331F]/20 text-[#1F331F] text-xs font-semibold uppercase tracking-wider px-7 py-3.5 rounded-full hover:bg-[#1F331F]/5 transition-colors"
-                >
-                  Why CareCraftz
-                </button>
-              </div>
-            </Fade>
-          </div>
-
-          <Fade delay={0.12}>
-            <div className="relative">
-              <div className="aspect-[4/5] rounded-[2rem] overflow-hidden bg-[#e8efe4]">
-                <img
-                  src="/bestseller-lifestyle.png"
-                  alt="CareCraftz skincare"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="absolute -bottom-5 -left-3 sm:left-6 bg-white rounded-2xl px-5 py-4 shadow-lg max-w-[220px] border border-black/5">
-                <div className="flex items-center gap-2 text-[#1F331F] mb-1">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wider">UAE · Pakistan</span>
-                </div>
-                <p className="text-sm text-[#696a67] leading-snug">Rooted in two markets. Built for shoppers who want proof, not promises.</p>
-              </div>
-            </div>
-          </Fade>
-        </div>
-      </section>
-
-      {/* Origin narrative */}
-      <section className="px-6 sm:px-10 lg:px-16 py-20 md:py-28 border-t border-[#1a1a1a]/06">
-        <div className="max-w-3xl mx-auto text-center">
-          <Fade>
-            <p className="text-xs font-semibold tracking-[0.28em] uppercase text-[#5a7a5a] mb-4">How we began</p>
-            <h2
-              className="text-[#1a1a1a] leading-[1.15] mb-8"
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(2rem, 4vw, 3rem)',
-              }}
-            >
-              Beauty commerce was full of noise. We built a quieter, safer way to buy.
-            </h2>
-            <p className="text-[#5a5a5a] text-base md:text-lg leading-relaxed mb-6">
-              Too many shoppers were left guessing — Is this authentic? Who stands behind this formula? CareCraftz started as an answer to that doubt: a platform where verification happens before the first listing, not after a disappointed return.
-            </p>
-            <p className="text-[#5a5a5a] text-base md:text-lg leading-relaxed">
-              Today we curate trusted skincare for the UAE and Pakistan, with CareCraftz Official as one verified seller among partners who meet the same standards. Our job is the heavy lifting. Yours is simply to choose what feels right for your skin.
-            </p>
-          </Fade>
-        </div>
-      </section>
-
-      {/* Image band */}
-      <section className="px-6 sm:px-10 lg:px-16 pb-6">
-        <Fade>
-          <div className="max-w-6xl mx-auto rounded-[2rem] overflow-hidden aspect-[21/9] min-h-[220px] bg-[#e8efe4]">
-            <img
-              src="/herosec.png"
-              alt="CareCraftz products"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </Fade>
-      </section>
-
-      {/* Values */}
-      <section className="px-6 sm:px-10 lg:px-16 py-20 md:py-28">
-        <div className="max-w-6xl mx-auto">
-          <Fade>
-            <p className="text-xs font-semibold tracking-[0.28em] uppercase text-[#5a7a5a] mb-3">What we believe</p>
-            <h2
-              className="text-[#1a1a1a] mb-12 max-w-xl leading-tight"
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(1.85rem, 3.5vw, 2.75rem)',
-              }}
-            >
-              Principles that shape every listing
-            </h2>
-          </Fade>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
-            {VALUES.map((value, i) => (
-              <Fade key={value.title} delay={i * 0.08}>
-                <div className="border-t border-[#1a1a1a]/15 pt-6">
-                  <h3
-                    className="text-[#1a1a1a] mb-3"
-                    style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: '1.65rem' }}
-                  >
-                    {value.title}
-                  </h3>
-                  <p className="text-[#5a5a5a] text-sm leading-relaxed">{value.body}</p>
-                </div>
-              </Fade>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Split: mission + proof */}
-      <section className="px-6 sm:px-10 lg:px-16 pb-20 md:pb-28">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Fade>
-            <div className="h-full rounded-[2rem] bg-[#1F331F] text-white p-8 md:p-12 flex flex-col justify-between min-h-[320px]">
-              <div>
-                <ShieldCheck className="w-8 h-8 text-[#8DEBD1] mb-6" />
-                <h2
-                  className="leading-tight mb-4"
-                  style={{
-                    fontFamily: "'Instrument Serif', Georgia, serif",
-                    fontSize: 'clamp(1.85rem, 3vw, 2.5rem)',
-                  }}
-                >
-                  Our mission
-                </h2>
-                <p className="text-white/70 leading-relaxed max-w-md">
-                  Make authentic skincare the default — by verifying sellers, clarifying who you buy from, and giving good brands a place worthy of their craft.
-                </p>
-              </div>
+                Shop the best <ArrowRight className="w-3 h-3" />
+              </button>
               <button
                 onClick={() => navigate('/why-us')}
-                className="mt-10 self-start inline-flex items-center gap-2 text-sm font-semibold text-[#8DEBD1] hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 border border-white/35 text-white text-[10px] font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-white/10 transition-colors"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
               >
-                See how we verify <ArrowRight className="w-4 h-4" />
+                How we verify
               </button>
             </div>
-          </Fade>
-          <Fade delay={0.1}>
-            <div className="h-full rounded-[2rem] bg-[#e8efe4] p-8 md:p-12 flex flex-col justify-between min-h-[320px]">
-              <div>
-                <Heart className="w-8 h-8 text-[#1F331F] mb-6" />
-                <h2
-                  className="text-[#1a1a1a] leading-tight mb-4"
-                  style={{
-                    fontFamily: "'Instrument Serif', Georgia, serif",
-                    fontSize: 'clamp(1.85rem, 3vw, 2.5rem)',
-                  }}
+            <div className="flex flex-wrap gap-1.5">
+              {SEALS.slice(0, 3).map((s) => (
+                <span
+                  key={s.label}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-[10px] font-semibold text-white"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
                 >
-                  Who we serve
-                </h2>
-                <p className="text-[#5a5a5a] leading-relaxed max-w-md">
-                  Shoppers who want natural, researched, and authentic care — and partner brands ready to meet a real quality bar before they sell.
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/partners')}
-                className="mt-10 self-start inline-flex items-center gap-2 text-sm font-semibold text-[#1F331F] hover:opacity-70 transition-opacity"
-              >
-                Partner with us <ArrowRight className="w-4 h-4" />
-              </button>
+                  <img src={s.icon} alt="" className="w-3.5 h-3.5" />
+                  {s.label}
+                </span>
+              ))}
             </div>
-          </Fade>
+          </div>
+        </div>
+
+        <div className="bg-[#1F331F] py-2 overflow-hidden shrink-0 w-full">
+          <motion.div
+            className="flex whitespace-nowrap gap-7"
+            animate={{ x: ['0%', '-50%'] }}
+            transition={{ duration: 20, ease: 'linear', repeat: Infinity }}
+          >
+            {[0, 1].map((loop) => (
+              <div key={loop} className="flex gap-7 items-center px-4">
+                {MARQUEE.map((item) => (
+                  <span
+                    key={`${loop}-${item}`}
+                    className="inline-flex items-center gap-2 text-[#c8e6cf] text-[11px] font-semibold tracking-wide"
+                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-[#8DEBD1]" />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* Timeline */}
-      <section className="px-6 sm:px-10 lg:px-16 py-20 md:py-28 bg-[#f0f4ec]">
-        <div className="max-w-4xl mx-auto">
-          <Fade>
-            <p className="text-xs font-semibold tracking-[0.28em] uppercase text-[#5a7a5a] mb-3 text-center">The path</p>
+      {/* Section 2 — how we protect quality */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 py-5 bg-[#fbfcf4]">
+        <Fade>
+          <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
             <h2
-              className="text-[#1a1a1a] text-center mb-14 leading-tight"
+              className="text-[#142016] leading-tight max-w-xl"
               style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(1.85rem, 3.5vw, 2.75rem)',
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
               }}
             >
-              From idea to marketplace
+              Every seller is checked{' '}
+              <span className="italic text-[#2d5a3d]">before a product goes live.</span>
             </h2>
+            <p
+              className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#3d6b4a]"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
+            >
+              Our verification
+            </p>
+          </div>
+          <p className="text-[#566057] text-sm max-w-lg mb-4 leading-snug">
+            Licenses, lab evidence, and claims get reviewed first — so you never have to guess what’s real.
+          </p>
+        </Fade>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4">
+          {[
+            { src: '/about/video-foam.mp4?v=3', poster: '/about/hero-skincare.jpg', label: 'Clinic care' },
+            { src: '/about/video-serum.mp4?v=3', poster: '/about/clip-still-shop.jpg', label: 'Treatment' },
+            { src: '/about/video-mask.mp4?v=3', poster: '/about/hero-apply.jpg', label: 'Products' },
+          ].map((clip, i) => (
+            <Fade key={clip.label} delay={i * 0.06}>
+              <div className="relative rounded-xl overflow-hidden aspect-[4/3] bg-[#142016]">
+                <LoopVideo src={clip.src} poster={clip.poster} />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#142016]/70 via-transparent to-transparent" />
+                <span
+                  className="absolute bottom-2.5 left-2.5 text-white text-xs font-semibold"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  {clip.label}
+                </span>
+              </div>
+            </Fade>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          {SEALS.map((s, i) => (
+            <Fade key={s.label} delay={i * 0.04}>
+              <div className="rounded-xl bg-white border border-[#142016]/08 px-3 py-3 h-full flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#f0f7f1] flex items-center justify-center shrink-0">
+                  <img src={s.icon} alt="" className="w-6 h-6" />
+                </div>
+                <p
+                  className="text-xs font-semibold text-[#142016] leading-snug"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  {s.label}
+                </p>
+              </div>
+            </Fade>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 3 — shopping experience / shelf */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 pt-5 pb-0 bg-[#eeecfe]">
+        <div className="pb-5">
+          <Fade>
+            <div className="flex flex-wrap items-end justify-between gap-2 mb-2">
+              <h2
+                className="text-[#142016] leading-tight max-w-xl"
+                style={{
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 600,
+                  fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
+                }}
+              >
+                Then it lands on your shelf —{' '}
+                <span className="italic text-[#2d5a3d]">ready to use with confidence.</span>
+              </h2>
+              <p
+                className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#3d6b4a]"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                Your experience
+              </p>
+            </div>
+            <p className="text-[#566057] text-sm max-w-lg mb-4 leading-snug">
+              Browse verified stores, pick what fits your skin, and check out knowing CareCraftz already did the hard part.
+            </p>
           </Fade>
-          <div className="space-y-0">
-            {MILESTONES.map((item, i) => (
-              <Fade key={item.label} delay={i * 0.06}>
-                <div className="grid grid-cols-[88px_1fr] sm:grid-cols-[120px_1fr] gap-4 sm:gap-8 py-6 border-t border-[#1a1a1a]/10">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#5a7a5a] pt-1">{item.label}</p>
-                  <p className="text-[#1a1a1a] text-base md:text-lg leading-relaxed">{item.text}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+            {[
+              { src: '/about/hero-skincare.jpg', label: 'Expert care' },
+              { src: '/about/hero-apply.jpg', label: 'Crafted formulas' },
+              { src: '/about/hero-people.jpg', label: 'Daily ritual' },
+            ].map((shot, i) => (
+              <Fade key={shot.label} delay={i * 0.05}>
+                <div className="relative rounded-xl overflow-hidden aspect-[16/10] bg-white">
+                  <img
+                    src={shot.src}
+                    alt={shot.label}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <span
+                    className="absolute bottom-2 left-2 rounded-full bg-[#142016]/85 text-white text-[10px] font-semibold px-2.5 py-1"
+                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                  >
+                    {shot.label}
+                  </span>
                 </div>
               </Fade>
             ))}
-            <div className="border-t border-[#1a1a1a]/10" />
           </div>
-        </div>
-      </section>
 
-      {/* Closing CTA */}
-      <section className="px-6 sm:px-10 lg:px-16 py-20 md:py-28">
-        <Fade>
-          <div className="max-w-3xl mx-auto text-center">
-            <h2
-              className="text-[#1a1a1a] leading-tight mb-5"
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(2rem, 4vw, 3.25rem)',
-              }}
-            >
-              Ready to meet better skincare?
-            </h2>
-            <p className="text-[#5a5a5a] text-lg mb-10 max-w-xl mx-auto">
-              Explore verified sellers and CareCraftz Official — curated for skin that deserves certainty.
-            </p>
-            <button
-              onClick={() => navigate('/shop')}
-              className="inline-flex items-center gap-2 bg-[#FF8C69] hover:bg-[#ff7a50] text-[#1a1a1a] text-xs font-bold uppercase tracking-wider px-8 py-4 rounded-full transition-colors"
-            >
-              Shop now <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </Fade>
+          <Fade delay={0.08}>
+            <div className="rounded-xl bg-white/80 border border-[#142016]/08 px-4 py-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p
+                  className="text-[#142016] leading-tight"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 600,
+                    fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
+                  }}
+                >
+                  Start with something verified today.
+                </p>
+                <p className="text-[#566057] text-xs">
+                  CareCraftz Official and partner stores — same quality bar.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/shop')}
+                className="inline-flex items-center justify-center gap-1.5 bg-[#FF8C69] hover:bg-[#ff7a50] text-[#142016] text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors shrink-0"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                Shop now <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </Fade>
+        </div>
       </section>
     </div>
   )

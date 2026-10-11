@@ -1,6 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ArrowLeft, X, Plus, Trash2, Upload, ChevronDown } from 'lucide-react'
+import {
+  ArrowLeft,
+  X,
+  Plus,
+  Trash2,
+  Upload,
+  ChevronDown,
+  BarChart3,
+  Package2,
+  ShoppingBag,
+  Star,
+  MessageSquareText,
+} from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+
+export interface ProductPerformanceStats {
+  unitsSold: number
+  orderCount: number
+  approvedReviews: number
+  averageRating: number
+  lastSoldAt: string | null
+  latestReviewAt: string | null
+}
 
 interface Product {
   id?: string
@@ -67,18 +88,32 @@ interface Props {
   onSaved: (productId?: string) => void
   layout?: 'modal' | 'page'
   closeOnSave?: boolean
+  stats?: ProductPerformanceStats | null
+  statsError?: string
 }
 
-type ModalTab = 'basics' | 'branding' | 'details' | 'sections' | 'blog' | 'reviews'
+type ModalTab = 'basics' | 'branding' | 'details' | 'sections' | 'blog' | 'reviews' | 'stats'
 
-const TABS: { key: ModalTab; label: string }[] = [
+const TABS: { key: ModalTab; label: string; pageOnly?: boolean }[] = [
   { key: 'basics', label: 'Basics' },
   { key: 'branding', label: 'Branding' },
   { key: 'details', label: 'How To Use & Ingredients' },
   { key: 'sections', label: 'Page Sections' },
   { key: 'blog', label: 'Blog Assignment' },
   { key: 'reviews', label: 'Reviews' },
+  { key: 'stats', label: 'Stats', pageOnly: true },
 ]
+
+const formatStatNumber = (value: number) => new Intl.NumberFormat('en-US').format(value)
+const formatStatDate = (value: string | null) => {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+const formatStatRating = (value: number) => `${value > 0 ? value.toFixed(1) : '0.0'}/5`
 
 const EMPTY_PRODUCT: Product = {
   name: '', subtitle: '', description: '', how_to_use: '', ingredients: '',
@@ -229,8 +264,17 @@ const buildProductUploadErrorMessage = (label: string, error: unknown): string =
   return `We couldn't upload the ${label}. ${reason}`
 }
 
-export default function ProductModal({ product, onClose, onSaved, layout = 'modal', closeOnSave = true }: Props) {
+export default function ProductModal({
+  product,
+  onClose,
+  onSaved,
+  layout = 'modal',
+  closeOnSave = true,
+  stats = null,
+  statsError = '',
+}: Props) {
   const isPageLayout = layout === 'page'
+  const visibleTabs = TABS.filter((tab) => isPageLayout || !tab.pageOnly)
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
   const [form, setForm] = useState<Product>(buildProductForm(product))
   const [sections, setSections] = useState<ProductSection[]>([])
@@ -489,13 +533,15 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
 
   return (
     <div className={isPageLayout ? 'w-full' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center'}>
-      <div className={isPageLayout ? 'flex w-full flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
+      <div className={isPageLayout ? 'flex w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+        <div className={`flex items-center justify-between border-b border-gray-100 ${isPageLayout ? 'px-5 py-3.5' : 'px-8 py-5'}`}>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{product?.id ? 'Edit Product' : 'Add Product'}</h2>
-            {product?.id && <p className="text-xs text-gray-400 mt-0.5">ID: {product.id}</p>}
+            <h2 className={`font-bold text-gray-900 ${isPageLayout ? 'text-lg' : 'text-xl'}`}>
+              {product?.id ? 'Edit product' : 'Add product'}
+            </h2>
+            {product?.id && <p className="text-xs text-gray-400 mt-0.5 font-mono truncate max-w-[280px] sm:max-w-md">ID: {product.id}</p>}
           </div>
           {isPageLayout ? (
             <button
@@ -513,32 +559,57 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
         </div>
 
         {error && (
-          <div className="px-8 pt-4">
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert" aria-live="polite">
+          <div className={isPageLayout ? 'px-5 pt-3' : 'px-8 pt-4'}>
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700" role="alert" aria-live="polite">
               {error}
             </div>
           </div>
         )}
 
-        {/* Tab bar */}
-        <div className="flex gap-1 px-8 pt-4 border-b border-gray-100 overflow-x-auto">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-xl whitespace-nowrap transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {/* Modal: horizontal tabs */}
+        {!isPageLayout && (
+          <div className="flex gap-1 px-8 pt-4 border-b border-gray-100 overflow-x-auto">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 text-sm font-medium rounded-t-xl whitespace-nowrap transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Body */}
-        <div className={isPageLayout ? 'px-8 py-6' : 'flex-1 overflow-y-auto px-8 py-6'}>
+        {/* Page: left sections + content | Modal: content only */}
+        <div className={isPageLayout ? 'flex flex-col md:flex-row min-h-[520px]' : 'contents'}>
+          {isPageLayout && (
+            <aside className="md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-gray-100 bg-gray-50/80 p-3">
+              <p className="px-2.5 mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Sections</p>
+              <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+                {visibleTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      activeTab === tab.key
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </aside>
+          )}
+
+          <div className={isPageLayout ? 'flex-1 min-w-0 px-5 py-4 md:px-6 md:py-5' : 'flex-1 overflow-y-auto px-8 py-6'}>
 
           {/* ── TAB: BASICS ── */}
           {activeTab === 'basics' && (
@@ -983,10 +1054,70 @@ export default function ProductModal({ product, onClose, onSaved, layout = 'moda
             </div>
           )}
 
+          {/* ── TAB: STATS ── */}
+          {activeTab === 'stats' && (
+            <div className="space-y-4">
+              {!product?.id ? (
+                <div className="py-10 text-center border border-dashed border-gray-200 rounded-xl">
+                  <BarChart3 className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Save the product first to see performance stats.</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Performance</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">From completed orders and approved reviews.</p>
+                  </div>
+
+                  {statsError && (
+                    <div className="rounded-xl bg-red-50 border border-red-100 px-3 py-2.5 text-sm text-red-700">
+                      {statsError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      { icon: Package2, label: 'Units sold', value: formatStatNumber(stats?.unitsSold ?? 0), tone: 'bg-indigo-50 text-indigo-600' },
+                      { icon: ShoppingBag, label: 'Orders', value: formatStatNumber(stats?.orderCount ?? 0), tone: 'bg-emerald-50 text-emerald-600' },
+                      { icon: Star, label: 'Avg rating', value: formatStatRating(stats?.averageRating ?? 0), tone: 'bg-amber-50 text-amber-600' },
+                      { icon: MessageSquareText, label: 'Approved reviews', value: formatStatNumber(stats?.approvedReviews ?? 0), tone: 'bg-violet-50 text-violet-600' },
+                    ].map((card) => (
+                      <div key={card.label} className="rounded-xl border border-gray-200 bg-white px-3.5 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{card.label}</p>
+                          <div className={`rounded-lg p-1.5 ${card.tone}`}>
+                            <card.icon className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xl font-semibold text-gray-900">{card.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3 space-y-2.5">
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span className="text-gray-500">Last sale</span>
+                      <span className="font-medium text-gray-900">{formatStatDate(stats?.lastSoldAt ?? null)}</span>
+                    </div>
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span className="text-gray-500">Latest review</span>
+                      <span className="font-medium text-gray-900">{formatStatDate(stats?.latestReviewAt ?? null)}</span>
+                    </div>
+                    <div className="flex justify-between gap-3 text-sm">
+                      <span className="text-gray-500">Sales basis</span>
+                      <span className="font-medium text-gray-900">Delivered orders only</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-8 py-5 border-t border-gray-100 bg-gray-50/50">
+        <div className={`flex items-center justify-between border-t border-gray-100 bg-gray-50/50 ${isPageLayout ? 'px-5 py-3.5' : 'px-8 py-5'}`}>
           <span />
           <div className="flex gap-3">
             <button onClick={onClose} className="px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">

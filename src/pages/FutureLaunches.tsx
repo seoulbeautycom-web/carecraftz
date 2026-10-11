@@ -8,34 +8,34 @@ const TARGET_RADIUS = 650
 
 const orbitImagesData = [
   {
-    src: '/future-launches/wild-vetiver.jpg',
+    src: '/future-launches/wild-vetiver.png',
     title: 'Wild Vetiver',
     desc: 'Smoky vetiver wrapped in saffron and leather — a grounded, untamed signature.',
   },
   {
-    src: '/future-launches/radiant-osmanthus.jpg',
+    src: '/future-launches/radiant-osmanthus.png',
     title: 'Radiant Osmanthus',
     desc: 'Apricot-tinged osmanthus over soft musks. Quietly luminous, never loud.',
   },
   {
-    src: '/future-launches/vibrant-hibiscus.jpg',
+    src: '/future-launches/vibrant-hibiscus.png',
     title: 'Vibrant Hibiscus',
     desc: 'Bright hibiscus and pink pepper resting on creamy sandalwood.',
   },
   {
-    src: '/future-launches/mellow-heliotrope.jpg',
+    src: '/future-launches/mellow-heliotrope.png',
     title: 'Mellow Heliotrope',
     desc: 'Almond, vanilla and heliotrope petals — a powdery, hushed warmth.',
   },
   {
-    src: '/future-launches/magnetic-amber.jpg',
-    title: 'Magnetic Amber',
-    desc: 'Resinous amber, oud and rich woods. The collection\'s deepest note.',
+    src: '/future-launches/exotic-musk.png',
+    title: 'Exotic Musk',
+    desc: 'Warm musk and dark woods — deep, skin-close, quietly intense.',
   },
   {
-    src: '/future-launches/crystal-edition.jpg',
-    title: 'Crystal Edition',
-    desc: 'A limited cut of the bottle — etched facets, lavender pour, leather collar.',
+    src: '/future-launches/majestic-cashmere.png',
+    title: 'Majestic Cashmere',
+    desc: 'Soft cashmere woods and warm musk — the collection\'s quietest luxury.',
   },
 ]
 
@@ -348,16 +348,16 @@ function StaySection() {
   }
 
   return (
-    <section className="relative w-full overflow-hidden" style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}>
+    <section className="relative w-full overflow-hidden" style={{ minHeight: '100%', backgroundColor: '#ffffff' }}>
       <img
-        src="/future-launches/magnetic-amber.jpg"
+        src="/future-launches/stay-bg.jpg"
         alt=""
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 w-full pointer-events-none select-none"
-        style={{ objectFit: 'cover', objectPosition: 'center bottom' }}
+        style={{ objectFit: 'cover', objectPosition: 'center bottom', maxHeight: '72%' }}
       />
 
-      <div className="relative max-w-[1480px] mx-auto px-8 md:px-16 pt-20 md:pt-24 pb-20 md:pb-24 min-h-screen flex flex-col" style={{ gap: '32px' }}>
+      <div className="relative max-w-[1480px] mx-auto px-8 md:px-16 pt-20 md:pt-24 pb-20 md:pb-24 min-h-[calc(100dvh-24px)] flex flex-col" style={{ gap: '32px' }}>
         <motion.div {...blurUp}>
           <div
             style={{
@@ -485,10 +485,12 @@ function FutureLaunchesInner() {
     orbitProgress.set(orbitProgress.get() + frameSpeed)
   })
 
+  const stageH = 'calc(100dvh - 24px)'
+
   return (
     <>
       <div ref={containerRef} className="relative w-full h-[600vh] bg-black">
-        <div className="sticky top-0 w-full h-screen overflow-hidden text-white">
+        <div className="sticky top-0 w-full overflow-hidden text-white" style={{ height: stageH }}>
           {/* Video background */}
           <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-0">
             <source src={VIDEO_SRC} type="video/mp4" />
@@ -547,24 +549,24 @@ function FutureLaunchesInner() {
             </div>
           </motion.div>
 
-          {/* Clip-path reveal with orbit */}
+          {/* Clip-path reveal with orbit — sized to the cream stage, not the browser viewport */}
           <motion.div
             className="absolute z-20 flex items-center justify-center overflow-hidden"
             style={{
               clipPath,
               rotate: -15,
-              width: '150vw',
-              height: '150vh',
-              left: '-25vw',
-              top: '-25vh',
+              width: '150%',
+              height: '150%',
+              left: '-25%',
+              top: '-25%',
             }}
           >
             <div className="absolute inset-0 bg-white" />
             <div
               className="relative flex flex-col items-center justify-center"
-              style={{ width: '100vw', height: '100vh', transform: 'rotate(15deg)' }}
+              style={{ width: '100%', height: '100%', transform: 'rotate(15deg)' }}
             >
-              <motion.div className="w-[90vw] max-w-[1200px] aspect-square relative z-0">
+              <motion.div className="w-[90%] max-w-[1200px] aspect-square relative z-0">
                 <OrbitImages
                   images={orbitImagesData}
                   direction="normal"

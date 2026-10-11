@@ -92,9 +92,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signInWithOAuth = async (provider: 'google' | 'apple') => {
-    const searchParams = new URLSearchParams(window.location.search)
+  const signInWithOAuth = async (provider: 'google' | 'apple', options?: { next?: string }) => {
+    const searchParams = new URLSearchParams()
     searchParams.set('signin', window.location.pathname.startsWith('/login') ? '/login' : '/signin')
+    if (options?.next?.startsWith('/')) {
+      searchParams.set('next', options.next)
+    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,

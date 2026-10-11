@@ -11,9 +11,20 @@ interface CartItem {
   currency: 'PKR' | 'AED'
 }
 
+type AddToCartInput = {
+  id: string
+  name: string
+  price: number
+  image: string
+  location?: 'Pakistan' | 'UAE'
+  delivery_charge?: number
+  currency?: 'PKR' | 'AED'
+  quantity?: number
+}
+
 interface CartContextType {
   items: CartItem[]
-  addToCart: (product: { id: string; name: string; price: number; image: string; location?: 'Pakistan' | 'UAE'; delivery_charge?: number; currency?: 'PKR' | 'AED' }) => void
+  addToCart: (product: AddToCartInput) => void
   removeFromCart: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
@@ -38,19 +49,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('cart', JSON.stringify(items))
   }, [items])
 
-  const addToCart = (product: { id: string; name: string; price: number; image: string; location?: 'Pakistan' | 'UAE'; delivery_charge?: number; currency?: 'PKR' | 'AED' }) => {
+  const addToCart = (product: AddToCartInput) => {
+    const qty = Math.max(1, product.quantity ?? 1)
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id)
       if (existing) {
         return prev.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + qty }
             : item
         )
       }
       const newItem: CartItem = {
-        ...product,
-        quantity: 1,
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: qty,
         location: product.location || 'UAE',
         delivery_charge: product.delivery_charge || 0,
         currency: product.currency || 'AED'

@@ -16,7 +16,7 @@ const NAV_ITEMS = [
 export default function NewHeader() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { items } = useCart()
+  const { totalItems } = useCart()
   const pageShell = usePageShellOptional()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -40,7 +40,16 @@ export default function NewHeader() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [pageShell])
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
+  const isActive = (path: string) => {
+    if (path === '/shop') {
+      return (
+        location.pathname === '/shop' ||
+        location.pathname.startsWith('/shop/') ||
+        location.pathname.startsWith('/product/')
+      )
+    }
+    return location.pathname === path || location.pathname.startsWith(path + '/')
+  }
 
   const pillBase = scrolled
     ? 'bg-white/50 backdrop-blur-md border border-white/30 shadow-sm'
@@ -92,9 +101,9 @@ export default function NewHeader() {
             className="p-1.5 hover:bg-black/5 rounded-full transition-colors relative"
           >
             <ShoppingBag className="w-5 h-5 text-[#2b2b2b]" />
-            {items.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#ff6b6b] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {items.length}
+            {totalItems > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-[#ff6b6b] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {totalItems > 99 ? '99+' : totalItems}
               </span>
             )}
           </button>

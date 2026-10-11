@@ -15,7 +15,7 @@ export interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthActionError }>
   signInWithPhone: (phone: string) => Promise<{ error: AuthActionError; confirmationRequired?: boolean }>
   verifyPhoneOtp: (phone: string, token: string) => Promise<{ error: AuthActionError }>
-  signInWithOAuth: (provider: 'google' | 'apple') => Promise<{ error: AuthActionError }>
+  signInWithOAuth: (provider: 'google' | 'apple', options?: { next?: string }) => Promise<{ error: AuthActionError }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthActionError }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthActionError }>

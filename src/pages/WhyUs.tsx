@@ -1,21 +1,25 @@
-import { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useInView,
-  useMotionTemplate,
-} from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, BadgeCheck, Eye, FlaskConical, ShieldCheck, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import PageFrame from '../components/PageFrame'
-import { usePageShell } from '../contexts/PageShellContext'
+
+const ROTATING = ['verified sellers', 'proof before the cart', 'authentic skincare', 'certainty, not guesswork']
+
+const MARQUEE = [
+  'Verified sellers',
+  'Authentic products',
+  'Document review',
+  'Selective curation',
+  'CareCraftz Official',
+  'Trust first',
+]
 
 const PILLARS = [
   {
     n: '01',
     title: 'We verify sellers',
-    body: 'Business licenses, certifications, and lab evidence are reviewed before anything goes live.',
+    body: 'Licenses, certifications, and lab evidence are reviewed before anything goes live.',
     accent: '#FF8C69',
   },
   {
@@ -27,7 +31,7 @@ const PILLARS = [
   {
     n: '03',
     title: 'We make trust visible',
-    body: 'Official and Verified Seller badges show you who passed our checklist — not marketing fluff.',
+    body: 'Official and Verified badges show who passed — not marketing fluff.',
     accent: '#7EC8E3',
   },
   {
@@ -53,393 +57,337 @@ const CONTRAST = [
   { skip: 'Hope it is authentic', ours: 'Checklist completed before approval' },
 ]
 
-function Reveal({
+function Fade({
   children,
-  className = '',
   delay = 0,
+  className = '',
 }: {
   children: React.ReactNode
-  className?: string
   delay?: number
+  className?: string
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
-
   return (
     <motion.div
-      ref={ref}
       className={className}
-      initial={{ opacity: 0, y: 36 }}
-      animate={inView ? { opacity: 1, y: 0 } : undefined}
-      transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1], delay }}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-20px' }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay }}
     >
       {children}
     </motion.div>
   )
 }
 
-function WhyUsInner() {
-  const navigate = useNavigate()
-  const { scrollRef } = usePageShell()
-  const heroRef = useRef<HTMLElement>(null)
-  const pillarsRef = useRef<HTMLElement>(null)
+function RotatingLine() {
+  const [index, setIndex] = useState(0)
 
-  const { scrollYProgress: heroProgress } = useScroll({
-    target: heroRef,
-    container: scrollRef,
-    offset: ['start start', 'end start'],
-  })
-
-  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.12])
-  const heroOpacity = useTransform(heroProgress, [0, 0.85], [1, 0.35])
-  const heroY = useTransform(heroProgress, [0, 1], ['0%', '12%'])
-  const titleY = useTransform(heroProgress, [0, 1], [0, 80])
-
-  const { scrollYProgress: pillarsProgress } = useScroll({
-    target: pillarsRef,
-    container: scrollRef,
-    offset: ['start end', 'end start'],
-  })
-  const pillarsX = useTransform(pillarsProgress, [0, 1], ['4%', '-18%'])
-  const glow = useTransform(pillarsProgress, [0, 0.5, 1], [0.2, 0.55, 0.25])
-  const glowFilter = useMotionTemplate`blur(${useTransform(glow, (v) => 40 + v * 40)}px)`
+  useEffect(() => {
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % ROTATING.length), 2200)
+    return () => window.clearInterval(id)
+  }, [])
 
   return (
-    <div className="overflow-x-hidden" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {/* ── HERO ── */}
-      <section ref={heroRef} className="relative min-h-[100vh] flex items-end overflow-hidden">
-        <motion.div className="absolute inset-0" style={{ scale: heroScale, y: heroY, opacity: heroOpacity }}>
+    <span className="relative block h-[1.15em] overflow-hidden" style={{ minWidth: '16ch' }}>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={ROTATING[index]}
+          className="absolute inset-x-0 top-0 italic text-[#8DEBD1]"
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600 }}
+          initial={{ opacity: 0, y: '40%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '-40%' }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {ROTATING[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+function WhyUsInner() {
+  const navigate = useNavigate()
+
+  return (
+    <div className="bg-[#fbfcf4] w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Hero + marquee — one laptop fold */}
+      <section className="relative w-full md:min-h-[calc(100dvh-24px)] md:max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col">
+        <div className="relative flex-1 min-h-[360px]">
           <img
             src="/bestseller-lifestyle.png"
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f1410] via-[#0f1410]/55 to-[#0f1410]/20" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,140,105,0.35),transparent_55%)]" />
-        </motion.div>
+          <div className="absolute inset-0 bg-[#fbfcf4]/25" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0f1611]/90 via-[#0f1611]/55 to-[#0f1611]/25" />
 
-        <motion.div
-          className="relative z-10 w-full px-6 sm:px-10 lg:px-16 pb-16 md:pb-20 pt-32"
-          style={{ y: titleY }}
-        >
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="text-[#FF8C69] text-xs sm:text-sm font-semibold tracking-[0.35em] uppercase mb-5"
-          >
-            CareCraftz
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="text-white max-w-4xl leading-[0.95] mb-6"
-            style={{
-              fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: 'clamp(3.2rem, 9vw, 7rem)',
-            }}
-          >
-            Why buy
-            <br />
-            <span className="italic text-[#8DEBD1]">anywhere else?</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-white/75 text-base sm:text-lg max-w-md mb-8 leading-relaxed"
-          >
-            We verify every seller. You shop authentic skincare with confidence — not guesswork.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.55 }}
-            className="flex flex-wrap gap-3"
-          >
-            <button
-              onClick={() => navigate('/shop')}
-              className="group inline-flex items-center gap-2 bg-[#FF8C69] hover:bg-[#ff7a50] text-[#1a1a1a] text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-full transition-colors"
+          <div className="relative z-10 h-full flex flex-col justify-end px-5 sm:px-8 lg:px-10 pb-6 pt-24 max-w-3xl">
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8DEBD1] mb-2"
+              style={{ fontFamily: "'Poppins', sans-serif" }}
             >
-              Shop verified
-              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-            </button>
-            <button
-              onClick={() => {
-                const target = document.getElementById('why-proof')
-                const shell = scrollRef.current
-                if (!target || !shell) return
-                const top = target.getBoundingClientRect().top - shell.getBoundingClientRect().top + shell.scrollTop - 24
-                shell.scrollTo({ top, behavior: 'smooth' })
+              Why CareCraftz
+            </motion.p>
+            <h1
+              className="text-white leading-[1.02] mb-3"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 'clamp(2.1rem, 5vw, 3.4rem)',
               }}
-              className="inline-flex items-center gap-2 border border-white/30 text-white text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-full hover:bg-white/10 transition-colors"
             >
-              See how we verify
-            </button>
-          </motion.div>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-6 right-6 md:right-12 text-white/40 text-[10px] tracking-[0.3em] uppercase hidden sm:block"
-          animate={{ opacity: [0.3, 0.7, 0.3] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          Scroll
-        </motion.div>
-      </section>
-
-      {/* ── MARQUEE ── */}
-      <section className="bg-[#1a1a1a] py-4 overflow-hidden border-y border-white/5">
-        <motion.div
-          className="flex whitespace-nowrap gap-10"
-          animate={{ x: ['0%', '-50%'] }}
-          transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
-        >
-          {[...Array(2)].map((_, loop) => (
-            <div key={loop} className="flex gap-10 items-center">
-              {['Verified sellers', 'Authentic products', 'Document review', 'Selective curation', 'CareCraftz Official', 'Trust first'].map((item) => (
-                <span key={`${loop}-${item}`} className="inline-flex items-center gap-3 text-[#8DEBD1] text-sm font-semibold tracking-wide">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF8C69]" />
-                  {item}
-                </span>
-              ))}
+              Shop with
+              <RotatingLine />
+            </h1>
+            <p className="text-white/75 text-sm leading-snug max-w-md mb-4">
+              We verify every seller. You shop authentic skincare with confidence — not guesswork.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate('/shop')}
+                className="inline-flex items-center gap-1.5 bg-[#8DEBD1] hover:bg-white text-[#142016] text-[10px] font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                Shop verified <ArrowRight className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => document.getElementById('why-proof')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="inline-flex items-center gap-1.5 border border-white/35 text-white text-[10px] font-semibold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-white/10 transition-colors"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                How we verify
+              </button>
             </div>
-          ))}
-        </motion.div>
+          </div>
+        </div>
+
+        <div className="bg-[#1F331F] py-2 overflow-hidden shrink-0 w-full">
+          <motion.div
+            className="flex whitespace-nowrap gap-7"
+            animate={{ x: ['0%', '-50%'] }}
+            transition={{ duration: 20, ease: 'linear', repeat: Infinity }}
+          >
+            {[0, 1].map((loop) => (
+              <div key={loop} className="flex gap-7 items-center px-4">
+                {MARQUEE.map((item) => (
+                  <span
+                    key={`${loop}-${item}`}
+                    className="inline-flex items-center gap-2 text-[#c8e6cf] text-[11px] font-semibold tracking-wide"
+                    style={{ fontFamily: "'Poppins', sans-serif" }}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-[#8DEBD1]" />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </motion.div>
+        </div>
       </section>
 
-      {/* ── MANIFESTO ── */}
-      <section className="px-6 sm:px-10 lg:px-16 py-24 md:py-32 bg-[#fbfcf4]">
-        <Reveal>
-          <p className="text-[#FF8C69] text-xs font-bold tracking-[0.3em] uppercase mb-4">The CareCraftz difference</p>
-        </Reveal>
-        <Reveal delay={0.08}>
+      {/* Manifesto — compact */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 py-5 bg-[#fbfcf4]">
+        <Fade>
+          <p
+            className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#3d6b4a] mb-2"
+            style={{ fontFamily: "'Poppins', sans-serif" }}
+          >
+            The CareCraftz difference
+          </p>
           <h2
-            className="text-[#1a1a1a] max-w-4xl leading-[1.05] mb-8"
+            className="text-[#142016] leading-tight max-w-2xl mb-2"
             style={{
-              fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: 'clamp(2.4rem, 5.5vw, 4.5rem)',
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 600,
+              fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
             }}
           >
-            Most stores sell products.
-            <br />
-            <span className="italic text-[#2b2b2b]/70">We sell certainty.</span>
+            Most stores sell products.{' '}
+            <span className="italic text-[#2d5a3d]">We sell certainty.</span>
           </h2>
-        </Reveal>
-        <Reveal delay={0.15}>
-          <p className="text-[#696a67] text-lg max-w-2xl leading-relaxed">
-            Counterfeits and unverified claims flood beauty commerce. CareCraftz exists so you never have to wonder
-            who stands behind what you put on your skin.
+          <p className="text-[#566057] text-sm max-w-lg leading-snug">
+            Counterfeits and unverified claims flood beauty commerce. CareCraftz exists so you never have to wonder who stands behind what you put on your skin.
           </p>
-        </Reveal>
+        </Fade>
       </section>
 
-      {/* ── PILLARS HORIZONTAL ── */}
-      <section ref={pillarsRef} className="relative bg-[#121612] py-20 md:py-28 overflow-hidden">
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute -top-20 left-1/3 w-[420px] h-[420px] rounded-full bg-[#FF8C69]/30"
-          style={{ filter: glowFilter, opacity: glow }}
-        />
-        <div className="px-6 sm:px-10 lg:px-16 mb-10">
-          <Reveal>
+      {/* Pillars — dense grid */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 py-5 bg-[#142016]">
+        <Fade>
+          <div className="flex flex-wrap items-end justify-between gap-2 mb-3">
             <h2
               className="text-white leading-tight"
               style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(2rem, 4vw, 3.25rem)',
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: 600,
+                fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
               }}
             >
               Four reasons people stay
             </h2>
-          </Reveal>
-        </div>
-        <motion.div style={{ x: pillarsX }} className="flex gap-5 px-6 sm:px-10 w-max">
+          </div>
+        </Fade>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {PILLARS.map((pillar, i) => (
-            <motion.article
-              key={pillar.n}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ delay: i * 0.08, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={{ y: -8 }}
-              className="w-[280px] sm:w-[320px] rounded-[2rem] p-7 sm:p-8 border border-white/10 bg-white/[0.04] backdrop-blur-sm"
-            >
-              <span className="text-xs font-bold tracking-[0.25em]" style={{ color: pillar.accent }}>
-                {pillar.n}
-              </span>
-              <h3
-                className="text-white mt-4 mb-3 leading-tight"
-                style={{ fontFamily: "'Instrument Serif', Georgia, serif", fontSize: '1.85rem' }}
-              >
-                {pillar.title}
-              </h3>
-              <p className="text-white/60 text-sm leading-relaxed">{pillar.body}</p>
-              <div className="mt-8 h-1 w-16 rounded-full" style={{ backgroundColor: pillar.accent }} />
-            </motion.article>
+            <Fade key={pillar.n} delay={i * 0.04}>
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-3.5 h-full">
+                <p
+                  className="text-[10px] font-bold tracking-[0.2em] mb-1.5"
+                  style={{ color: pillar.accent, fontFamily: "'Poppins', sans-serif" }}
+                >
+                  {pillar.n}
+                </p>
+                <h3
+                  className="text-white text-sm font-semibold leading-snug mb-1"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  {pillar.title}
+                </h3>
+                <p className="text-white/60 text-xs leading-snug">{pillar.body}</p>
+                <div className="mt-3 h-0.5 w-10 rounded-full" style={{ backgroundColor: pillar.accent }} />
+              </div>
+            </Fade>
           ))}
-        </motion.div>
+        </div>
       </section>
 
-      {/* ── PROOF / CHECKLIST ── */}
-      <section id="why-proof" className="px-6 sm:px-10 lg:px-16 py-24 md:py-32 bg-[#fbfcf4]">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      {/* Proof checklist */}
+      <section id="why-proof" className="w-full px-4 sm:px-5 lg:px-6 py-5 bg-[#fbfcf4]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
           <div className="lg:col-span-5">
-            <Reveal>
-              <p className="text-[#FF8C69] text-xs font-bold tracking-[0.3em] uppercase mb-4">How verification works</p>
+            <Fade>
+              <p
+                className="text-[10px] font-bold tracking-[0.22em] uppercase text-[#3d6b4a] mb-2"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
+              >
+                How verification works
+              </p>
               <h2
-                className="text-[#1a1a1a] leading-[1.05] mb-5"
+                className="text-[#142016] leading-tight mb-2"
                 style={{
-                  fontFamily: "'Instrument Serif', Georgia, serif",
-                  fontSize: 'clamp(2.2rem, 4vw, 3.5rem)',
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: 600,
+                  fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
                 }}
               >
-                Nothing lists
-                <br />
-                <span className="italic">until it passes.</span>
+                Nothing lists{' '}
+                <span className="italic text-[#2d5a3d]">until it passes.</span>
               </h2>
-              <p className="text-[#696a67] leading-relaxed mb-8">
-                Sellers upload licenses, certifications, and lab reports. Our team completes a structured checklist
-                before a store can go active on CareCraftz.
+              <p className="text-[#566057] text-sm leading-snug mb-3 max-w-md">
+                Sellers upload licenses, certifications, and lab reports. Our team completes a structured checklist before a store can go active.
               </p>
               <button
                 onClick={() => navigate('/partners')}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#1a1a1a] underline underline-offset-4 decoration-[#FF8C69] hover:decoration-2"
+                className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#142016] hover:opacity-70"
+                style={{ fontFamily: "'Poppins', sans-serif" }}
               >
-                Become a verified seller <ArrowRight className="w-4 h-4" />
+                Become a verified seller <ArrowRight className="w-3 h-3" />
               </button>
-            </Reveal>
+            </Fade>
           </div>
 
-          <div className="lg:col-span-7 space-y-3">
+          <div className="lg:col-span-7 space-y-1.5">
             {CHECKLIST.map((item, i) => {
               const Icon = item.icon
               return (
-                <motion.div
-                  key={item.label}
-                  initial={{ opacity: 0, x: 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, margin: '-40px' }}
-                  transition={{ delay: i * 0.1, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-                  className="group flex items-center gap-4 rounded-2xl bg-white border border-[#1a1a1a]/08 px-5 py-4 shadow-[4px_4px_0_0_#1a1a1a14] hover:shadow-[6px_6px_0_0_#FF8C6933] hover:-translate-y-0.5 transition-all"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-[#1a1a1a] text-[#8DEBD1] flex items-center justify-center flex-shrink-0 group-hover:bg-[#FF8C69] group-hover:text-[#1a1a1a] transition-colors">
-                    <Icon className="w-5 h-5" />
+                <Fade key={item.label} delay={i * 0.04}>
+                  <div className="flex items-center gap-2.5 rounded-xl bg-white border border-[#142016]/08 px-3 py-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-[#f0f7f1] text-[#2d5a3d] flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-xs font-semibold text-[#142016]"
+                        style={{ fontFamily: "'Poppins', sans-serif" }}
+                      >
+                        {item.label}
+                      </p>
+                      <p className="text-[11px] text-[#696a67]">Required before approval</p>
+                    </div>
+                    <span className="text-[#1db954] text-sm font-bold">✓</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[#1a1a1a] font-semibold text-sm sm:text-base">{item.label}</p>
-                    <p className="text-[#696a67] text-xs mt-0.5">Required before approval</p>
-                  </div>
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.25 + i * 0.1, type: 'spring', stiffness: 260, damping: 16 }}
-                    className="text-[#1db954] font-bold text-lg"
-                  >
-                    ✓
-                  </motion.span>
-                </motion.div>
+                </Fade>
               )
             })}
           </div>
         </div>
       </section>
 
-      {/* ── CONTRAST ── */}
-      <section className="px-6 sm:px-10 lg:px-16 py-24 md:py-28 bg-[#FF8C69]">
-        <Reveal>
+      {/* Contrast */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 py-5 bg-[#FF8C69]">
+        <Fade>
           <h2
-            className="text-[#1a1a1a] text-center mb-14 leading-tight"
+            className="text-[#142016] leading-tight mb-3"
             style={{
-              fontFamily: "'Instrument Serif', Georgia, serif",
-              fontSize: 'clamp(2rem, 4vw, 3.25rem)',
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 600,
+              fontSize: 'clamp(1.35rem, 2.6vw, 1.85rem)',
             }}
           >
             Elsewhere vs CareCraftz
           </h2>
-        </Reveal>
-        <div className="max-w-4xl mx-auto space-y-3">
-          <div className="hidden sm:grid grid-cols-2 gap-3 mb-2 px-2">
-            <p className="text-[#1a1a1a]/60 text-xs font-bold uppercase tracking-widest">Typical store</p>
-            <p className="text-[#1a1a1a] text-xs font-bold uppercase tracking-widest">CareCraftz</p>
-          </div>
+        </Fade>
+        <div className="hidden sm:grid grid-cols-2 gap-2 mb-1.5 px-0.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#142016]/55">Typical store</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#142016]">CareCraftz</p>
+        </div>
+        <div className="space-y-1.5">
           {CONTRAST.map((row, i) => (
-            <motion.div
-              key={row.ours}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.6 }}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-            >
-              <div className="rounded-2xl bg-[#1a1a1a]/10 px-5 py-4 text-[#1a1a1a]/70 text-sm line-through decoration-[#1a1a1a]/40">
-                {row.skip}
+            <Fade key={row.ours} delay={i * 0.04}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <div className="rounded-xl bg-[#142016]/10 px-3 py-2.5 text-[#142016]/65 text-xs line-through decoration-[#142016]/35">
+                  {row.skip}
+                </div>
+                <div className="rounded-xl bg-[#142016] px-3 py-2.5 text-[#8DEBD1] text-xs font-medium">
+                  {row.ours}
+                </div>
               </div>
-              <div className="rounded-2xl bg-[#1a1a1a] px-5 py-4 text-[#8DEBD1] text-sm font-medium">
-                {row.ours}
-              </div>
-            </motion.div>
+            </Fade>
           ))}
         </div>
       </section>
 
-      {/* ── VISUAL BREAK ── */}
-      <section className="relative min-h-[55vh] overflow-hidden">
-        <img src="/herosec.png" alt="" className="absolute inset-0 w-full h-full object-cover scale-105" />
-        <div className="absolute inset-0 bg-[#0f1410]/70" />
-        <div className="relative z-10 min-h-[55vh] flex flex-col items-center justify-center text-center px-6">
-          <Reveal>
-            <p
-              className="text-white max-w-3xl leading-[1.1]"
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(2rem, 5vw, 3.75rem)',
-              }}
-            >
-              Your skin deserves a marketplace that did the homework.
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── FINAL CTA ── */}
-      <section className="px-6 sm:px-10 lg:px-16 py-24 md:py-32 bg-[#fbfcf4]">
-        <div className="max-w-3xl mx-auto text-center">
-          <Reveal>
-            <h2
-              className="text-[#1a1a1a] leading-[1.05] mb-5"
-              style={{
-                fontFamily: "'Instrument Serif', Georgia, serif",
-                fontSize: 'clamp(2.4rem, 5vw, 4rem)',
-              }}
-            >
-              Ready to shop with certainty?
-            </h2>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <p className="text-[#696a67] text-lg mb-10 max-w-xl mx-auto">
-              Browse curated skincare from verified sellers — including CareCraftz Official.
-            </p>
-          </Reveal>
-          <Reveal delay={0.18}>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => navigate('/shop')}
-                className="group inline-flex items-center gap-2 bg-[#1a1a1a] hover:bg-black text-white text-xs font-bold uppercase tracking-wider px-8 py-4 rounded-full transition-colors"
-              >
-                Enter the shop
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
-              <button
-                onClick={() => navigate('/about')}
-                className="inline-flex items-center gap-2 border border-[#1a1a1a]/20 text-[#1a1a1a] text-xs font-bold uppercase tracking-wider px-8 py-4 rounded-full hover:bg-[#1a1a1a]/5 transition-colors"
-              >
-                Our story
-              </button>
+      {/* CTA band */}
+      <section className="w-full px-4 sm:px-5 lg:px-6 pt-5 pb-0 bg-[#eeecfe]">
+        <div className="pb-5">
+          <Fade>
+            <div className="rounded-xl bg-white/80 border border-[#142016]/08 px-4 py-3.5 sm:px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p
+                  className="text-[#142016] leading-tight"
+                  style={{
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 600,
+                    fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
+                  }}
+                >
+                  Ready to shop with certainty?
+                </p>
+                <p className="text-[#566057] text-xs">
+                  Curated skincare from verified sellers — including CareCraftz Official.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <button
+                  onClick={() => navigate('/shop')}
+                  className="inline-flex items-center justify-center gap-1.5 bg-[#FF8C69] hover:bg-[#ff7a50] text-[#142016] text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full transition-colors"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  Enter the shop <ArrowRight className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => navigate('/about')}
+                  className="inline-flex items-center justify-center gap-1.5 border border-[#142016]/20 text-[#142016] text-[10px] font-bold uppercase tracking-wider px-5 py-2.5 rounded-full hover:bg-[#142016]/5 transition-colors"
+                  style={{ fontFamily: "'Poppins', sans-serif" }}
+                >
+                  Our story
+                </button>
+              </div>
             </div>
-          </Reveal>
+          </Fade>
         </div>
       </section>
     </div>
@@ -448,7 +396,7 @@ function WhyUsInner() {
 
 export default function WhyUs() {
   return (
-    <PageFrame frameColor="#1F2A24">
+    <PageFrame frameColor="#7EC8E3">
       <WhyUsInner />
     </PageFrame>
   )
