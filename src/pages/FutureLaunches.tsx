@@ -8,32 +8,32 @@ const TARGET_RADIUS = 650
 
 const orbitImagesData = [
   {
-    src: '/s1.png',
+    src: '/future-launches/wild-vetiver.jpg',
     title: 'Wild Vetiver',
     desc: 'Smoky vetiver wrapped in saffron and leather — a grounded, untamed signature.',
   },
   {
-    src: '/s2.png',
+    src: '/future-launches/radiant-osmanthus.jpg',
     title: 'Radiant Osmanthus',
     desc: 'Apricot-tinged osmanthus over soft musks. Quietly luminous, never loud.',
   },
   {
-    src: '/s3.png',
+    src: '/future-launches/vibrant-hibiscus.jpg',
     title: 'Vibrant Hibiscus',
     desc: 'Bright hibiscus and pink pepper resting on creamy sandalwood.',
   },
   {
-    src: '/s4.png',
+    src: '/future-launches/mellow-heliotrope.jpg',
     title: 'Mellow Heliotrope',
     desc: 'Almond, vanilla and heliotrope petals — a powdery, hushed warmth.',
   },
   {
-    src: '/facewash.png',
+    src: '/future-launches/magnetic-amber.jpg',
     title: 'Magnetic Amber',
     desc: 'Resinous amber, oud and rich woods. The collection\'s deepest note.',
   },
   {
-    src: '/deepclean.png',
+    src: '/future-launches/crystal-edition.jpg',
     title: 'Crystal Edition',
     desc: 'A limited cut of the bottle — etched facets, lavender pour, leather collar.',
   },
@@ -350,7 +350,7 @@ function StaySection() {
   return (
     <section className="relative w-full overflow-hidden" style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}>
       <img
-        src="/bestseller-lifestyle.png"
+        src="/future-launches/magnetic-amber.jpg"
         alt=""
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 w-full pointer-events-none select-none"
