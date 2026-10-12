@@ -735,13 +735,13 @@ export default function AccessControl() {
             })}
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="space-y-6">
+          <div className="grid gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <div className="space-y-3">
               <div className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-xs font-semibold text-gray-900">Roles</h2>
-                    <p className="text-sm text-gray-500">System roles and custom templates</p>
+                    <p className="text-[11px] text-gray-500">System roles and custom templates</p>
                   </div>
                   <ShieldCheck className="h-5 w-5 text-indigo-600" />
                 </div>
@@ -769,7 +769,7 @@ export default function AccessControl() {
                         key={role.id}
                         type="button"
                         onClick={() => applyRoleSelection(role, rolePermissions)}
-                        className={`group w-full rounded-2xl border p-4 text-left transition-all ${
+                        className={`group w-full rounded-xl border p-3 text-left transition-all ${
                           isSelected
                             ? 'border-indigo-500 bg-indigo-50/70 shadow-sm'
                             : 'border-[#D9D0C2] bg-white hover:border-indigo-300 hover:bg-[#F7F2E8]'
@@ -822,7 +822,7 @@ export default function AccessControl() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-xs font-semibold text-gray-900">Staff assignments</h2>
-                    <p className="text-sm text-gray-500">Assign one role to each staff member</p>
+                    <p className="text-[11px] text-gray-500">Assign one role to each staff member</p>
                   </div>
                   <Users className="h-5 w-5 text-emerald-600" />
                 </div>
@@ -916,7 +916,7 @@ export default function AccessControl() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-3">
               <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
                 {selectedRole ? (
                   <>
@@ -935,7 +935,7 @@ export default function AccessControl() {
                             {selectedRole.code}
                           </span>
                         </div>
-                        <h2 className="mt-4 text-base font-bold text-gray-900">Role details</h2>
+                        <p className="mt-1.5 text-sm font-semibold text-gray-900">Role details</p>
                         <p className="mt-2 max-w-2xl text-sm text-gray-500">
                           Edit the role profile and permission matrix. Writes go through Supabase helpers so the RLS layer stays authoritative.
                         </p>
@@ -1056,7 +1056,7 @@ export default function AccessControl() {
                       <KeyRound className="h-4 w-4" />
                       Permission matrix
                     </div>
-                    <h3 className="mt-3 text-sm font-semibold text-gray-900">Atomic permissions</h3>
+                    <p className="mt-1.5 text-xs font-semibold text-gray-900">Atomic permissions</p>
                     <p className="mt-2 text-sm text-gray-500">
                       Toggle permissions by module. The selected set is persisted through the `replace_role_permissions` RPC.
                     </p>
@@ -1135,7 +1135,7 @@ export default function AccessControl() {
                       <Eye className="h-4 w-4" />
                       Audit trail
                     </div>
-                    <h3 className="mt-3 text-sm font-semibold text-gray-900">Security-sensitive changes</h3>
+                    <p className="mt-1.5 text-xs font-semibold text-gray-900">Security-sensitive changes</p>
                     <p className="mt-2 text-sm text-gray-500">Latest changes to roles, permissions, and staff-role assignments.</p>
                   </div>
                 </div>
