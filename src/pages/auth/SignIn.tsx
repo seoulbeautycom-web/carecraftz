@@ -3,10 +3,11 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/auth-context'
 import { Mail, Lock, Phone, Eye, EyeOff, Sparkles } from 'lucide-react'
 import PageFrame from '../../components/PageFrame'
+import GoogleSignInButton from '../../components/GoogleSignInButton'
 
 function SignInInner() {
   const navigate = useNavigate()
-  const { signInWithEmail, signInWithPhone, verifyPhoneOtp } = useAuth()
+  const { signInWithEmail, signInWithPhone, verifyPhoneOtp, signInWithOAuth } = useAuth()
   const [activeTab, setActiveTab] = useState<'email' | 'phone'>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,6 +17,7 @@ function SignInInner() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [otpSent, setOtpSent] = useState(false)
+  const [testOtpHint, setTestOtpHint] = useState('')
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,11 +39,12 @@ function SignInInner() {
     setError('')
 
     if (!otpSent) {
-      const { error } = await signInWithPhone(phone)
+      const { error, testOtp } = await signInWithPhone(phone)
       if (error) {
         setError(error.message)
       } else {
         setOtpSent(true)
+        setTestOtpHint(testOtp || '')
       }
     } else {
       const { error } = await verifyPhoneOtp(phone, otp)
@@ -52,6 +55,16 @@ function SignInInner() {
       }
     }
     setLoading(false)
+  }
+
+  const handleGoogle = async () => {
+    setLoading(true)
+    setError('')
+    const { error: oauthError } = await signInWithOAuth('google', { next: '/profile' })
+    if (oauthError) {
+      setError(oauthError.message)
+      setLoading(false)
+    }
   }
 
   return (
@@ -93,6 +106,15 @@ function SignInInner() {
               {error}
             </div>
           )}
+
+          <div className="mb-4 space-y-3">
+            <GoogleSignInButton onClick={() => void handleGoogle()} disabled={loading} />
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#696a67]">
+              <span className="flex-1 h-px bg-[#2b2b2b]/10" />
+              or
+              <span className="flex-1 h-px bg-[#2b2b2b]/10" />
+            </div>
+          </div>
 
           {activeTab === 'email' ? (
             <form onSubmit={handleEmailSignIn} className="space-y-4">
@@ -143,7 +165,10 @@ function SignInInner() {
                   <input type="text" value={otp} onChange={e => setOtp(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C9B8FF] focus:border-transparent text-center tracking-[0.3em] font-mono"
                     placeholder="······" maxLength={6} required />
-                  <p className="text-xs text-[#696a67] mt-1.5 text-center">Code sent to {phone}</p>
+                  <p className="text-xs text-[#696a67] mt-1.5 text-center">Code sent to {phone} via WhatsApp</p>
+                  {testOtpHint ? (
+                    <p className="text-[10px] text-amber-700 mt-1 text-center">Dev OTP: {testOtpHint}</p>
+                  ) : null}
                 </div>
               )}
               <button type="submit" disabled={loading}

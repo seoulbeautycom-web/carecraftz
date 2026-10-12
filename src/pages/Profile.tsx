@@ -1,7 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  User,
+  Mail,
+  Phone,
+  Package,
+  LogOut,
+  ShoppingBag,
+  ChevronRight,
+  MapPin,
+  CheckCircle,
+  AlertCircle,
+  Send,
+  Home,
+} from 'lucide-react'
 import { useAuth } from '../contexts/auth-context'
-import { User, Mail, Phone, Package, LogOut, ShoppingBag, ChevronRight, MapPin, CheckCircle, AlertCircle, Send, Home } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PageFrame from '../components/PageFrame'
 
@@ -27,13 +40,31 @@ interface Order {
   }
 }
 
+interface ProfileRow {
+  full_name: string
+  phone: string
+  address: string
+  city: string
+  country: string
+  postal_code: string
+}
+
 const ORDER_STEPS = [
   { id: 1, name: 'Order Received', icon: CheckCircle },
   { id: 2, name: 'Order Confirmed', icon: AlertCircle },
   { id: 3, name: 'Being Packaged', icon: Package },
   { id: 4, name: 'Dispatched', icon: Send },
-  { id: 5, name: 'Delivered', icon: Home }
+  { id: 5, name: 'Delivered', icon: Home },
 ]
+
+const emptyProfile: ProfileRow = {
+  full_name: '',
+  phone: '',
+  address: '',
+  city: '',
+  country: 'UAE',
+  postal_code: '',
+}
 
 function ProfileInner() {
   const navigate = useNavigate()
@@ -42,18 +73,33 @@ function ProfileInner() {
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [profile, setProfile] = useState<ProfileRow>(emptyProfile)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+  const [profileError, setProfileError] = useState('')
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/signin')
-    }
+    if (!authLoading && !user) navigate('/signin')
   }, [user, authLoading, navigate])
 
-  // Fetch user orders
   useEffect(() => {
-    if (user && activeTab === 'orders') {
-      fetchOrders()
+    if (!user?.id) return
+    const loadProfile = async () => {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+      setProfile({
+        full_name: data?.full_name || user.full_name || '',
+        phone: data?.phone || user.phone || '',
+        address: data?.address || '',
+        city: data?.city || '',
+        country: data?.country || 'UAE',
+        postal_code: data?.postal_code || '',
+      })
     }
+    void loadProfile()
+  }, [user])
+
+  useEffect(() => {
+    if (user && activeTab === 'orders') void fetchOrders()
   }, [user, activeTab])
 
   const fetchOrders = async () => {
@@ -63,334 +109,362 @@ function ProfileInner() {
       .select('*')
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching orders:', error)
-    } else {
-      setOrders(data || [])
-    }
+    if (error) console.error('Error fetching orders:', error)
+    else setOrders((data || []) as Order[])
     setOrdersLoading(false)
+  }
+
+  const saveProfile = async (mode: 'overview' | 'addresses') => {
+    if (!user?.id) return
+    setProfileSaving(true)
+    setProfileMessage('')
+    setProfileError('')
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: profile.full_name.trim() || null,
+      phone: profile.phone.trim() || null,
+      address: profile.address.trim() || null,
+      city: profile.city.trim() || null,
+      country: profile.country.trim() || null,
+      postal_code: profile.postal_code.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    if (error) setProfileError(error.message)
+    else setProfileMessage(mode === 'addresses' ? 'Address saved' : 'Profile saved')
+    setProfileSaving(false)
   }
 
   const formatCurrency = (amount: number, currency: string) => {
     if (!amount) return '-'
-    return currency === 'PKR' 
+    return currency === 'PKR'
       ? `₨ ${amount.toLocaleString('en-PK')}`
       : `AED ${amount.toLocaleString('en-AE')}`
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     })
-  }
 
   const getOrderProgress = (status: string) => {
-    const index = ORDER_STEPS.findIndex(step => step.name === status)
+    const index = ORDER_STEPS.findIndex((step) => step.name === status)
     return index >= 0 ? ((index + 1) / ORDER_STEPS.length) * 100 : 0
   }
 
-  const getCurrentStepIndex = (status: string) => {
-    return ORDER_STEPS.findIndex(step => step.name === status)
-  }
+  const getCurrentStepIndex = (status: string) =>
+    ORDER_STEPS.findIndex((step) => step.name === status)
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
   }
 
+  const displayName = profile.full_name || user?.full_name || 'User'
+  const displayEmail = user?.email || 'Phone account'
+  const avatarLetter = (displayName || displayEmail || 'U').charAt(0).toUpperCase()
+
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-[#FFD6B0] border-t-[#2b2b2b] rounded-full animate-spin" />
       </div>
     )
   }
 
+  const fieldClass =
+    'w-full px-3 py-2.5 text-sm rounded-xl border border-[#2b2b2b]/10 bg-[#fbfcf4] focus:outline-none focus:ring-2 focus:ring-[#1F331F]/15'
+  const labelClass = 'block text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1.5'
+
   return (
-    <div className="min-h-screen bg-[#fbfcf4]">
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center text-white text-xl font-medium">
-                  {user.email?.[0].toUpperCase() || 'U'}
-                </div>
-                <div>
-                  <h2 className="font-medium">{user.full_name || 'User'}</h2>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
+    <div className="pt-20 pb-10 px-4 sm:px-5 lg:px-6 max-w-5xl mx-auto" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+        <div className="lg:col-span-1">
+          <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-[#1F331F] rounded-full flex items-center justify-center text-white text-lg font-semibold">
+                {avatarLetter}
               </div>
-
-              <nav className="space-y-1">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === 'overview'
-                      ? 'bg-black text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <User className="w-5 h-5" />
-                  Overview
-                </button>
-                <button
-                  onClick={() => setActiveTab('orders')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === 'orders'
-                      ? 'bg-black text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <Package className="w-5 h-5" />
-                  Orders
-                </button>
-                <button
-                  onClick={() => setActiveTab('addresses')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                    activeTab === 'addresses'
-                      ? 'bg-black text-white'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <MapPin className="w-5 h-5" />
-                  Addresses
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Sign Out
-                </button>
-              </nav>
+              <div className="min-w-0">
+                <h2 className="font-semibold text-[#2b2b2b] truncate">{displayName}</h2>
+                <p className="text-xs text-[#696a67] truncate">{displayEmail}</p>
+              </div>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {activeTab === 'overview' && (
-              <div className="space-y-6">
-                {/* Account Info */}
-                <div className="bg-white rounded-2xl shadow-sm p-6">
-                  <h3 className="text-lg font-medium mb-4">Account Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                        <Mail className="w-4 h-4" />
-                        Email
-                      </div>
-                      <p className="font-medium">{user.email}</p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                        <Phone className="w-4 h-4" />
-                        Phone
-                      </div>
-                      <p className="font-medium">{user.phone || 'Not added'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-white rounded-2xl shadow-sm p-6">
-                  <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={() => navigate('/shop')}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-black transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <ShoppingBag className="w-5 h-5" />
-                        <span>Continue Shopping</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('orders')}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-black transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Package className="w-5 h-5" />
-                        <span>View Orders</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'orders' && (
-              <div className="bg-white rounded-2xl shadow-sm p-6">
-                <h3 className="text-lg font-medium mb-4">Order History</h3>
-                
-                {ordersLoading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin w-8 h-8 border-2 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-gray-500">Loading orders...</p>
-                  </div>
-                ) : orders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No orders yet</p>
-                    <button
-                      onClick={() => navigate('/shop')}
-                      className="mt-4 px-6 py-2 bg-black text-white rounded-full text-sm hover:bg-gray-800"
-                    >
-                      Start Shopping
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {orders.map(order => {
-                      const currentStepIndex = getCurrentStepIndex(order.status)
-                      return (
-                        <div key={order.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                          {/* Order Header */}
-                          <div 
-                            className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                            onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                <span className="font-mono font-bold text-lg text-blue-600">
-                                  {order.order_code}
-                                </span>
-                                <span className="text-sm text-gray-500">{formatDate(order.created_at)}</span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
-                                  order.status === 'Order Received' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-yellow-100 text-yellow-700'
-                                }`}>
-                                  {order.status}
-                                </span>
-                                <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${
-                                  expandedOrder === order.id ? 'rotate-90' : ''
-                                }`} />
-                              </div>
-                            </div>
-                            
-                            {/* Mini Progress Bar */}
-                            <div className="mt-3">
-                              <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div 
-                                  className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-                                  style={{ width: `${getOrderProgress(order.status)}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Order Details & Journey */}
-                          {expandedOrder === order.id && (
-                            <div className="p-4">
-                              {/* Order Journey */}
-                              <div className="mb-4">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-3">Order Journey</h4>
-                                <div className="relative">
-                                  {/* Progress Line */}
-                                  <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200"></div>
-                                  
-                                  {/* Steps */}
-                                  <div className="space-y-3">
-                                    {ORDER_STEPS.map((step, idx) => {
-                                      const isCompleted = idx <= currentStepIndex
-                                      const isCurrent = idx === currentStepIndex
-                                      
-                                      return (
-                                        <div key={step.id} className="flex items-center gap-3 relative">
-                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
-                                            isCompleted 
-                                              ? 'bg-green-500 text-white' 
-                                              : 'bg-gray-100 text-gray-400'
-                                          }`}>
-                                            <step.icon className="w-4 h-4" />
-                                          </div>
-                                          <div className="flex-1">
-                                            <p className={`text-sm font-medium ${
-                                              isCompleted ? 'text-gray-900' : 'text-gray-400'
-                                            }`}>
-                                              {step.name}
-                                              {isCurrent && <span className="ml-2 text-xs text-blue-600">(Current)</span>}
-                                            </p>
-                                          </div>
-                                          {isCompleted && (
-                                            <CheckCircle className="w-4 h-4 text-green-500" />
-                                          )}
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Items */}
-                              <div className="border-t pt-4">
-                                <h4 className="text-sm font-semibold text-gray-700 mb-3">Items</h4>
-                                <div className="space-y-2">
-                                  {order.items?.map((item, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-sm">
-                                      <span>{item.name} x{item.quantity}</span>
-                                      <span className="font-medium">
-                                        {formatCurrency(item.price * item.quantity, item.currency)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Total */}
-                                <div className="border-t mt-3 pt-3">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-semibold">Total</span>
-                                    <div className="text-right">
-                                      {order.totals?.pkr && order.totals.pkr.total > 0 && (
-                                        <p className="text-green-700 font-bold">
-                                          {formatCurrency(order.totals.pkr.total, 'PKR')}
-                                        </p>
-                                      )}
-                                      {order.totals?.aed && order.totals.aed.total > 0 && (
-                                        <p className="text-blue-700 font-bold">
-                                          {formatCurrency(order.totals.aed.total, 'AED')}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'addresses' && (
-              <div className="bg-white rounded-2xl shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium">Saved Addresses</h3>
-                  <button className="px-4 py-2 bg-black text-white rounded-full text-sm hover:bg-gray-800">
-                    Add Address
-                  </button>
-                </div>
-                <div className="text-center py-12">
-                  <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No addresses saved</p>
-                </div>
-              </div>
-            )}
+            <nav className="space-y-1">
+              {(
+                [
+                  ['overview', 'Overview', User],
+                  ['orders', 'Orders', Package],
+                  ['addresses', 'Addresses', MapPin],
+                ] as const
+              ).map(([id, label, Icon]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-colors ${
+                    activeTab === id
+                      ? 'bg-[#1F331F] text-white'
+                      : 'text-[#2b2b2b] hover:bg-[#fbfcf4]'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </nav>
           </div>
         </div>
-      </main>
+
+        <div className="lg:col-span-3 space-y-3">
+          {activeTab === 'overview' && (
+            <>
+              <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 p-4 space-y-3">
+                <h3 className="text-base font-semibold text-[#2b2b2b]">Account information</h3>
+                {profileError ? <p className="text-xs text-rose-600">{profileError}</p> : null}
+                {profileMessage ? <p className="text-xs text-emerald-700">{profileMessage}</p> : null}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>Full name</label>
+                    <input
+                      className={fieldClass}
+                      value={profile.full_name}
+                      onChange={(e) => setProfile((p) => ({ ...p, full_name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Phone</label>
+                    <input
+                      className={fieldClass}
+                      value={profile.phone}
+                      onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="+971…"
+                    />
+                  </div>
+                  <div className="md:col-span-2 p-3 rounded-xl bg-[#fbfcf4] border border-[#2b2b2b]/08">
+                    <div className="flex items-center gap-2 text-[#696a67] text-xs mb-1">
+                      <Mail className="w-3.5 h-3.5" />
+                      Email
+                    </div>
+                    <p className="text-sm font-medium text-[#2b2b2b]">{displayEmail}</p>
+                    {!user.email ? (
+                      <p className="text-[11px] text-[#696a67] mt-1">Signed in with WhatsApp</p>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={profileSaving}
+                  onClick={() => void saveProfile('overview')}
+                  className="px-5 py-2.5 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider disabled:opacity-50"
+                >
+                  {profileSaving ? 'Saving…' : 'Save profile'}
+                </button>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 p-4">
+                <h3 className="text-base font-semibold text-[#2b2b2b] mb-3">Quick actions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/shop')}
+                    className="flex items-center justify-between p-3 border border-[#2b2b2b]/10 rounded-xl hover:border-[#1F331F]/40 transition-colors"
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm text-[#2b2b2b]">
+                      <ShoppingBag className="w-4 h-4" /> Continue shopping
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-[#696a67]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('orders')}
+                    className="flex items-center justify-between p-3 border border-[#2b2b2b]/10 rounded-xl hover:border-[#1F331F]/40 transition-colors"
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm text-[#2b2b2b]">
+                      <Package className="w-4 h-4" /> View orders
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-[#696a67]" />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'orders' && (
+            <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 p-4">
+              <h3 className="text-base font-semibold text-[#2b2b2b] mb-3">Order history</h3>
+              {ordersLoading ? (
+                <p className="text-sm text-[#696a67] py-8 text-center">Loading orders…</p>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-10">
+                  <Package className="w-12 h-12 text-[#2b2b2b]/20 mx-auto mb-3" />
+                  <p className="text-sm text-[#696a67] mb-4">No orders yet</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/shop')}
+                    className="px-5 py-2.5 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider"
+                  >
+                    Start shopping
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((order) => {
+                    const currentStepIndex = getCurrentStepIndex(order.status)
+                    return (
+                      <div key={order.id} className="border border-[#2b2b2b]/08 rounded-xl overflow-hidden">
+                        <button
+                          type="button"
+                          className="w-full p-3 bg-[#fbfcf4] text-left hover:bg-[#f0ece0] transition-colors"
+                          onClick={() =>
+                            setExpandedOrder(expandedOrder === order.id ? null : order.id)
+                          }
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-mono font-bold text-sm text-[#1F331F]">
+                                {order.order_code}
+                              </p>
+                              <p className="text-[11px] text-[#696a67]">{formatDate(order.created_at)}</p>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white border border-[#2b2b2b]/08 text-[#2b2b2b]">
+                              {order.status}
+                            </span>
+                          </div>
+                          <div className="mt-2 w-full bg-[#2b2b2b]/10 rounded-full h-1.5">
+                            <div
+                              className="bg-[#1F331F] h-1.5 rounded-full"
+                              style={{ width: `${getOrderProgress(order.status)}%` }}
+                            />
+                          </div>
+                        </button>
+                        {expandedOrder === order.id ? (
+                          <div className="p-3 space-y-3">
+                            <div className="space-y-2">
+                              {ORDER_STEPS.map((step, idx) => {
+                                const isCompleted = idx <= currentStepIndex
+                                return (
+                                  <div key={step.id} className="flex items-center gap-2">
+                                    <div
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                                        isCompleted
+                                          ? 'bg-emerald-500 text-white'
+                                          : 'bg-[#f0ece0] text-[#696a67]'
+                                      }`}
+                                    >
+                                      <step.icon className="w-3.5 h-3.5" />
+                                    </div>
+                                    <p
+                                      className={`text-xs ${
+                                        isCompleted ? 'text-[#2b2b2b] font-medium' : 'text-[#696a67]'
+                                      }`}
+                                    >
+                                      {step.name}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                            <div className="border-t border-[#2b2b2b]/08 pt-3 space-y-1.5">
+                              {order.items?.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-xs text-[#2b2b2b]">
+                                  <span>
+                                    {item.name} ×{item.quantity}
+                                  </span>
+                                  <span className="font-medium">
+                                    {formatCurrency(item.price * item.quantity, item.currency)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'addresses' && (
+            <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 p-4 space-y-3">
+              <h3 className="text-base font-semibold text-[#2b2b2b]">Shipping address</h3>
+              <p className="text-[11px] text-[#696a67]">
+                Saved to your profile and used to autofill checkout.
+              </p>
+              {profileError ? <p className="text-xs text-rose-600">{profileError}</p> : null}
+              {profileMessage ? <p className="text-xs text-emerald-700">{profileMessage}</p> : null}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Street address</label>
+                  <input
+                    className={fieldClass}
+                    value={profile.address}
+                    onChange={(e) => setProfile((p) => ({ ...p, address: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>City</label>
+                  <input
+                    className={fieldClass}
+                    value={profile.city}
+                    onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Country</label>
+                  <select
+                    className={fieldClass}
+                    value={profile.country}
+                    onChange={(e) => setProfile((p) => ({ ...p, country: e.target.value }))}
+                  >
+                    <option value="UAE">UAE</option>
+                    <option value="Pakistan">Pakistan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Postal code</label>
+                  <input
+                    className={fieldClass}
+                    value={profile.postal_code}
+                    onChange={(e) => setProfile((p) => ({ ...p, postal_code: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#696a67]" />
+                    <input
+                      className={`${fieldClass} pl-9`}
+                      value={profile.phone}
+                      onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={profileSaving}
+                onClick={() => void saveProfile('addresses')}
+                className="px-5 py-2.5 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider disabled:opacity-50"
+              >
+                {profileSaving ? 'Saving…' : 'Save address'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

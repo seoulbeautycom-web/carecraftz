@@ -4,10 +4,11 @@ import { useAuth } from '../../contexts/auth-context'
 import { useStorefrontIdentity } from '../../contexts/StorefrontIdentityContext'
 import { Mail, Lock, User, Eye, EyeOff, Leaf } from 'lucide-react'
 import PageFrame from '../../components/PageFrame'
+import GoogleSignInButton from '../../components/GoogleSignInButton'
 
 function SignUpInner() {
   const navigate = useNavigate()
-  const { signUp } = useAuth()
+  const { signUp, signInWithOAuth } = useAuth()
   const { ops } = useStorefrontIdentity()
   const minPasswordLength = Math.max(6, ops.security.password_min_length || 6)
   const [fullName, setFullName] = useState('')
@@ -18,6 +19,16 @@ function SignUpInner() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  const handleGoogle = async () => {
+    setLoading(true)
+    setError('')
+    const { error: oauthError } = await signInWithOAuth('google', { next: '/profile' })
+    if (oauthError) {
+      setError(oauthError.message)
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -83,6 +94,15 @@ function SignUpInner() {
             <div className="mb-4 p-3 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100">{error}</div>
           )}
 
+          <div className="mb-4 space-y-3">
+            <GoogleSignInButton onClick={() => void handleGoogle()} disabled={loading} label="Sign up with Google" />
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-[#696a67]">
+              <span className="flex-1 h-px bg-[#2b2b2b]/10" />
+              or
+              <span className="flex-1 h-px bg-[#2b2b2b]/10" />
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-[#2b2b2b] mb-1.5 uppercase tracking-wider">Full Name</label>
@@ -108,7 +128,7 @@ function SignUpInner() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                   className="w-full pl-10 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#A8E6CF] focus:border-transparent transition"
-                  placeholder="Min. 6 characters" required />
+                  placeholder={`Min. ${minPasswordLength} characters`} required minLength={minPasswordLength} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

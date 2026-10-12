@@ -8,12 +8,10 @@ export default function AuthCallback() {
   const location = useLocation()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
   const signInPath = (() => {
     const hint = new URLSearchParams(location.search).get('signin')
-    if (hint === '/login' || hint === '/signin') {
-      return hint
-    }
-
+    if (hint === '/login' || hint === '/signin') return hint
     return window.location.hostname.startsWith('admin.') ? '/login' : '/signin'
   })()
 
@@ -23,31 +21,56 @@ export default function AuthCallback() {
   })()
 
   useEffect(() => {
-    // Handle the OAuth callback
     const handleAuthCallback = async () => {
       try {
-        // Get the session from the URL hash
-        const { data, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          setError(error.message)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const searchParams = new URLSearchParams(window.location.search)
+        const errorDescription =
+          hashParams.get('error_description') || searchParams.get('error_description')
+        if (errorDescription) {
+          setError(errorDescription)
+          return
+        }
+
+        // PKCE / code exchange (newer Supabase OAuth flows)
+        const code = searchParams.get('code')
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          if (exchangeError) {
+            setError(exchangeError.message)
+            return
+          }
+          navigate(nextPath, { replace: true })
+          return
+        }
+
+        // Implicit / recovery hash tokens
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (sessionError) {
+            setError(sessionError.message)
+            return
+          }
+          const type = hashParams.get('type')
+          navigate(type === 'recovery' ? '/reset-password' : nextPath, { replace: true })
+          return
+        }
+
+        const { data, error: sessionReadError } = await supabase.auth.getSession()
+        if (sessionReadError) {
+          setError(sessionReadError.message)
           return
         }
 
         if (data.session) {
-          // Successfully authenticated
           navigate(nextPath, { replace: true })
         } else {
-          // Check if there's an error in the URL
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const errorDescription = hashParams.get('error_description')
-          
-          if (errorDescription) {
-            setError(errorDescription)
-          } else {
-            // No session, redirect to signin
-            navigate(signInPath)
-          }
+          navigate(signInPath, { replace: true })
         }
       } catch {
         setError('An unexpected error occurred')
@@ -56,7 +79,7 @@ export default function AuthCallback() {
       }
     }
 
-    handleAuthCallback()
+    void handleAuthCallback()
   }, [navigate, nextPath, signInPath])
 
   if (loading) {
@@ -64,8 +87,8 @@ export default function AuthCallback() {
       <PageFrame frameColor="#C9B8FF">
         <div className="min-h-[70vh] flex items-center justify-center pt-24 pb-16">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Completing sign in...</p>
+            <div className="w-12 h-12 border-4 border-[#1F331F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[#696a67] text-sm">Completing sign in…</p>
           </div>
         </div>
       </PageFrame>
@@ -77,18 +100,14 @@ export default function AuthCallback() {
       <PageFrame frameColor="#C9B8FF">
         <div className="min-h-[70vh] flex items-center justify-center pt-24 pb-16">
           <div className="text-center max-w-md px-4">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-medium mb-2">Authentication Failed</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h2 className="text-xl font-semibold text-[#2b2b2b] mb-2">Authentication failed</h2>
+            <p className="text-[#696a67] mb-6 text-sm">{error}</p>
             <button
+              type="button"
               onClick={() => navigate(signInPath)}
-              className="px-6 py-3 bg-black text-white rounded-full font-medium hover:bg-gray-800"
+              className="px-6 py-3 bg-[#1F331F] text-white rounded-full text-[11px] font-semibold uppercase tracking-wider"
             >
-              Back to Sign In
+              Back to sign in
             </button>
           </div>
         </div>

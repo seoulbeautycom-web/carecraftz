@@ -15,6 +15,8 @@ import CartPage from './pages/CartPage'
 import SignIn from './pages/auth/SignIn'
 import SignUp from './pages/auth/SignUp'
 import AuthCallback from './pages/auth/AuthCallback'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import Profile from './pages/Profile'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
@@ -49,6 +51,8 @@ function App() {
             <Route path="/rewards"      element={<Navigate to="/partners" replace />} />
             <Route path="/signin"       element={<SignIn />} />         {/* #C9B8FF purple */}
             <Route path="/signup"       element={<SignUp />} />         {/* #A8E6CF mint */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile"      element={<Profile />} />        {/* #FFD6B0 peach */}
             <Route path="/cart"         element={<CartPage />} />       {/* #B0E4FF sky */}

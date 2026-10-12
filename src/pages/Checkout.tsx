@@ -55,6 +55,7 @@ function CheckoutInner() {
   // Card checkout stays blocked until a real payment gateway is wired.
   const cardPaymentsLive = false
   const cardEnabled = ops.payments.card_enabled && cardPaymentsLive
+  const minPasswordLength = Math.max(6, ops.security.password_min_length || 6)
 
   const hasPKRItems = items.some((item) => item.currency === 'PKR')
   const hasAEDItems = items.some((item) => item.currency === 'AED' || !item.currency)
@@ -481,7 +482,7 @@ function CheckoutInner() {
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={minPasswordLength}
                         placeholder="Password"
                         className={`${inputClass} pr-10`}
                       />
