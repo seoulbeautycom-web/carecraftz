@@ -430,15 +430,15 @@ export default function Staff() {
   const getStatusIndicator = (status: string) => {
     if (status === 'online') {
       return (
-        <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Online
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1.5 text-sm text-gray-400">
-        <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
         Offline
       </span>
     )
@@ -459,119 +459,124 @@ export default function Staff() {
 
   return (
     <AdminLayout>
-      <div className="flex-1 bg-gray-50 min-h-screen">
-
-        {/* Toast Notification */}
+      <div className="min-h-full bg-[#F7F2E8]">
         {toast && (
-          <div className={`fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-medium transition-all animate-in slide-in-from-top-2 ${
-            toast.type === 'success'
-              ? 'bg-emerald-600 text-white'
-              : 'bg-red-600 text-white'
-          }`}>
-            {toast.type === 'success'
-              ? <CheckCircle2 className="w-5 h-5 shrink-0" />
-              : <X className="w-5 h-5 shrink-0" />}
+          <div
+            className={`fixed top-4 right-4 z-[9999] flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium text-white shadow-lg ${
+              toast.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+            }`}
+          >
+            {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
             <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100">
-              <X className="w-4 h-4" />
+            <button type="button" onClick={() => setToast(null)} className="ml-1 opacity-70 hover:opacity-100">
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Top Navigation Bar - No New button, No Search */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Staff</h1>
-              <p className="text-sm text-gray-500">Manage your team and access permissions.</p>
+        <div className="sticky top-0 z-20 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-gray-900">Staff</h1>
+              <p className="text-[11px] text-gray-500">Manage your team and access permissions.</p>
             </div>
-            
-            <div className="flex items-center gap-4">
-              {/* Notification Button with Dropdown */}
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => { resetAddForm(); setShowAddModal(true) }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add staff
+              </button>
+
               <div className="relative">
-                <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotifications(!showNotifications)
+                    setShowProfileMenu(false)
+                  }}
+                  className="relative p-1.5 text-gray-500 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4" />
                   {newOrdersCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
                   )}
                 </button>
-                
+
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
-                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">New Orders</h3>
-                      <button onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                        <X className="w-4 h-4" />
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#E8E0D4] flex items-center justify-between bg-[#F7F2E8]">
+                      <h3 className="text-xs font-semibold text-gray-900">New orders</h3>
+                      <button type="button" onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-md">
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-64 overflow-y-auto">
                       {newOrdersCount === 0 ? (
-                        <div className="p-8 text-center">
-                          <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">No new orders in the last 24 hours</p>
+                        <div className="p-6 text-center">
+                          <Bell className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                          <p className="text-[11px] text-gray-500">No new orders in the last 24 hours</p>
                         </div>
                       ) : (
                         allOrders.slice(0, 5).map((order) => (
-                          <div 
+                          <button
                             key={order.id}
-                            onClick={() => { setShowNotifications(false); navigate('/orders'); }}
-                            className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                            type="button"
+                            onClick={() => { setShowNotifications(false); navigate('/orders') }}
+                            className="w-full text-left px-3 py-2.5 border-b border-[#F0E9DC] hover:bg-[#F7F2E8] transition-colors"
                           >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-900">{order.order_code}</span>
-                              <span className="text-xs text-gray-500">{order.time_ago}</span>
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <span className="text-xs font-medium text-gray-900">{order.order_code}</span>
+                              <span className="text-[10px] text-gray-400">{order.time_ago}</span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-1">{order.shipping_address?.full_name || order.customer_email}</p>
-                            <Eye className="w-3.5 h-3.5 text-gray-400" />
-                          </div>
+                            <p className="text-[11px] text-gray-600 truncate">
+                              {order.shipping_address?.full_name || order.customer_email}
+                            </p>
+                          </button>
                         ))
                       )}
-                    </div>
-                    <div className="p-3 border-t border-gray-100">
-                      <button 
-                        onClick={() => { setShowNotifications(false); navigate('/orders'); }}
-                        className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg"
-                      >
-                        View all orders
-                      </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Profile Button with Dropdown */}
               <div className="relative">
-                <button 
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-xl transition-colors"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu)
+                    setShowNotifications(false)
+                  }}
+                  className="flex items-center gap-1.5 p-1 pr-2 hover:bg-white rounded-lg transition-colors"
                 >
-                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
                     {userName.charAt(0)}
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>
-                
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
-                    <div className="p-4 border-b border-gray-100">
-                      <p className="font-semibold text-gray-900">{userName}</p>
-                      <p className="text-sm text-gray-500">Store Owner</p>
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]">
+                      <p className="text-xs font-semibold text-gray-900">{userName}</p>
+                      <p className="text-[10px] text-gray-500">Staff access</p>
                     </div>
-                    <div className="p-2">
-                      <button 
-                        onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"
+                    <div className="p-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setShowProfileMenu(false); navigate('/settings') }}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-[#F7F2E8] rounded-lg"
                       >
-                        <Settings className="w-4 h-4" /> Settings
+                        <Settings className="w-3.5 h-3.5" /> Settings
                       </button>
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                      <button
+                        type="button"
+                        onClick={() => void handleLogout()}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg"
                       >
-                        <LogOut className="w-4 h-4" /> Logout
+                        <LogOut className="w-3.5 h-3.5" /> Logout
                       </button>
                     </div>
                   </div>
@@ -581,125 +586,121 @@ export default function Staff() {
           </div>
         </div>
 
-        <div className="p-8">
-          {/* Clickable Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {stats.map((stat, index) => (
+        <div className="px-4 py-5 sm:px-6 space-y-4">
+          <div className="grid grid-cols-2 gap-2.5">
+            {stats.map((stat) => (
               <button
-                key={index}
-                onClick={() => stat.filter && setActiveFilter(stat.filter)}
-                className={`bg-white rounded-2xl p-6 shadow-sm border text-left transition-all hover:shadow-md ${
-                  stat.filter && activeFilter === stat.filter ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-gray-100'
+                key={stat.label}
+                type="button"
+                onClick={() => setActiveFilter(stat.filter)}
+                className={`rounded-xl border bg-white p-3.5 text-left transition-all ${
+                  activeFilter === stat.filter
+                    ? 'border-indigo-400 ring-1 ring-indigo-500/20 shadow-sm'
+                    : 'border-[#D9D0C2] hover:border-indigo-300'
                 }`}
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                    <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+                    <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{stat.label}</p>
                   </div>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '100')}`}>
-                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '50')}`}>
+                    <stat.icon className={`w-4 h-4 ${stat.color}`} />
                   </div>
                 </div>
               </button>
             ))}
           </div>
 
-          {/* Team Members Section */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900">Team Members</h3>
+          <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-gray-800">Team members</p>
                 {activeFilter !== 'all' && (
-                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-                    {activeFilter === 'online' ? 'Online Only' : 'Offline Only'}
-                    <button 
-                      onClick={() => setActiveFilter('all')}
-                      className="ml-2 text-indigo-500 hover:text-indigo-700"
-                    >
-                      ×
-                    </button>
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter('all')}
+                    className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
+                  >
+                    {activeFilter === 'online' ? 'Online only' : 'Offline only'}
+                    <X className="w-3 h-3" />
+                  </button>
                 )}
               </div>
-              <button 
-                onClick={() => { resetAddForm(); setShowAddModal(true) }}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Staff
-              </button>
+              <span className="text-[11px] text-gray-500">{filteredStaff.length} shown</span>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Member</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Permissions</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Last Active</th>
-                    <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <tr className="border-b border-[#E8E0D4] bg-[#FBF8F2]/60">
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Member</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Role</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Permissions</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Last active</th>
+                    <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-                        Loading team members...
+                      <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-gray-400" />
+                        Loading team members…
                       </td>
                     </tr>
                   ) : filteredStaff.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                        No team members found
+                      <td colSpan={6} className="px-4 py-10 text-center">
+                        <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">No team members found</p>
                       </td>
                     </tr>
                   ) : (
                     filteredStaff.map((member) => (
-                      <tr key={member.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 ${member.avatarColor} rounded-full flex items-center justify-center text-white text-sm font-medium`}>
+                      <tr key={member.id} className="border-b border-[#F0E9DC] last:border-0 hover:bg-[#F7F2E8]/50 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 ${member.avatarColor} rounded-full flex items-center justify-center text-white text-[11px] font-semibold`}>
                               {member.initials}
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{member.full_name}</p>
-                              <p className="text-xs text-gray-500">{member.email}</p>
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-gray-900 truncate">{member.full_name}</p>
+                              <p className="text-[10px] text-gray-500 truncate">{member.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${member.roleColor}`}>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium ${member.roleColor}`}>
                             {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <Shield className="w-3.5 h-3.5 text-gray-400" />
-                            {member.permissionsDisplay}
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-1 text-[11px] text-gray-600">
+                            <Shield className="w-3 h-3 text-gray-400" />
+                            <span className="truncate max-w-[10rem]">{member.permissionsDisplay}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          {getStatusIndicator(member.status)}
+                        <td className="px-4 py-2.5">{getStatusIndicator(member.status)}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-[11px] text-gray-500">{member.last_active}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-500">{member.last_active}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button 
+                        <td className="px-4 py-2.5 text-right">
+                          <div className="inline-flex items-center gap-0.5">
+                            <button
+                              type="button"
                               onClick={() => openEditModal(member)}
-                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-[#F7F2E8] rounded-lg"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
-                            <button 
+                            <button
+                              type="button"
                               onClick={() => openDeleteModal(member)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -710,269 +711,220 @@ export default function Staff() {
               </table>
             </div>
           </div>
-
         </div>
 
-        {/* Add Staff Modal */}
         {showAddModal && (
           <div
-            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={(e) => { if (e.target === e.currentTarget) { setShowAddModal(false); resetAddForm() } }}
           >
-            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Add Staff Member</h2>
-                <button 
-                  onClick={() => setShowAddModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#D9D0C2] bg-white shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between gap-2 border-b border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
+                <h2 className="text-sm font-semibold text-gray-900">Add staff member</h2>
+                <button type="button" onClick={() => { setShowAddModal(false); resetAddForm() }} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-md">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              
-              <div className="space-y-4">
+
+              <div className="p-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Full name</label>
                   <input
                     type="text"
                     value={newFullName}
                     onChange={(e) => setNewFullName(e.target.value)}
                     placeholder="Jane Smith"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Email</label>
                   <input
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="jane@carecraftz.com"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Min. 6 characters"
-                      className="w-full px-4 py-2.5 pr-11 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                      className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Role</label>
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                   >
-                    {ROLE_OPTIONS.map(option => (
+                    {ROLE_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label} — {option.permissions}
                       </option>
                     ))}
                   </select>
                 </div>
-
-                <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+                <div className="rounded-lg border border-[#E8E0D4] bg-[#F7F2E8] px-3 py-2.5 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Active Account</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {ROLE_OPTIONS.find(r => r.value === newRole)?.permissions}
+                    <p className="text-xs font-medium text-gray-700">Active account</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                      {ROLE_OPTIONS.find((r) => r.value === newRole)?.permissions}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setNewIsActive(v => !v)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      newIsActive ? 'bg-indigo-600' : 'bg-gray-300'
-                    }`}
+                    onClick={() => setNewIsActive((v) => !v)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${newIsActive ? 'bg-indigo-600' : 'bg-gray-300'}`}
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      newIsActive ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${newIsActive ? 'translate-x-5' : 'translate-x-1'}`} />
                   </button>
                 </div>
-
                 {addError && (
-                  <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl">{addError}</p>
+                  <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{addError}</p>
                 )}
               </div>
-              
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
-                >
+
+              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
+                <button type="button" onClick={() => { setShowAddModal(false); resetAddForm() }} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white">
                   Cancel
                 </button>
                 <button
-                  onClick={handleAddStaff}
+                  type="button"
+                  onClick={() => void handleAddStaff()}
                   disabled={adding}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {adding ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" />
-                      Add Staff Member
-                    </>
-                  )}
+                  {adding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  {adding ? 'Adding…' : 'Add staff'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Edit Staff Modal */}
         {showEditModal && selectedStaff && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}>
-            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Edit Staff Member</h2>
-                <button 
-                  onClick={() => setShowEditModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}
+          >
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#D9D0C2] bg-white shadow-xl overflow-hidden">
+              <div className="flex items-center justify-between gap-2 border-b border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
+                <h2 className="text-sm font-semibold text-gray-900">Edit staff member</h2>
+                <button type="button" onClick={() => setShowEditModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-md">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-12 h-12 ${selectedStaff.avatarColor} rounded-full flex items-center justify-center text-white text-lg font-medium`}>
+
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-10 h-10 ${selectedStaff.avatarColor} rounded-full flex items-center justify-center text-white text-sm font-medium`}>
                     {selectedStaff.initials}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{selectedStaff.full_name}</p>
-                    <p className="text-sm text-gray-500">{selectedStaff.email}</p>
+                    <p className="text-xs font-semibold text-gray-900">{selectedStaff.full_name}</p>
+                    <p className="text-[11px] text-gray-500">{selectedStaff.email}</p>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Role</label>
                   <select
                     value={selectedStaff.role}
-                    onChange={(e) => setSelectedStaff({...selectedStaff, role: e.target.value})}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                    onChange={(e) => setSelectedStaff({ ...selectedStaff, role: e.target.value })}
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                   >
-                    {ROLE_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
+                    {ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <label className="flex items-center gap-2 rounded-lg border border-[#E8E0D4] bg-[#F7F2E8] px-3 py-2.5 cursor-pointer">
                   <input
                     type="checkbox"
-                    id="isActive"
                     checked={selectedStaff.is_active}
-                    onChange={(e) => setSelectedStaff({...selectedStaff, is_active: e.target.checked})}
-                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    onChange={(e) => setSelectedStaff({ ...selectedStaff, is_active: e.target.checked })}
+                    className="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded"
                   />
-                  <label htmlFor="isActive" className="text-sm text-gray-700">
-                    Account Active
-                  </label>
-                </div>
+                  <span className="text-xs text-gray-700">Account active</span>
+                </label>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Password (optional)</label>
+                  <label className="block text-[11px] font-medium text-gray-600 mb-1">New password (optional)</label>
                   <div className="relative">
                     <input
                       type={showEditPassword ? 'text' : 'password'}
                       value={editPassword}
                       onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="Leave blank to keep current password"
-                      className="w-full px-4 py-2.5 pr-11 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
+                      placeholder="Leave blank to keep current"
+                      className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowEditPassword(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <button type="button" onClick={() => setShowEditPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Min. 6 characters</p>
                 </div>
 
                 {editError && (
-                  <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-xl">{editError}</p>
+                  <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{editError}</p>
                 )}
               </div>
-              
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
-                >
+
+              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
+                <button type="button" onClick={() => setShowEditModal(false)} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white">
                   Cancel
                 </button>
                 <button
-                  onClick={handleUpdateStaff}
+                  type="button"
+                  onClick={() => void handleUpdateStaff()}
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {actionLoading ? 'Saving...' : 'Save Changes'}
+                  {actionLoading ? 'Saving…' : 'Save changes'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedStaff && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}>
-            <div className="my-8 max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                  <Trash2 className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Remove Staff Member?</h2>
-                </div>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowDeleteModal(false) }}
+          >
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#D9D0C2] bg-white shadow-xl overflow-hidden">
+              <div className="px-4 py-4">
+                <h2 className="text-sm font-semibold text-gray-900">Remove staff member</h2>
+                <p className="mt-1.5 text-xs text-gray-600">
+                  Remove <span className="font-medium text-gray-900">“{selectedStaff.full_name}”</span> from your team? This can’t be undone.
+                </p>
               </div>
-              
-              <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to remove <strong>{selectedStaff.full_name}</strong> from your team? 
-                This action cannot be undone.
-              </p>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition-colors"
-                >
+              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
+                <button type="button" onClick={() => setShowDeleteModal(false)} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white" disabled={actionLoading}>
                   Cancel
                 </button>
                 <button
-                  onClick={handleDeleteStaff}
+                  type="button"
+                  onClick={() => void handleDeleteStaff()}
                   disabled={actionLoading}
-                  className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
-                  {actionLoading ? 'Removing...' : 'Remove Member'}
+                  {actionLoading ? 'Removing…' : 'Remove'}
                 </button>
               </div>
             </div>
