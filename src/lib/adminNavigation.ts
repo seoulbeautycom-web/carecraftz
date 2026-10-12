@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   Star,
+  Tag,
   Users,
 } from 'lucide-react'
 
@@ -88,7 +89,7 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     showInNavigation: true,
   },
   {
-    path: '/master/partners',
+    path: '/partners',
     label: 'Partners',
     icon: Users,
     requiredAnyPermissions: PARTNER_PERMISSIONS,
@@ -105,6 +106,13 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     path: '/products',
     label: 'Products',
     icon: Package,
+    requiredAnyPermissions: PRODUCT_PERMISSIONS,
+    showInNavigation: true,
+  },
+  {
+    path: '/brands',
+    label: 'Brand',
+    icon: Tag,
     requiredAnyPermissions: PRODUCT_PERMISSIONS,
     showInNavigation: true,
   },
@@ -196,6 +204,7 @@ export const ADMIN_MODULE_PERMISSIONS = {
   products: PRODUCT_PERMISSIONS,
   productsNew: PRODUCT_CREATE_PERMISSIONS,
   productsEdit: PRODUCT_EDIT_PERMISSIONS,
+  brands: PRODUCT_PERMISSIONS,
   staff: STAFF_PERMISSIONS,
   settings: SETTINGS_PERMISSIONS,
   analytics: ANALYTICS_PERMISSIONS,

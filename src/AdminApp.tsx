@@ -8,11 +8,13 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
 import StaffManagement from './pages/admin/Staff'
 import Products from './pages/admin/Products'
+import Brands from './pages/admin/Brands'
 import ProductEditor from './pages/admin/ProductEditor'
 import Settings from './pages/admin/Settings'
 import Analytics from './pages/admin/Analytics'
 import Reviews from './pages/admin/Reviews'
 import PartnerApplications from './pages/admin/PartnerApplications'
+import PartnerStoreEditor from './pages/admin/PartnerStoreEditor'
 import BlogPosts from './pages/admin/BlogPosts'
 import SocialMedia from './pages/admin/SocialMedia'
 import SkinTypes from './pages/admin/SkinTypes'
@@ -153,6 +155,11 @@ function AdminApp() {
                 <Products />
               </ProtectedRoute>
             } />
+            <Route path="/brands" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.brands}>
+                <Brands />
+              </ProtectedRoute>
+            } />
             <Route path="/settings" element={
               <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.settings}>
                 <Settings />
@@ -173,9 +180,9 @@ function AdminApp() {
                 <PartnerApplications />
               </ProtectedRoute>
             } />
-            <Route path="/master/partners" element={
+            <Route path="/partners/:storeId" element={
               <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.partners}>
-                <PartnerApplications />
+                <PartnerStoreEditor />
               </ProtectedRoute>
             } />
             <Route path="/content" element={
