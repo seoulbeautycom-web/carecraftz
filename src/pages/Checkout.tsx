@@ -16,12 +16,10 @@ import {
   Send,
   Home,
   AlertCircle,
-  Lock,
-  Eye,
-  EyeOff,
 } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
 import { useStorefrontIdentity } from '../contexts/StorefrontIdentityContext'
+import { useAuthModal } from '../contexts/auth-modal-context'
 
 interface OrderForm {
   fullName: string
@@ -34,28 +32,17 @@ interface OrderForm {
   paymentMethod: 'cod' | 'card'
 }
 
-function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34.2 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z" />
-      <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.3C29.2 35 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.3 4.1-4.2 5.5l.1.1 6.3 5.3C39 37.3 44 33 44 24c0-1.2-.1-2.3-.4-3.5z" />
-    </svg>
-  )
-}
-
 function CheckoutInner() {
   const navigate = useNavigate()
   const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart, replaceItems } =
     useCart()
-  const { user, loading: authLoading, signInWithEmail, signInWithPhone, verifyPhoneOtp, signInWithOAuth, signUp, signOut } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const { ops } = useStorefrontIdentity()
   const codEnabled = ops.payments.cod_enabled
   // Card checkout stays blocked until a real payment gateway is wired.
   const cardPaymentsLive = false
   const cardEnabled = ops.payments.card_enabled && cardPaymentsLive
-  const minPasswordLength = Math.max(6, ops.security.password_min_length || 6)
 
   const hasPKRItems = items.some((item) => item.currency === 'PKR')
   const hasAEDItems = items.some((item) => item.currency === 'AED' || !item.currency)
@@ -83,19 +70,6 @@ function CheckoutInner() {
   const [error, setError] = useState('')
   const [orderSuccess, setOrderSuccess] = useState(false)
   const [orderId, setOrderId] = useState('')
-
-  // Auth panel
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
-  const [authTab, setAuthTab] = useState<'email' | 'phone'>('email')
-  const [authEmail, setAuthEmail] = useState('')
-  const [authPassword, setAuthPassword] = useState('')
-  const [authName, setAuthName] = useState('')
-  const [authPhone, setAuthPhone] = useState('')
-  const [authOtp, setAuthOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [authBusy, setAuthBusy] = useState(false)
-  const [authError, setAuthError] = useState('')
 
   const pkrItems = items.filter((item) => item.currency === 'PKR')
   const aedItems = items.filter((item) => item.currency === 'AED' || !item.currency)
@@ -135,47 +109,6 @@ function CheckoutInner() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleAuthEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthBusy(true)
-    setAuthError('')
-    if (authMode === 'signup') {
-      const { error: err } = await signUp(authEmail, authPassword, authName)
-      if (err) setAuthError(err.message)
-      else setForm((prev) => ({ ...prev, fullName: authName, email: authEmail }))
-    } else {
-      const { error: err } = await signInWithEmail(authEmail, authPassword)
-      if (err) setAuthError(err.message)
-    }
-    setAuthBusy(false)
-  }
-
-  const handleAuthPhone = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthBusy(true)
-    setAuthError('')
-    if (!otpSent) {
-      const { error: err } = await signInWithPhone(authPhone)
-      if (err) setAuthError(err.message)
-      else setOtpSent(true)
-    } else {
-      const { error: err } = await verifyPhoneOtp(authPhone, authOtp)
-      if (err) setAuthError(err.message)
-      else setForm((prev) => ({ ...prev, phone: authPhone }))
-    }
-    setAuthBusy(false)
-  }
-
-  const handleGoogle = async () => {
-    setAuthBusy(true)
-    setAuthError('')
-    const { error: err } = await signInWithOAuth('google', { next: '/checkout' })
-    if (err) {
-      setAuthError(err.message)
-      setAuthBusy(false)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -382,34 +315,21 @@ function CheckoutInner() {
         {/* Left — account + shipping */}
         <div className="space-y-3">
           <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2
-                className="text-[#2b2b2b] leading-tight"
-                style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.05rem' }}
-              >
-                {user ? 'Account' : authMode === 'signup' ? 'Create account' : 'Sign in to checkout'}
-              </h2>
-              {!user && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode(authMode === 'login' ? 'signup' : 'login')
-                    setAuthError('')
-                    setOtpSent(false)
-                  }}
-                  className="text-[10px] font-bold uppercase tracking-wider text-[#3d6b4a] hover:opacity-70"
-                >
-                  {authMode === 'login' ? 'Sign up' : 'Sign in'}
-                </button>
-              )}
-            </div>
+            <h2
+              className="text-[#2b2b2b] leading-tight mb-3"
+              style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '1.05rem' }}
+            >
+              Account
+            </h2>
 
             {authLoading ? (
               <p className="text-xs text-[#696a67]">Checking session…</p>
             ) : user ? (
               <div className="flex items-center justify-between gap-2 rounded-xl bg-[#fbfcf4] border border-[#2b2b2b]/08 px-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-[#2b2b2b] truncate">{user.email || user.phone || 'Signed in'}</p>
+                  <p className="text-xs font-semibold text-[#2b2b2b] truncate">
+                    {user.email || user.phone || 'Signed in'}
+                  </p>
                   <p className="text-[11px] text-[#696a67]">Shipping details unlocked below</p>
                 </div>
                 <button
@@ -421,179 +341,20 @@ function CheckoutInner() {
                 </button>
               </div>
             ) : (
-              <>
-                {authMode === 'login' && (
-                  <div className="flex gap-1 p-0.5 bg-[#f0ece0] rounded-full mb-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthTab('email')
-                        setOtpSent(false)
-                        setAuthError('')
-                      }}
-                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-full transition-all ${
-                        authTab === 'email' ? 'bg-white text-[#2b2b2b] shadow-sm' : 'text-[#696a67]'
-                      }`}
-                    >
-                      <Mail className="w-3 h-3 inline mr-1" />
-                      Email
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthTab('phone')
-                        setAuthError('')
-                      }}
-                      className={`flex-1 py-1.5 text-[11px] font-semibold rounded-full transition-all ${
-                        authTab === 'phone' ? 'bg-white text-[#2b2b2b] shadow-sm' : 'text-[#696a67]'
-                      }`}
-                    >
-                      <Phone className="w-3 h-3 inline mr-1" />
-                      Mobile
-                    </button>
-                  </div>
-                )}
-
-                {authError && (
-                  <div className="mb-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{authError}</div>
-                )}
-
-                {authMode === 'signup' ? (
-                  <form onSubmit={handleAuthEmail} className="space-y-2">
-                    <input
-                      type="text"
-                      value={authName}
-                      onChange={(e) => setAuthName(e.target.value)}
-                      required
-                      placeholder="Full name"
-                      className={inputClass}
-                    />
-                    <input
-                      type="email"
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      required
-                      placeholder="Email"
-                      className={inputClass}
-                    />
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        required
-                        minLength={minPasswordLength}
-                        placeholder="Password"
-                        className={`${inputClass} pr-10`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      >
-                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={authBusy}
-                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
-                    >
-                      {authBusy ? 'Creating…' : 'Create account'}
-                    </button>
-                  </form>
-                ) : authTab === 'email' ? (
-                  <form onSubmit={handleAuthEmail} className="space-y-2">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input
-                        type="email"
-                        value={authEmail}
-                        onChange={(e) => setAuthEmail(e.target.value)}
-                        required
-                        placeholder="you@email.com"
-                        className={`${inputClass} pl-9`}
-                      />
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        required
-                        placeholder="Password"
-                        className={`${inputClass} pl-9 pr-10`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                      >
-                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={authBusy}
-                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
-                    >
-                      {authBusy ? 'Signing in…' : 'Sign in'}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleAuthPhone} className="space-y-2">
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input
-                        type="tel"
-                        value={authPhone}
-                        onChange={(e) => setAuthPhone(e.target.value)}
-                        required
-                        placeholder="+971… or +92…"
-                        className={`${inputClass} pl-9`}
-                        disabled={otpSent}
-                      />
-                    </div>
-                    {otpSent && (
-                      <input
-                        type="text"
-                        value={authOtp}
-                        onChange={(e) => setAuthOtp(e.target.value)}
-                        required
-                        placeholder="Enter OTP"
-                        className={inputClass}
-                      />
-                    )}
-                    <button
-                      type="submit"
-                      disabled={authBusy}
-                      className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-2.5 rounded-full disabled:opacity-50"
-                    >
-                      {authBusy ? 'Please wait…' : otpSent ? 'Verify OTP' : 'Send OTP'}
-                    </button>
-                  </form>
-                )}
-
-                {!user && (
-                  <div className="mt-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 h-px bg-[#2b2b2b]/10" />
-                      <span className="text-[10px] uppercase tracking-wider text-[#696a67]">or</span>
-                      <div className="flex-1 h-px bg-[#2b2b2b]/10" />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleGoogle()}
-                      disabled={authBusy}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full border border-[#2b2b2b]/12 bg-white text-xs font-semibold text-[#2b2b2b] hover:bg-[#fbfcf4] disabled:opacity-50"
-                    >
-                      <GoogleIcon />
-                      Continue with Google
-                    </button>
-                  </div>
-                )}
-              </>
+              <div className="space-y-3">
+                <p className="text-xs text-[#696a67]">
+                  Sign in with your mobile number or email to continue checkout.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openAuthModal({ mode: 'signin', tab: 'phone', next: '/checkout' })
+                  }
+                  className="w-full py-3 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider"
+                >
+                  Sign in to checkout
+                </button>
+              </div>
             )}
           </div>
 

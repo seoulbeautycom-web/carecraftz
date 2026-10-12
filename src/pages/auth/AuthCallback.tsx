@@ -12,7 +12,7 @@ export default function AuthCallback() {
   const signInPath = (() => {
     const hint = new URLSearchParams(location.search).get('signin')
     if (hint === '/login' || hint === '/signin') return hint
-    return window.location.hostname.startsWith('admin.') ? '/login' : '/signin'
+    return window.location.hostname.startsWith('admin.') ? '/login' : '/?auth=signin'
   })()
 
   const nextPath = (() => {

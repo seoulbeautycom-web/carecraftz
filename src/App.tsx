@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
+import { AuthModalProvider } from './contexts/AuthModalContext'
 import { StorefrontIdentityProvider } from './contexts/StorefrontIdentityContext'
 import BlogPostDetail from './pages/BlogPostDetail'
 import AboutUs from './components/AboutUs'
@@ -32,6 +33,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <StorefrontIdentityProvider>
+          <AuthModalProvider>
           <CartProvider>
           <Routes>
             {/* All storefront routes use PageFrame (global header/footer + home shell). Only frameColor differs. */}
@@ -62,6 +64,7 @@ function App() {
             {/* Admin routes — use admin.carecraftz.com */}
           </Routes>
           </CartProvider>
+          </AuthModalProvider>
         </StorefrontIdentityProvider>
       </AuthProvider>
     </BrowserRouter>

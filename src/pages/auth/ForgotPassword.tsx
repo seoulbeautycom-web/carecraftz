@@ -44,7 +44,7 @@ function ForgotPasswordInner() {
                 If an account exists for <strong>{email}</strong>, a reset link is on the way.
               </p>
               <Link
-                to="/signin"
+                to="/?auth=signin"
                 className="inline-flex w-full justify-center py-3 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider"
               >
                 Back to sign in
@@ -81,7 +81,7 @@ function ForgotPasswordInner() {
                 {loading ? 'Sending…' : 'Send reset link'}
               </button>
               <Link
-                to="/signin"
+                to="/?auth=signin"
                 className="block text-center text-[11px] font-semibold text-[#696a67] hover:text-[#2b2b2b]"
               >
                 Back to sign in

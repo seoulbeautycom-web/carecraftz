@@ -15,6 +15,7 @@ import {
   Home,
 } from 'lucide-react'
 import { useAuth } from '../contexts/auth-context'
+import { useAuthModal } from '../contexts/auth-modal-context'
 import { supabase } from '../lib/supabase'
 import PageFrame from '../components/PageFrame'
 
@@ -69,6 +70,7 @@ const emptyProfile: ProfileRow = {
 function ProfileInner() {
   const navigate = useNavigate()
   const { user, signOut, loading: authLoading } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'addresses'>('overview')
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
@@ -79,8 +81,11 @@ function ProfileInner() {
   const [profileError, setProfileError] = useState('')
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/signin')
-  }, [user, authLoading, navigate])
+    if (!authLoading && !user) {
+      openAuthModal({ mode: 'signin', tab: 'phone', next: '/profile' })
+      navigate('/', { replace: true })
+    }
+  }, [user, authLoading, navigate, openAuthModal])
 
   useEffect(() => {
     if (!user?.id) return

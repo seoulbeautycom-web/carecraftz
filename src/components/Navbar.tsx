@@ -108,7 +108,7 @@ export default function Navbar() {
               </button>
             ) : (
               <button
-                onClick={() => navigate('/signin')}
+                onClick={() => navigate('/?auth=signin')}
                 className={`font-['Poppins',sans-serif] text-sm font-bold px-4 py-2 rounded-full transition-colors duration-300 ${scrolled ? 'bg-black text-white hover:bg-gray-800' : isAboutPage ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-gray-800'}`}
               >
                 Sign In

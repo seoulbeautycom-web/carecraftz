@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/auth-context'
+import { useAuthModal } from '../contexts/auth-modal-context'
 import { usePageShellOptional } from '../contexts/PageShellContext'
 import { useStorefrontIdentity } from '../contexts/StorefrontIdentityContext'
 
@@ -18,6 +20,8 @@ export default function NewHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { totalItems } = useCart()
+  const { user } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const { store } = useStorefrontIdentity()
   const pageShell = usePageShellOptional()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -93,8 +97,13 @@ export default function NewHeader() {
         {/* Utility Icons Pill */}
         <div className={`flex-shrink-0 ${pillBase} rounded-full px-3 py-2 flex items-center gap-1 transition-all duration-300`}>
           <button
-            onClick={() => navigate('/profile')}
+            type="button"
+            onClick={() => {
+              if (user) navigate('/profile')
+              else openAuthModal({ mode: 'signin', tab: 'phone', next: '/profile' })
+            }}
             className="p-1.5 hover:bg-black/5 rounded-full transition-colors"
+            aria-label={user ? 'Profile' : 'Sign in'}
           >
             <User className="w-5 h-5 text-[#2b2b2b]" />
           </button>
