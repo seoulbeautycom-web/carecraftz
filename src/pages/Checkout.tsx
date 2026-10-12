@@ -21,6 +21,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import PageFrame from '../components/PageFrame'
+import { useStorefrontIdentity } from '../contexts/StorefrontIdentityContext'
 
 interface OrderForm {
   fullName: string
@@ -46,8 +47,14 @@ function GoogleIcon({ className = 'w-4 h-4' }: { className?: string }) {
 
 function CheckoutInner() {
   const navigate = useNavigate()
-  const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart } = useCart()
+  const { items, totalPriceByCurrency, deliveryChargesByCurrency, grandTotalByCurrency, clearCart, replaceItems } =
+    useCart()
   const { user, loading: authLoading, signInWithEmail, signInWithPhone, verifyPhoneOtp, signInWithOAuth, signUp, signOut } = useAuth()
+  const { ops } = useStorefrontIdentity()
+  const codEnabled = ops.payments.cod_enabled
+  // Card checkout stays blocked until a real payment gateway is wired.
+  const cardPaymentsLive = false
+  const cardEnabled = ops.payments.card_enabled && cardPaymentsLive
 
   const hasPKRItems = items.some((item) => item.currency === 'PKR')
   const hasAEDItems = items.some((item) => item.currency === 'AED' || !item.currency)
@@ -93,6 +100,18 @@ function CheckoutInner() {
   const aedItems = items.filter((item) => item.currency === 'AED' || !item.currency)
 
   useEffect(() => {
+    setForm((prev) => {
+      if (prev.paymentMethod === 'cod' && !codEnabled && cardEnabled) {
+        return { ...prev, paymentMethod: 'card' }
+      }
+      if (prev.paymentMethod === 'card' && !cardEnabled && codEnabled) {
+        return { ...prev, paymentMethod: 'cod' }
+      }
+      return prev
+    })
+  }, [cardEnabled, codEnabled])
+
+  useEffect(() => {
     async function fetchUserProfile() {
       if (!user?.id) return
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -115,13 +134,6 @@ function CheckoutInner() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const generateOrderId = async (): Promise<string> => {
-    const customId = `CC${Math.floor(1000 + Math.random() * 9000)}`
-    const { data } = await supabase.from('orders').select('order_code').eq('order_code', customId).single()
-    if (data) return generateOrderId()
-    return customId
   }
 
   const handleAuthEmail = async (e: React.FormEvent) => {
@@ -171,59 +183,89 @@ function CheckoutInner() {
       setError('Sign in to continue checkout.')
       return
     }
+    if (form.paymentMethod !== 'cod' || !codEnabled) {
+      setError('Only cash on delivery is available right now.')
+      return
+    }
     setLoading(true)
     setError('')
 
     try {
-      const orderCode = await generateOrderId()
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          order_code: orderCode,
-          user_id: user.id,
-          customer_email: form.email,
-          customer_phone: form.phone,
-          shipping_address: {
-            full_name: form.fullName,
-            address: form.address,
-            city: form.city,
-            country: form.country,
-            postal_code: form.postalCode,
-          },
-          items: items.map((item) => ({
-            product_id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            currency: item.currency || 'AED',
-            delivery_charge: item.delivery_charge || 0,
-            location: item.location || 'UAE',
-          })),
-          totals: {
-            pkr: {
-              subtotal: totalPriceByCurrency.PKR,
-              delivery: deliveryChargesByCurrency.PKR,
-              total: grandTotalByCurrency.PKR,
-            },
-            aed: {
-              subtotal: totalPriceByCurrency.AED,
-              delivery: deliveryChargesByCurrency.AED,
-              total: grandTotalByCurrency.AED,
-            },
-          },
-          payment_method: form.paymentMethod,
-          status: 'Order Received',
-        })
-        .select()
-        .single()
+      // Soft revalidate for cart UI; authoritative stock lock happens in place_checkout_orders.
+      const productIds = items.map((item) => item.id)
+      const { data: liveProducts, error: liveError } = await supabase
+        .from('products')
+        .select('id, name, price, price_pkr, price_aed, delivery_charge, location, images, is_active, inventory')
+        .in('id', productIds)
 
-      if (orderError) throw orderError
-      setOrderId(order.order_code)
+      if (liveError) throw liveError
+
+      const liveById = new Map((liveProducts || []).map((row) => [row.id, row]))
+      const syncedItems = []
+      for (const item of items) {
+        const live = liveById.get(item.id)
+        if (!live || !live.is_active) {
+          setError(`${item.name} is no longer available. Remove it from your cart to continue.`)
+          setLoading(false)
+          return
+        }
+        if (Number(live.inventory) < item.quantity) {
+          setError(`${item.name} only has ${live.inventory} in stock.`)
+          setLoading(false)
+          return
+        }
+        const preferPkr = item.currency === 'PKR'
+        const price = preferPkr
+          ? Number(live.price_pkr) || Number(live.price) || item.price
+          : Number(live.price_aed) || Number(live.price) || item.price
+        const location =
+          live.location === 'Pakistan' || live.location === 'UAE'
+            ? live.location
+            : item.location
+        syncedItems.push({
+          ...item,
+          name: live.name || item.name,
+          price,
+          delivery_charge: Number(live.delivery_charge) || 0,
+          location,
+          image: Array.isArray(live.images) && live.images[0] ? live.images[0] : item.image,
+        })
+      }
+
+      replaceItems(syncedItems)
+
+      const { data: placed, error: placeError } = await supabase.rpc('place_checkout_orders', {
+        p_customer_email: form.email,
+        p_customer_phone: form.phone,
+        p_shipping_address: {
+          full_name: form.fullName,
+          address: form.address,
+          city: form.city,
+          country: form.country,
+          postal_code: form.postalCode,
+        },
+        p_payment_method: 'cod',
+        p_items: syncedItems.map((item) => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          currency: item.currency || 'AED',
+        })),
+      })
+
+      if (placeError) throw placeError
+
+      const orders = (placed as { orders?: Array<{ order_code?: string }> } | null)?.orders || []
+      const codes = orders.map((o) => o.order_code).filter(Boolean) as string[]
+      setOrderId(codes.length > 0 ? codes.join(', ') : 'placed')
       setOrderSuccess(true)
       clearCart()
     } catch (err) {
       console.error('Order error:', err)
-      setError('Failed to place order. Please try again.')
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Failed to place order. Please try again.'
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -632,30 +674,52 @@ function CheckoutInner() {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1.5">Payment</p>
                   <div className="grid grid-cols-2 gap-1.5">
+                    {codEnabled ? (
+                      <label
+                        className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer ${
+                          form.paymentMethod === 'cod' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'
+                        }`}
+                      >
+                        <input type="radio" name="paymentMethod" value="cod" checked={form.paymentMethod === 'cod'} onChange={handleInputChange} className="sr-only" />
+                        <Truck className="w-3.5 h-3.5 text-[#1F331F] shrink-0" />
+                        <span className="text-[11px] font-medium text-[#2b2b2b]">Cash on delivery</span>
+                      </label>
+                    ) : null}
                     <label
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-pointer ${
-                        form.paymentMethod === 'cod' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'
-                      }`}
+                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border ${
+                        cardEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                      } ${form.paymentMethod === 'card' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'}`}
                     >
-                      <input type="radio" name="paymentMethod" value="cod" checked={form.paymentMethod === 'cod'} onChange={handleInputChange} className="sr-only" />
-                      <Truck className="w-3.5 h-3.5 text-[#1F331F] shrink-0" />
-                      <span className="text-[11px] font-medium text-[#2b2b2b]">Cash on delivery</span>
-                    </label>
-                    <label
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border cursor-not-allowed opacity-60 ${
-                        form.paymentMethod === 'card' ? 'border-[#E8B800] bg-[#fff9e0]' : 'border-[#2b2b2b]/10'
-                      }`}
-                    >
-                      <input type="radio" name="paymentMethod" value="card" checked={form.paymentMethod === 'card'} onChange={handleInputChange} className="sr-only" disabled />
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="card"
+                        checked={form.paymentMethod === 'card'}
+                        onChange={handleInputChange}
+                        className="sr-only"
+                        disabled={!cardEnabled}
+                      />
                       <CreditCard className="w-3.5 h-3.5 text-[#1F331F] shrink-0" />
-                      <span className="text-[11px] font-medium text-[#2b2b2b]">Card soon</span>
+                      <span className="text-[11px] font-medium text-[#2b2b2b]">Card (gateway soon)</span>
                     </label>
                   </div>
+                  <p className="mt-2 text-[11px] text-[#696a67]">
+                    Card checkout is disabled until a payment provider is connected. COD only.
+                  </p>
+                  {!codEnabled ? (
+                    <p className="mt-2 text-[11px] text-rose-600">Cash on delivery is disabled. Update Admin → Settings.</p>
+                  ) : null}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading || form.paymentMethod === 'card' || requiredCountry === 'mixed'}
+                  disabled={
+                    loading ||
+                    requiredCountry === 'mixed' ||
+                    (!codEnabled && !cardEnabled) ||
+                    (form.paymentMethod === 'card' && !cardEnabled) ||
+                    (form.paymentMethod === 'cod' && !codEnabled)
+                  }
                   className="w-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider py-3 rounded-full disabled:opacity-50"
                 >
                   {loading ? 'Placing order…' : 'Place order'}

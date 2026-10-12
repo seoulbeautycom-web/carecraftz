@@ -74,10 +74,10 @@ export default function Navbar() {
               )
             })}
             <Link
-              to="/seoul-beauty"
+              to="/shop"
               className={`font-['Poppins',sans-serif] text-sm font-bold transition-colors duration-300 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
-              Seoul Beauty
+              Shop
             </Link>
           </div>
 
@@ -168,11 +168,11 @@ export default function Navbar() {
               )
             })}
             <Link
-              to="/seoul-beauty"
+              to="/shop"
               onClick={() => setMobileOpen(false)}
               className={`font-['Poppins',sans-serif] text-base font-bold py-2 ${scrolled ? 'text-rose-500 hover:text-rose-600' : isAboutPage ? 'text-white hover:text-white/80' : 'text-[#1F331F] hover:text-[#1F331F]/80'}`}
             >
-              Seoul Beauty
+              Shop
             </Link>
             <Link
               to="/shop"

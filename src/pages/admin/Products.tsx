@@ -128,20 +128,37 @@ export default function Products() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const { data: productsData, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const [{ data: productsData, error }, { data: ordersData }] = await Promise.all([
+        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('orders').select('items,status'),
+      ])
 
       if (error) {
         console.error('Error fetching products:', error)
         return
       }
 
-      // Add sample sold data
-      const productsWithSold = (productsData || []).map((p: Product, i: number) => ({
+      const soldByProduct = new Map<string, number>()
+      for (const order of ordersData || []) {
+        const status = String((order as { status?: string }).status || '')
+        if (!['Delivered', 'Order Completed', 'Dispatched', 'Being Packaged', 'Order Confirmed'].includes(status)) {
+          continue
+        }
+        const items = Array.isArray((order as { items?: unknown }).items)
+          ? ((order as { items: Array<{ product_id?: string; quantity?: number }> }).items)
+          : []
+        for (const item of items) {
+          if (!item?.product_id) continue
+          soldByProduct.set(
+            item.product_id,
+            (soldByProduct.get(item.product_id) || 0) + (Number(item.quantity) || 0),
+          )
+        }
+      }
+
+      const productsWithSold = (productsData || []).map((p: Product) => ({
         ...p,
-        sold: [284, 156, 143, 122, 98, 85, 64][i % 7] || 0
+        sold: soldByProduct.get(p.id) || 0,
       }))
 
       setProducts(productsWithSold)
@@ -189,210 +206,45 @@ export default function Products() {
     { label: 'Out of Stock', value: outOfStockProducts, color: 'text-red-600', filter: 'out' as const, icon: XCircle }
   ]
 
-  const formatPrice = (price: number) => {
-    return `$${price.toFixed(0)}`
+  const formatPrice = (product: Product) => {
+    const parts: string[] = []
+    if (product.price_aed != null && product.price_aed > 0) parts.push(`AED ${product.price_aed.toFixed(0)}`)
+    if (product.price_pkr != null && product.price_pkr > 0) parts.push(`₨${product.price_pkr.toLocaleString()}`)
+    if (parts.length === 0) parts.push(product.price > 0 ? `AED ${product.price.toFixed(0)}` : '—')
+    return parts.join(' · ')
+  }
+
+  const formatLocations = (location: string) => {
+    if (!location?.trim()) return '—'
+    return location
+      .split(',')
+      .map((part) => part.trim().split(':')[0])
+      .filter(Boolean)
+      .join(', ')
   }
 
   const getStatusBadge = (product: Product) => {
     if (product.inventory === 0) {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-          Out of Stock
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-red-50 text-red-700 border border-red-100">
+          Out of stock
         </span>
       )
     }
     if (product.inventory <= product.low_stock_threshold) {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-          <AlertTriangle className="w-3 h-3 mr-1" />
-          Low Stock
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-100">
+          <AlertTriangle className="w-3 h-3" />
+          Low stock
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
         Active
       </span>
     )
   }
-
-  // Sample products for demo
-  const sampleProducts: Product[] = [
-    {
-      id: '1',
-      name: 'Calendula & Oat Soap',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 12,
-      compare_at_price: null,
-      inventory: 84,
-      low_stock_threshold: 10,
-      category: 'Face',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-001',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 284
-    },
-    {
-      id: '2',
-      name: 'Whipped Shea Body Butter',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 22,
-      compare_at_price: null,
-      inventory: 56,
-      low_stock_threshold: 10,
-      category: 'Body',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-002',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 156
-    },
-    {
-      id: '3',
-      name: 'Rosehip Facial Serum',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 38,
-      compare_at_price: null,
-      inventory: 32,
-      low_stock_threshold: 10,
-      category: 'Serums',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-003',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 143
-    },
-    {
-      id: '4',
-      name: 'Lavender Dream Soap',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 14,
-      compare_at_price: null,
-      inventory: 10,
-      low_stock_threshold: 15,
-      category: 'Body',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-004',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 122
-    },
-    {
-      id: '5',
-      name: 'Green Clay Detox Mask',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 28,
-      compare_at_price: null,
-      inventory: 0,
-      low_stock_threshold: 10,
-      category: 'Face',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-005',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 98
-    },
-    {
-      id: '6',
-      name: 'Botanical Bath Salts',
-      description: '',
-      brand_name: 'CareCraftz',
-      brand_logo: '',
-      seller_name: 'CareCraftz Official',
-      price: 18,
-      compare_at_price: null,
-      inventory: 63,
-      low_stock_threshold: 10,
-      category: 'Bath',
-      location: 'UAE',
-      delivery_charge: 0,
-      images: [],
-      is_active: true,
-      is_featured: false,
-      sku: 'SKU-006',
-      weight: null,
-      discount_percent: 0,
-      tags: [],
-      tag1: null,
-      tag2: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: null,
-      updated_by: null,
-      sold: 58
-    }
-  ]
 
   // Apply inventory filter
   const inventoryFilteredProducts = filteredProducts.filter(product => {
@@ -403,79 +255,77 @@ export default function Products() {
     return true
   })
 
-  const usingDemoProducts = products.length === 0
-  const displayProducts = usingDemoProducts
-    ? sampleProducts.filter((product) => {
-        if (!matchesSearch(product)) return false
-        if (inventoryFilter === 'all') return true
-        if (inventoryFilter === 'active') return product.is_active
-        if (inventoryFilter === 'low') return product.inventory <= product.low_stock_threshold && product.inventory > 0
-        if (inventoryFilter === 'out') return product.inventory === 0
-        return true
-      })
-    : inventoryFilteredProducts
+  const displayProducts = inventoryFilteredProducts
 
   return (
     <AdminLayout>
-      <div className="flex-1 bg-gray-50 min-h-screen">
-        {/* Top Navigation Bar */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Left - Title */}
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Products</h1>
-              <p className="text-sm text-gray-500">Manage your product catalog and inventory.</p>
+      <div className="min-h-full bg-[#F7F2E8]">
+        {/* Top bar — matches product editor chrome */}
+        <div className="sticky top-0 z-20 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-gray-900">Products</h1>
+              <p className="text-[11px] text-gray-500">Catalog, partner assignment, and fulfilment.</p>
             </div>
-            
-            {/* Right - Actions */}
-            <div className="flex items-center gap-4">
-              {/* Notification Button with Dropdown */}
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => openProductEditor()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add product
+              </button>
+
               <div className="relative">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                  className="relative p-1.5 text-gray-500 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4" />
                   {newOrdersCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
                   )}
                 </button>
-                
+
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
-                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">New Orders</h3>
-                      <button onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                        <X className="w-4 h-4" />
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#E8E0D4] flex items-center justify-between bg-[#F7F2E8]">
+                      <h3 className="text-xs font-semibold text-gray-900">New orders</h3>
+                      <button type="button" onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-md">
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-64 overflow-y-auto">
                       {newOrdersCount === 0 ? (
-                        <div className="p-8 text-center">
-                          <Bell className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">No new orders in the last 24 hours</p>
+                        <div className="p-6 text-center">
+                          <Bell className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                          <p className="text-[11px] text-gray-500">No new orders in the last 24 hours</p>
                         </div>
                       ) : (
                         allOrders.slice(0, 5).map((order) => (
-                          <div 
+                          <button
                             key={order.id}
-                            onClick={() => { setShowNotifications(false); navigate('/orders'); }}
-                            className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                            type="button"
+                            onClick={() => { setShowNotifications(false); navigate('/orders') }}
+                            className="w-full text-left px-3 py-2.5 border-b border-[#F0E9DC] hover:bg-[#F7F2E8] transition-colors"
                           >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-900">{order.order_code}</span>
-                              <span className="text-xs text-gray-500">{order.time_ago}</span>
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <span className="text-xs font-medium text-gray-900">{order.order_code}</span>
+                              <span className="text-[10px] text-gray-400">{order.time_ago}</span>
                             </div>
-                            <p className="text-sm text-gray-600 mb-1">{order.shipping_address?.full_name || order.customer_email}</p>
-                            <Eye className="w-3.5 h-3.5 text-gray-400" />
-                          </div>
+                            <p className="text-[11px] text-gray-600 truncate">{order.shipping_address?.full_name || order.customer_email}</p>
+                          </button>
                         ))
                       )}
                     </div>
-                    <div className="p-3 border-t border-gray-100">
-                      <button 
-                        onClick={() => { setShowNotifications(false); navigate('/orders'); }}
-                        className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg"
+                    <div className="p-2 border-t border-[#E8E0D4] bg-[#F7F2E8]">
+                      <button
+                        type="button"
+                        onClick={() => { setShowNotifications(false); navigate('/orders') }}
+                        className="w-full py-1.5 text-[11px] font-semibold text-indigo-600 hover:bg-white rounded-lg"
                       >
                         View all orders
                       </button>
@@ -484,36 +334,38 @@ export default function Products() {
                 )}
               </div>
 
-              {/* Profile Button with Dropdown */}
               <div className="relative">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-2 p-1 pr-3 hover:bg-gray-100 rounded-xl transition-colors"
+                  className="flex items-center gap-1.5 p-0.5 pr-2 hover:bg-white rounded-lg transition-colors"
                 >
-                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
                     {userName.charAt(0)}
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50">
-                    <div className="p-4 border-b border-gray-100">
-                      <p className="font-semibold text-gray-900">{userName}</p>
-                      <p className="text-sm text-gray-500">Store Owner</p>
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]">
+                      <p className="text-xs font-semibold text-gray-900">{userName}</p>
+                      <p className="text-[10px] text-gray-500">Staff access</p>
                     </div>
-                    <div className="p-2">
-                      <button 
-                        onClick={() => { setShowProfileMenu(false); navigate('/settings'); }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl"
+                    <div className="p-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setShowProfileMenu(false); navigate('/settings') }}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-[#F7F2E8] rounded-lg"
                       >
-                        <Settings className="w-4 h-4" /> Settings
+                        <Settings className="w-3.5 h-3.5" /> Settings
                       </button>
-                      <button 
+                      <button
+                        type="button"
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg"
                       >
-                        <LogOut className="w-4 h-4" /> Logout
+                        <LogOut className="w-3.5 h-3.5" /> Logout
                       </button>
                     </div>
                   </div>
@@ -523,26 +375,29 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="p-8">
-          {/* Clickable Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {stats.map((stat, index) => {
+        <div className="px-4 py-4 sm:px-6 space-y-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {stats.map((stat) => {
               const Icon = stat.icon
+              const active = inventoryFilter === stat.filter
               return (
                 <button
-                  key={index}
+                  key={stat.filter}
+                  type="button"
                   onClick={() => setInventoryFilter(stat.filter)}
-                  className={`bg-white rounded-2xl p-6 shadow-sm border text-left transition-all hover:shadow-md ${
-                    inventoryFilter === stat.filter ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-gray-100'
+                  className={`rounded-xl border bg-white px-3 py-2.5 text-left transition-all ${
+                    active
+                      ? 'border-indigo-400 ring-2 ring-indigo-500/15'
+                      : 'border-[#D9D0C2] hover:border-[#C9BEAE]'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                      <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+                      <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mt-0.5">{stat.label}</p>
                     </div>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '100')}`}>
-                      <Icon className={`w-5 h-5 ${stat.color}`} />
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${stat.color.replace('text-', 'bg-').replace('600', '50')}`}>
+                      <Icon className={`w-3.5 h-3.5 ${stat.color}`} />
                     </div>
                   </div>
                 </button>
@@ -550,53 +405,43 @@ export default function Products() {
             })}
           </div>
 
-          {/* Products Table Section */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {/* Search and Filters */}
-            <div className="p-4 border-b border-gray-100">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Search */}
-                <div className="flex-1 min-w-[300px]">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                    />
-                  </div>
+          <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
+            <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]/50">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search name, SKU, partner…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#D9D0C2] rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                  />
                 </div>
 
-                {/* View Toggle & Add Button */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-[#F0E9DC] rounded-lg p-0.5">
                     <button
+                      type="button"
                       onClick={() => setViewMode('table')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
                         viewMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      <TableIcon className="w-4 h-4" />
+                      <TableIcon className="w-3.5 h-3.5" />
                       Table
                     </button>
                     <button
+                      type="button"
                       onClick={() => setViewMode('grid')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
                         viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      <Grid3X3 className="w-4 h-4" />
+                      <Grid3X3 className="w-3.5 h-3.5" />
                       Grid
                     </button>
                   </div>
-                  <button
-                    onClick={() => openProductEditor()}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
-                    <Plus className="w-4 h-4" />
-                    Add Product
-                  </button>
                 </div>
               </div>
             </div>
@@ -605,109 +450,77 @@ export default function Products() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Product</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">SKU</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Skin Type</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Price</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Stock</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Sold</th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <tr className="border-b border-[#E8E0D4] bg-[#F7F2E8]/40">
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Partner</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Locations</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Stock</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                          Loading products...
-                        </td>
+                        <td colSpan={7} className="px-3 py-8 text-center text-xs text-gray-500">Loading products…</td>
                       </tr>
                     ) : displayProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                          No products found
-                        </td>
+                        <td colSpan={7} className="px-3 py-8 text-center text-xs text-gray-500">No products found</td>
                       </tr>
                     ) : (
                       displayProducts.map((product) => (
                         <tr
                           key={product.id}
                           tabIndex={0}
-                          onClick={() => openProductEditor(usingDemoProducts ? undefined : product.id)}
+                          onClick={() => openProductEditor(product.id)}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter' || event.key === ' ') {
                               event.preventDefault()
-                              openProductEditor(usingDemoProducts ? undefined : product.id)
+                              openProductEditor(product.id)
                             }
                           }}
-                          className="group border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50 transition-colors focus:bg-gray-50 focus:outline-none"
+                          className="group border-b border-[#F0E9DC] last:border-0 cursor-pointer hover:bg-[#F7F2E8]/70 transition-colors focus:bg-[#F7F2E8] focus:outline-none"
                         >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-9 h-9 bg-[#F0E9DC] border border-[#D9D0C2] rounded-lg flex items-center justify-center overflow-hidden shrink-0">
                                 {product.images && product.images.length > 0 ? (
-                                  <img
-                                    src={product.images[0]}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover"
-                                  />
+                                  <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                                 ) : (
-                                  <Package className="w-5 h-5 text-gray-400" />
+                                  <Package className="w-4 h-4 text-gray-400" />
                                 )}
                               </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
-                                    {product.name}
-                                  </span>
-                                  {product.brand_name && (
-                                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-                                      {product.brand_name}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500">
-                                  {product.brand_name || 'No brand yet'}{product.seller_name ? ` • Seller: ${product.seller_name}` : ''}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors truncate">
+                                  {product.name}
+                                </p>
+                                <p className="text-[11px] text-gray-500 truncate">
+                                  {product.subtitle || product.category || '—'}
+                                  {product.skin_type ? ` · ${product.skin_type}` : ''}
                                 </p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-600">{product.sku || '-'}</span>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs text-gray-600 font-mono">{product.sku || '—'}</span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-gray-600">{product.category || '-'}</span>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs text-gray-700">{product.seller_name || product.brand_name || '—'}</span>
                           </td>
-                          <td className="px-6 py-4">
-                            {product.skin_type ? (
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                product.skin_type === 'Oily' ? 'bg-lime-100 text-lime-700' :
-                                product.skin_type === 'Dry' ? 'bg-orange-100 text-orange-700' :
-                                product.skin_type === 'Combo' ? 'bg-teal-100 text-teal-700' :
-                                'bg-blue-100 text-blue-700'
-                              }`}>
-                                {product.skin_type}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-gray-400">—</span>
-                            )}
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs text-gray-600">{formatLocations(product.location)}</span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-medium text-gray-900">{formatPrice(product.price)}</span>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs font-medium text-gray-900 whitespace-nowrap">{formatPrice(product)}</span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className={`text-sm ${product.inventory <= product.low_stock_threshold ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                          <td className="px-3 py-2.5">
+                            <span className={`text-xs ${product.inventory <= product.low_stock_threshold ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               {product.inventory}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1 text-sm text-emerald-600">
-                              <span className="text-emerald-500">↗</span>
-                              {product.sold || 0}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
+                          <td className="px-3 py-2.5">
                             {getStatusBadge(product)}
                           </td>
                         </tr>
@@ -717,13 +530,13 @@ export default function Products() {
                 </table>
               </div>
             ) : (
-              <div className="grid gap-6 p-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-2.5 p-3 sm:grid-cols-2 xl:grid-cols-3">
                 {loading ? (
-                  <div className="col-span-full rounded-2xl border border-gray-100 bg-gray-50 px-6 py-10 text-center text-gray-500">
-                    Loading products...
+                  <div className="col-span-full rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8] px-4 py-8 text-center text-xs text-gray-500">
+                    Loading products…
                   </div>
                 ) : displayProducts.length === 0 ? (
-                  <div className="col-span-full rounded-2xl border border-gray-100 bg-gray-50 px-6 py-10 text-center text-gray-500">
+                  <div className="col-span-full rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8] px-4 py-8 text-center text-xs text-gray-500">
                     No products found
                   </div>
                 ) : (
@@ -731,65 +544,53 @@ export default function Products() {
                     <button
                       key={product.id}
                       type="button"
-                      onClick={() => openProductEditor(usingDemoProducts ? undefined : product.id)}
-                      className="group rounded-3xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      onClick={() => openProductEditor(product.id)}
+                      className="group rounded-xl border border-[#D9D0C2] bg-white p-3 text-left transition-all hover:border-indigo-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                     >
-                      <div className="relative overflow-hidden rounded-2xl bg-gray-100 aspect-[4/3]">
+                      <div className="relative overflow-hidden rounded-lg bg-[#F0E9DC] aspect-[4/3] border border-[#E8E0D4]">
                         {product.images && product.images.length > 0 ? (
-                          <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                          <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
-                            <Package className="h-10 w-10 text-gray-400" />
+                            <Package className="h-8 w-8 text-gray-400" />
                           </div>
                         )}
-                        <div className="absolute left-3 top-3">
+                        <div className="absolute left-2 top-2">
                           {getStatusBadge(product)}
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                              {product.name}
-                            </h3>
-                            {product.brand_name && (
-                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
-                                {product.brand_name}
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm text-gray-500 line-clamp-2">
-                            {product.subtitle || product.description || 'No description added yet.'}
+                      <div className="mt-2.5 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors truncate">
+                            {product.name}
+                          </h3>
+                          <p className="mt-0.5 text-[11px] text-gray-500 truncate">
+                            {product.seller_name || product.brand_name || 'No partner'} · {formatLocations(product.location)}
                           </p>
                         </div>
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600">
-                          <Eye className="h-5 w-5" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F7F2E8] text-gray-400 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600">
+                          <Eye className="h-3.5 w-3.5" />
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Price</p>
-                          <p className="font-medium text-gray-900">{formatPrice(product.price)}</p>
+                      <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[11px]">
+                        <div className="rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]/60 px-2 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Price</p>
+                          <p className="font-medium text-gray-900 truncate">{formatPrice(product)}</p>
                         </div>
-                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Stock</p>
+                        <div className="rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]/60 px-2 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Stock</p>
                           <p className="font-medium text-gray-900">{product.inventory}</p>
                         </div>
-                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">SKU</p>
-                          <p className="font-medium text-gray-900">{product.sku || '—'}</p>
+                        <div className="rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]/60 px-2 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">SKU</p>
+                          <p className="font-medium text-gray-900 font-mono">{product.sku || '—'}</p>
                         </div>
-                        <div className="rounded-2xl bg-gray-50 px-3 py-2">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Sold</p>
+                        <div className="rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]/60 px-2 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Sold</p>
                           <p className="font-medium text-gray-900">{product.sold || 0}</p>
                         </div>
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                        <span>{product.brand_name || 'No brand yet'}{product.seller_name ? ` • ${product.seller_name}` : ''}</span>
-                        <span className="font-medium text-indigo-600">Open details →</span>
                       </div>
                     </button>
                   ))

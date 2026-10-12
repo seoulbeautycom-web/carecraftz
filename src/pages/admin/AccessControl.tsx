@@ -11,7 +11,6 @@ import {
   Search,
   ShieldCheck,
   Trash2,
-  Users,
   X,
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
@@ -52,12 +51,7 @@ interface RolePermissionRow {
 
 interface StaffRow {
   id: string
-  full_name: string
-  email: string
   role: string
-  is_active: boolean
-  last_signed_in: string | null
-  created_at: string
 }
 
 interface StaffRoleRow {
@@ -117,11 +111,6 @@ const formatTimeAgo = (dateString: string) => {
   return `${Math.floor(diffInMinutes / 1440)}d ago`
 }
 
-const formatLastSignedIn = (dateString: string | null) => {
-  if (!dateString) return 'Never'
-  return formatTimeAgo(dateString)
-}
-
 const fallbackRoleMeta = (code: string) => {
   const predefined = ROLE_OPTIONS.find((role) => role.value === code)
   if (predefined) return predefined
@@ -146,6 +135,8 @@ const normalizeRoleCode = (value: string) => value
   .replace(/_+/g, '_')
   .replace(/^_+|_+$/g, '')
 
+type RoleDetailTab = 'settings' | 'permissions' | 'audit'
+
 const getAuditTitle = (row: AuditRow) => {
   const primarySnapshot = row.new_data ?? row.old_data ?? {}
   const candidateTitle =
@@ -158,15 +149,109 @@ const getAuditTitle = (row: AuditRow) => {
   return candidateTitle ?? row.table_name
 }
 
-const buildStaffAssignmentDraft = (staffRows: StaffRow[], staffRoleRows: StaffRoleRow[]) => {
-  const draft: Record<string, string> = {}
-  const roleLookup = new Map(staffRoleRows.map((entry) => [entry.staff_id, entry.role_code]))
+const AUDIT_TABLE_LABELS: Record<string, string> = {
+  roles: 'Role',
+  permissions: 'Permission',
+  role_permissions: 'Role permission',
+  staff_roles: 'Staff assignment',
+}
 
-  for (const member of staffRows) {
-    draft[member.id] = roleLookup.get(member.id) ?? member.role
+const AUDIT_SKIP_FIELDS = new Set(['updated_at', 'created_at', 'id'])
+
+const formatAuditFieldLabel = (key: string) =>
+  key
+    .split('_')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+
+const formatAuditValue = (value: unknown) => {
+  if (value === null || value === undefined) return '—'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
+const buildAuditChangeLines = (row: AuditRow) => {
+  const tableLabel = AUDIT_TABLE_LABELS[row.table_name] ?? row.table_name
+  const subject = getAuditTitle(row)
+
+  if (row.action === 'DELETE') {
+    return [`Removed ${tableLabel.toLowerCase()}: ${subject}`]
   }
 
-  return draft
+  if (row.action === 'CREATE') {
+    return [`Added ${tableLabel.toLowerCase()}: ${subject}`]
+  }
+
+  if (row.action === 'UPDATE' && row.old_data && row.new_data) {
+    const lines: string[] = []
+    const keys = new Set([...Object.keys(row.old_data), ...Object.keys(row.new_data)])
+
+    for (const key of keys) {
+      if (AUDIT_SKIP_FIELDS.has(key)) continue
+      const oldValue = row.old_data[key]
+      const newValue = row.new_data[key]
+      if (JSON.stringify(oldValue) === JSON.stringify(newValue)) continue
+      lines.push(`${formatAuditFieldLabel(key)}: ${formatAuditValue(oldValue)} → ${formatAuditValue(newValue)}`)
+    }
+
+    if (lines.length > 0) {
+      return lines.map((line) => `${tableLabel} “${subject}” — ${line}`)
+    }
+  }
+
+  return [`Updated ${tableLabel.toLowerCase()}: ${subject}`]
+}
+
+interface AuditEventBatch {
+  key: string
+  performedBy: string
+  performedByEmail: string | null
+  performedAt: string
+  changeLines: string[]
+  changeCount: number
+}
+
+const formatAuditWhen = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+const groupAuditRowsIntoBatches = (rows: AuditRow[]): AuditEventBatch[] => {
+  const batchMap = new Map<string, AuditEventBatch>()
+
+  for (const row of rows) {
+    const performedBy = row.performed_by_name?.trim() || row.performed_by_email?.trim() || 'System'
+    const performedByEmail = row.performed_by_email?.trim() || null
+    const batchKey = `${performedByEmail ?? performedBy}|${row.performed_at}`
+
+    const existing = batchMap.get(batchKey)
+    const rowLines = buildAuditChangeLines(row)
+
+    if (existing) {
+      existing.changeLines.push(...rowLines)
+      existing.changeCount = existing.changeLines.length
+      if (new Date(row.performed_at).getTime() > new Date(existing.performedAt).getTime()) {
+        existing.performedAt = row.performed_at
+      }
+      continue
+    }
+
+    batchMap.set(batchKey, {
+      key: batchKey,
+      performedBy,
+      performedByEmail,
+      performedAt: row.performed_at,
+      changeLines: rowLines,
+      changeCount: rowLines.length,
+    })
+  }
+
+  return Array.from(batchMap.values()).sort(
+    (left, right) => new Date(right.performedAt).getTime() - new Date(left.performedAt).getTime(),
+  )
 }
 
 export default function AccessControl() {
@@ -180,10 +265,8 @@ export default function AccessControl() {
   const [pageError, setPageError] = useState('')
   const [selectedRoleCode, setSelectedRoleCode] = useState('')
   const [roleSearch, setRoleSearch] = useState('')
-  const [staffSearch, setStaffSearch] = useState('')
   const [savingRole, setSavingRole] = useState(false)
   const [savingPermissions, setSavingPermissions] = useState(false)
-  const [savingStaffId, setSavingStaffId] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createRoleForm, setCreateRoleForm] = useState<CreateRoleFormState>(defaultCreateRoleForm)
   const [roleForm, setRoleForm] = useState<RoleFormState>(defaultRoleForm)
@@ -191,6 +274,10 @@ export default function AccessControl() {
   const [creatingRole, setCreatingRole] = useState(false)
   const [deletingRoleCode, setDeletingRoleCode] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
+  const [detailTab, setDetailTab] = useState<RoleDetailTab>('settings')
+  const [showRoleChangesList, setShowRoleChangesList] = useState(false)
+  const [showPermissionChangesList, setShowPermissionChangesList] = useState(false)
+  const [openAuditBatchKey, setOpenAuditBatchKey] = useState<string | null>(null)
 
   const selectedRoleCodeRef = useRef('')
 
@@ -233,26 +320,6 @@ export default function AccessControl() {
 
   const selectedRole = roles.find((role) => role.code === selectedRoleCode) ?? null
 
-  const rolePermissionLookup = useMemo(() => {
-    const map = new Map<string, Set<string>>()
-    for (const role of roles) {
-      map.set(role.id, new Set())
-    }
-    for (const entry of rolePermissions) {
-      const bucket = map.get(entry.role_id)
-      if (bucket) bucket.add(entry.permission_id)
-    }
-    return map
-  }, [roles, rolePermissions])
-
-  const rolePermissionCount = useMemo(() => {
-    const counts: Record<string, number> = {}
-    for (const role of roles) {
-      counts[role.id] = rolePermissionLookup.get(role.id)?.size ?? 0
-    }
-    return counts
-  }, [roles, rolePermissionLookup])
-
   const staffRoleLookup = useMemo(() => {
     const map = new Map<string, string>()
     for (const row of staffRoles) {
@@ -272,8 +339,6 @@ export default function AccessControl() {
     }
     return counts
   }, [roles, staff, staffRoleLookup])
-
-  const [staffAssignmentDraft, setStaffAssignmentDraft] = useState<Record<string, string>>({})
 
   const selectedPermissionSet = useMemo(() => new Set(draftPermissionIds), [draftPermissionIds])
 
@@ -322,19 +387,68 @@ export default function AccessControl() {
     })
   }, [roles, roleSearch])
 
-  const filteredStaff = useMemo(() => {
-    const query = staffSearch.trim().toLowerCase()
-    return staff.filter((member) => {
-      const resolvedRole = staffRoleLookup.get(member.id) ?? member.role
-      const roleMeta = fallbackRoleMeta(resolvedRole)
-      return (
-        !query ||
-        [member.full_name, member.email, member.role, resolvedRole, roleMeta.label].some((value) =>
-          value.toLowerCase().includes(query),
-        )
-      )
-    })
-  }, [staff, staffRoleLookup, staffSearch])
+  const savedPermissionIds = useMemo(() => {
+    if (!selectedRole) return new Set<string>()
+    return new Set(
+      rolePermissions
+        .filter((entry) => entry.role_id === selectedRole.id)
+        .map((entry) => entry.permission_id),
+    )
+  }, [selectedRole, rolePermissions])
+
+  const roleSettingsChanges = useMemo(() => {
+    if (!selectedRole) return [] as string[]
+
+    const changes: string[] = []
+    const trimmedName = roleForm.name.trim()
+    const trimmedDescription = roleForm.description.trim()
+
+    if (trimmedName !== selectedRole.name) {
+      changes.push(`Name: “${selectedRole.name}” → “${trimmedName}”`)
+    }
+    if (trimmedDescription !== selectedRole.description) {
+      changes.push('Description updated')
+    }
+    if (roleForm.category !== selectedRole.category) {
+      const label = (value: RoleRow['category']) =>
+        ROLE_CATEGORY_OPTIONS.find((option) => option.value === value)?.label ?? value
+      changes.push(`Category: ${label(selectedRole.category)} → ${label(roleForm.category)}`)
+    }
+
+    return changes
+  }, [selectedRole, roleForm])
+
+  const permissionChanges = useMemo(() => {
+    if (!selectedRole) return [] as string[]
+
+    const changes: string[] = []
+    for (const permission of permissions) {
+      const enabled = selectedPermissionSet.has(permission.id)
+      const wasEnabled = savedPermissionIds.has(permission.id)
+      if (enabled && !wasEnabled) {
+        changes.push(`Added: ${permission.name}`)
+      } else if (!enabled && wasEnabled) {
+        changes.push(`Removed: ${permission.name}`)
+      }
+    }
+
+    return changes.sort((left, right) => left.localeCompare(right))
+  }, [permissions, savedPermissionIds, selectedPermissionSet, selectedRole])
+
+  const roleSettingsChangeCount = roleSettingsChanges.length
+  const permissionChangeCount = permissionChanges.length
+
+  const auditBatches = useMemo(() => groupAuditRowsIntoBatches(auditRows), [auditRows])
+  const auditChangeTotal = useMemo(
+    () => auditBatches.reduce((sum, batch) => sum + batch.changeCount, 0),
+    [auditBatches],
+  )
+
+  useEffect(() => {
+    setShowRoleChangesList(false)
+    setShowPermissionChangesList(false)
+    setOpenAuditBatchKey(null)
+  }, [selectedRoleCode, detailTab])
 
   const stats = useMemo(() => [
     {
@@ -352,20 +466,13 @@ export default function AccessControl() {
       tone: 'bg-amber-100 text-amber-600',
     },
     {
-      label: 'Staff assignments',
-      value: staffRoles.length,
-      icon: Users,
-      hint: 'normalized links',
-      tone: 'bg-emerald-100 text-emerald-600',
-    },
-    {
       label: 'Audit entries',
       value: auditRows.length,
       icon: Eye,
       hint: 'security events',
       tone: 'bg-[#F0E9DC] text-gray-600',
     },
-  ], [auditRows.length, permissions.length, roles.length, staffRoles.length])
+  ], [auditRows.length, permissions.length, roles.length])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -376,7 +483,7 @@ export default function AccessControl() {
         supabase.from('roles').select('*').order('sort_order', { ascending: true }),
         supabase.from('permissions').select('*').order('module', { ascending: true }).order('sort_order', { ascending: true }),
         supabase.from('role_permissions').select('*'),
-        supabase.from('staff').select('id, full_name, email, role, is_active, last_signed_in, created_at').order('full_name', { ascending: true }),
+        supabase.from('staff').select('id, role'),
         supabase.from('staff_roles').select('*').order('assigned_at', { ascending: false }),
         supabase
           .from('audit_logs')
@@ -405,7 +512,6 @@ export default function AccessControl() {
       setStaff(nextStaff)
       setStaffRoles(nextStaffRoles)
       setAuditRows(auditResult.data ?? [])
-      setStaffAssignmentDraft(buildStaffAssignmentDraft(nextStaff, nextStaffRoles))
 
       const activeRoleCode = selectedRoleCodeRef.current
       const nextSelectedRole = nextRoles.find((role) => role.code === activeRoleCode) ?? nextRoles[0] ?? null
@@ -536,6 +642,7 @@ export default function AccessControl() {
       )
 
       showSuccess(`Role ${selectedRole.code} updated.`)
+      setShowRoleChangesList(false)
     } catch (error) {
       console.error('Failed to save role:', error)
       setPageError(error instanceof Error ? error.message : 'Failed to save role')
@@ -576,6 +683,7 @@ export default function AccessControl() {
 
       setRolePermissions([...updatedRolePermissions, ...replacementRows])
       showSuccess(`Permissions updated for ${selectedRole.code}.`)
+      setShowPermissionChangesList(false)
     } catch (error) {
       console.error('Failed to save permissions:', error)
       setPageError(error instanceof Error ? error.message : 'Failed to save permissions')
@@ -619,47 +727,6 @@ export default function AccessControl() {
     }
   }
 
-  const handleAssignStaffRole = async (staffId: string) => {
-    const targetRoleCode = staffRoleLookup.get(staffId) ?? staff.find((member) => member.id === staffId)?.role ?? 'staff'
-    const nextRoleCode = staffAssignmentDraft[staffId] ?? targetRoleCode
-
-    setSavingStaffId(staffId)
-    setPageError('')
-
-    try {
-      const { error } = await supabase.rpc('sync_staff_role_assignment', {
-        target_staff_id: staffId,
-        target_role_code: nextRoleCode,
-      })
-
-      if (error) throw error
-
-      setStaff((current) => current.map((member) => (member.id === staffId ? { ...member, role: nextRoleCode } : member)))
-      setStaffRoles((current) => {
-        const remaining = current.filter((entry) => entry.staff_id !== staffId)
-        return [
-          ...remaining,
-          {
-            staff_id: staffId,
-            role_code: nextRoleCode,
-            assigned_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ]
-      })
-      setStaffAssignmentDraft((current) => ({
-        ...current,
-        [staffId]: nextRoleCode,
-      }))
-      showSuccess('Staff role updated.')
-    } catch (error) {
-      console.error('Failed to assign staff role:', error)
-      setPageError(error instanceof Error ? error.message : 'Failed to assign staff role')
-    } finally {
-      setSavingStaffId(null)
-    }
-  }
-
   const rolePermissionSummary = selectedRole
     ? {
         assignedStaff: staffAssignmentCounts[selectedRole.code] ?? 0,
@@ -677,7 +744,7 @@ export default function AccessControl() {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-base font-bold text-gray-900">Access Control</h1>
-              <p className="text-[11px] text-gray-500">Roles, permissions, and staff assignments.</p>
+              <p className="text-[11px] text-gray-500">Roles and permissions.</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
@@ -715,7 +782,7 @@ export default function AccessControl() {
             </div>
           )}
 
-          <div className="grid gap-2.5 grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3">
             {stats.map((stat) => {
               const Icon = stat.icon
               return (
@@ -735,478 +802,457 @@ export default function AccessControl() {
             })}
           </div>
 
-          <div className="space-y-3">
-              <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800">Roles</p>
-                    <p className="text-[11px] text-gray-500">System roles and custom templates</p>
-                  </div>
-                  <div className="relative w-full sm:w-56">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 w-3.5 h-3.5 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={roleSearch}
-                      onChange={(event) => setRoleSearch(event.target.value)}
-                      placeholder="Search roles"
-                      className="w-full rounded-lg border border-[#D9D0C2] bg-white py-1.5 pl-8 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-[#E8E0D4] bg-[#FBF8F2]/60">
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Role</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Code</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Staff</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Permissions</th>
-                        <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRoles.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-xs text-gray-500">No roles found</td>
-                        </tr>
-                      ) : (
-                        filteredRoles.map((role) => {
-                          const meta = fallbackRoleMeta(role.code)
-                          const isSelected = role.code === selectedRole?.code
-                          const assignedCount = staffAssignmentCounts[role.code] ?? 0
-                          const permissionCount = rolePermissionCount[role.id] ?? 0
-
-                          return (
-                            <tr
-                              key={role.id}
-                              onClick={() => applyRoleSelection(role, rolePermissions)}
-                              className={`border-b border-[#F0E9DC] last:border-0 cursor-pointer transition-colors ${
-                                isSelected ? 'bg-indigo-50/70' : 'hover:bg-[#F7F2E8]/50'
-                              }`}
-                            >
-                              <td className="px-4 py-2.5">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-medium ${meta.color}`}>
-                                    {role.name}
-                                  </span>
-                                  {role.is_system && (
-                                    <span className="rounded-md bg-[#F0E9DC] px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
-                                      System
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-[11px] text-gray-500 line-clamp-1 max-w-md">{role.description}</p>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <span className="text-[11px] font-mono text-gray-600">{role.code}</span>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <span className="text-xs font-medium text-gray-800">{assignedCount}</span>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <span className="text-xs font-medium text-gray-800">{permissionCount}</span>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                {!role.is_system && assignedCount === 0 ? (
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      void handleDeleteRole(role)
-                                    }}
-                                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                                    title="Delete role"
-                                  >
-                                    {deletingRoleCode === role.code ? (
-                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                ) : (
-                                  <span className="text-[10px] text-gray-400">—</span>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })
-                      )}
-                    </tbody>
-                  </table>
+          <div className="grid grid-cols-1 xl:grid-cols-[min(300px,100%)_minmax(0,1fr)] gap-3 items-start">
+            <aside className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden xl:sticky xl:top-[4.25rem] xl:flex xl:max-h-[calc(100vh-5.25rem)] xl:flex-col">
+              <div className="border-b border-[#E8E0D4] bg-[#FBF8F2] px-3 py-3">
+                <p className="text-xs font-semibold text-gray-800">Roles</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">{filteredRoles.length} templates</p>
+                <div className="relative mt-2.5">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 w-3.5 h-3.5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={roleSearch}
+                    onChange={(event) => setRoleSearch(event.target.value)}
+                    placeholder="Search roles"
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white py-1.5 pl-8 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  />
                 </div>
               </div>
+              <div className="p-2 space-y-1 overflow-y-auto xl:flex-1">
+                {filteredRoles.length === 0 ? (
+                  <p className="px-2 py-6 text-center text-xs text-gray-500">No roles found</p>
+                ) : (
+                  filteredRoles.map((role) => {
+                    const isSelected = role.code === selectedRole?.code
+                    const assignedCount = staffAssignmentCounts[role.code] ?? 0
 
-              <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800">Staff assignments</p>
-                    <p className="text-[11px] text-gray-500">Assign one role to each staff member</p>
-                  </div>
-                  <div className="relative w-full sm:w-56">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 w-3.5 h-3.5 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={staffSearch}
-                      onChange={(event) => setStaffSearch(event.target.value)}
-                      placeholder="Search staff"
-                      className="w-full rounded-lg border border-[#D9D0C2] bg-white py-1.5 pl-8 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                    />
-                  </div>
-                </div>
-                <div className="overflow-x-auto max-h-[28rem] overflow-y-auto">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-[#FBF8F2] z-10">
-                      <tr className="border-b border-[#E8E0D4]">
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Member</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Current role</th>
-                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Assign role</th>
-                        <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStaff.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-xs text-gray-500">No staff found</td>
-                        </tr>
-                      ) : (
-                        filteredStaff.map((member) => {
-                          const currentRoleCode = staffRoleLookup.get(member.id) ?? member.role
-                          const currentRole = fallbackRoleMeta(currentRoleCode)
-                          const initials = member.full_name
-                            .split(' ')
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((part) => part[0])
-                            .join('')
-                            .toUpperCase()
-
-                          return (
-                            <tr key={member.id} className="border-b border-[#F0E9DC] last:border-0 hover:bg-[#F7F2E8]/50">
-                              <td className="px-4 py-2.5">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white shrink-0">
-                                    {initials}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs font-medium text-gray-900">{member.full_name}</p>
-                                    <p className="truncate text-[10px] text-gray-500">{member.email}</p>
-                                    <p className="text-[10px] text-gray-400">Last in {formatLastSignedIn(member.last_signed_in)}</p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${member.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                                  {member.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-medium ${currentRole.color}`}>
-                                  {currentRole.label}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2.5">
-                                <select
-                                  value={staffAssignmentDraft[member.id] ?? currentRoleCode}
-                                  onChange={(event) =>
-                                    setStaffAssignmentDraft((current) => ({
-                                      ...current,
-                                      [member.id]: event.target.value,
-                                    }))
-                                  }
-                                  className="w-full min-w-[8rem] rounded-lg border border-[#D9D0C2] bg-white px-2 py-1.5 text-[11px] text-gray-700 focus:border-indigo-400 focus:outline-none"
-                                >
-                                  {roles.map((role) => (
-                                    <option key={role.id} value={role.code}>
-                                      {role.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button
-                                  type="button"
-                                  onClick={() => void handleAssignStaffRole(member.id)}
-                                  disabled={savingStaffId === member.id}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                                >
-                                  {savingStaffId === member.id ? (
-                                    <RefreshCw className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Save className="w-3 h-3" />
-                                  )}
-                                  Assign
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
-                {selectedRole ? (
-                  <>
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${fallbackRoleMeta(selectedRole.code).color}`}>
-                            {selectedRole.name}
-                          </span>
-                          {selectedRole.is_system && (
-                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-                              System role
-                            </span>
-                          )}
-                          <span className="rounded-full bg-[#F0E9DC] px-3 py-1 text-xs font-medium text-gray-600">
-                            {selectedRole.code}
-                          </span>
-                        </div>
-                        <p className="mt-1.5 text-sm font-semibold text-gray-900">Role details</p>
-                        <p className="mt-2 max-w-2xl text-sm text-gray-500">
-                          Edit the role profile and permission matrix. Writes go through Supabase helpers so the RLS layer stays authoritative.
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3 text-center text-sm">
-                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Staff</p>
-                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.assignedStaff ?? 0}</p>
-                        </div>
-                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Permissions</p>
-                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.permissions ?? 0}</p>
-                        </div>
-                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">Sensitive</p>
-                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.sensitivePermissions ?? 0}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">Code</label>
-                        <input
-                          type="text"
-                          value={selectedRole.code}
-                          disabled
-                          className="w-full rounded-xl border border-[#D9D0C2] bg-[#F0E9DC] px-4 py-2.5 text-sm text-gray-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
-                        <select
-                          value={roleForm.category}
-                          onChange={(event) =>
-                            setRoleForm((current) => ({
-                              ...current,
-                              category: event.target.value as RoleRow['category'],
-                            }))
-                          }
-                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                        >
-                          {ROLE_CATEGORY_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-gray-700">Role name</label>
-                        <input
-                          type="text"
-                          value={roleForm.name}
-                          onChange={(event) =>
-                            setRoleForm((current) => ({
-                              ...current,
-                              name: event.target.value,
-                            }))
-                          }
-                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
-                        <textarea
-                          value={roleForm.description}
-                          onChange={(event) =>
-                            setRoleForm((current) => ({
-                              ...current,
-                              description: event.target.value,
-                            }))
-                          }
-                          rows={4}
-                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-3 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => void handleSaveRole()}
-                        disabled={savingRole}
-                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {savingRole ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save role details
-                      </button>
-                      {!selectedRole.is_system && (
+                    return (
+                      <div key={role.id} className="relative">
                         <button
                           type="button"
-                          onClick={() => void handleDeleteRole(selectedRole)}
-                          disabled={deletingRoleCode === selectedRole.code}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => applyRoleSelection(role, rolePermissions)}
+                          className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                            isSelected
+                              ? 'border-indigo-300 bg-indigo-50 shadow-sm ring-1 ring-indigo-200/80'
+                              : 'border-transparent hover:border-[#E8E0D4] hover:bg-[#F7F2E8]/70'
+                          }`}
                         >
-                          {deletingRoleCode === selectedRole.code ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                          Delete role
+                          <div className="flex items-start justify-between gap-2">
+                            <p className={`min-w-0 truncate text-xs font-semibold ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}>
+                              {role.name}
+                            </p>
+                            {isSelected ? (
+                              <span className="shrink-0 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                Active
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-gray-500">{role.description}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {role.is_system ? (
+                              <span className="rounded-md bg-[#F0E9DC] px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                                System
+                              </span>
+                            ) : null}
+                            <span className="text-[10px] text-gray-500">{assignedCount} staff</span>
+                          </div>
                         </button>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-8 text-center text-sm text-gray-500">
-                    Select a role to view and edit its permissions.
-                  </div>
+                        {!role.is_system && assignedCount === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteRole(role)}
+                            className="absolute right-2 top-2 rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600"
+                            title="Delete role"
+                          >
+                            {deletingRoleCode === role.code ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        ) : null}
+                      </div>
+                    )
+                  })
                 )}
               </div>
+            </aside>
 
-              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                      <KeyRound className="h-4 w-4" />
-                      Permission matrix
+            <div className="min-w-0">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden flex flex-col min-h-[min(32rem,70vh)]">
+                <div className="border-b border-[#E8E0D4] bg-[#FBF8F2] px-4 pt-3 pb-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-800">Role configuration</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                        {selectedRole ? selectedRole.name : 'Select a role on the left'}
+                      </p>
                     </div>
-                    <p className="mt-1.5 text-xs font-semibold text-gray-900">Atomic permissions</p>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Toggle permissions by module. The selected set is persisted through the `replace_role_permissions` RPC.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleSavePermissions()}
-                    disabled={!selectedRole || savingPermissions}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {savingPermissions ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save permissions
-                  </button>
-                </div>
-
-                <div className="mt-6 space-y-5">
-                  {groupedPermissions.map((group) => (
-                    <div key={group.module} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <h4 className="text-sm font-semibold text-gray-900">{group.label}</h4>
-                          <p className="text-xs text-gray-500">{group.permissions.length} permissions</p>
-                        </div>
-                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                      </div>
-
-                      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {group.permissions.map((permission) => {
-                          const checked = selectedPermissionSet.has(permission.id)
-                          const sensitive = ['roles', 'staff', 'settings', 'audit'].includes(permission.module)
-
-                          return (
-                            <label
-                              key={permission.id}
-                              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors ${
-                                checked ? 'border-indigo-300 bg-indigo-50' : 'border-[#D9D0C2] bg-white hover:bg-[#F7F2E8]'
-                              }`}
+                    {detailTab === 'permissions' && selectedRole ? (
+                      <div className="flex shrink-0 items-center gap-2">
+                        {permissionChangeCount > 0 ? (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowPermissionChangesList((current) => !current)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
                             >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() =>
-                                  setDraftPermissionIds((current) =>
-                                    checked
-                                      ? current.filter((permissionId) => permissionId !== permission.id)
-                                      : [...current, permission.id],
-                                  )
-                                }
-                                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-medium text-gray-900">{permission.name}</span>
-                                  {sensitive && (
-                                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                                      Sensitive
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500">{permission.description}</p>
-                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400">{permission.code}</p>
+                              <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                                {permissionChangeCount}
+                              </span>
+                              pending
+                            </button>
+                            {showPermissionChangesList ? (
+                              <div className="absolute right-0 top-full z-30 mt-1.5 w-72 max-h-64 overflow-y-auto rounded-xl border border-[#D9D0C2] bg-white p-2 shadow-lg">
+                                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                  Permission changes
+                                </p>
+                                <ul className="space-y-1">
+                                  {permissionChanges.map((change) => (
+                                    <li key={change} className="rounded-lg bg-[#F7F2E8]/80 px-2.5 py-1.5 text-[11px] text-gray-700">
+                                      {change}
+                                    </li>
+                                  ))}
+                                </ul>
                               </div>
-                            </label>
-                          )
-                        })}
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => void handleSavePermissions()}
+                          disabled={savingPermissions || permissionChangeCount === 0}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {savingPermissions ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                          Save permissions
+                        </button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-[#F0E9DC] px-3 py-1 text-xs font-semibold text-gray-700">
-                      <Eye className="h-4 w-4" />
-                      Audit trail
-                    </div>
-                    <p className="mt-1.5 text-xs font-semibold text-gray-900">Security-sensitive changes</p>
-                    <p className="mt-2 text-sm text-gray-500">Latest changes to roles, permissions, and staff-role assignments.</p>
+                    ) : null}
+                    {detailTab === 'settings' && selectedRole ? (
+                      <div className="flex shrink-0 items-center gap-2">
+                        {roleSettingsChangeCount > 0 ? (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowRoleChangesList((current) => !current)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100"
+                            >
+                              <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                                {roleSettingsChangeCount}
+                              </span>
+                              pending
+                            </button>
+                            {showRoleChangesList ? (
+                              <div className="absolute right-0 top-full z-30 mt-1.5 w-72 max-h-64 overflow-y-auto rounded-xl border border-[#D9D0C2] bg-white p-2 shadow-lg">
+                                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                  Role changes
+                                </p>
+                                <ul className="space-y-1">
+                                  {roleSettingsChanges.map((change) => (
+                                    <li key={change} className="rounded-lg bg-[#F7F2E8]/80 px-2.5 py-1.5 text-[11px] text-gray-700">
+                                      {change}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => void handleSaveRole()}
+                          disabled={savingRole || roleSettingsChangeCount === 0}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {savingRole ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                          Save role
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {(
+                      [
+                        { key: 'settings' as const, label: 'Role settings' },
+                        { key: 'permissions' as const, label: 'Permissions' },
+                        { key: 'audit' as const, label: 'Audit trail' },
+                      ] as const
+                    ).map((tab) => {
+                      const isActive = detailTab === tab.key
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setDetailTab(tab.key)}
+                          className={`px-3 py-2 text-xs font-semibold rounded-t-lg border border-b-0 transition-colors ${
+                            isActive
+                              ? 'bg-white border-[#D9D0C2] text-indigo-700'
+                              : 'border-transparent text-gray-500 hover:text-gray-800'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  {auditRows.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-6 text-sm text-gray-500">
-                      No RBAC audit entries yet.
-                    </div>
-                  ) : (
-                    auditRows.map((row) => (
-                      <div key={row.id} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700">
-                                {row.table_name}
-                              </span>
-                              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${row.action === 'DELETE' ? 'bg-red-100 text-red-700' : row.action === 'UPDATE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                {row.action}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-sm font-medium text-gray-900">{getAuditTitle(row)}</p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {row.performed_by_name ?? row.performed_by_email ?? 'System'} · {formatTimeAgo(row.performed_at)}
-                            </p>
-                          </div>
-                          <div className="max-w-md rounded-xl bg-white p-3 text-xs text-gray-500">
-                            <p className="font-medium text-gray-700">Snapshot</p>
-                            <p className="mt-1 line-clamp-3">
-                              {JSON.stringify(row.new_data ?? row.old_data ?? {}, null, 2)}
-                            </p>
-                          </div>
+                <div className="p-4 flex-1 overflow-y-auto min-h-0">
+                  {detailTab === 'settings' && (
+                    <>
+                      {!selectedRole ? (
+                        <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-8 text-center text-sm text-gray-500">
+                          Select a role on the left to view and edit its settings.
                         </div>
-                      </div>
-                    ))
+                      ) : (
+                        <>
+                          <div className="mb-4 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+                            {selectedRole.is_system ? (
+                              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 font-semibold text-amber-800">
+                                System role
+                              </span>
+                            ) : null}
+                            <span>{rolePermissionSummary?.assignedStaff ?? 0} staff assigned</span>
+                            <span className="text-gray-300">·</span>
+                            <span>{rolePermissionSummary?.permissions ?? 0} permissions</span>
+                            {rolePermissionSummary && rolePermissionSummary.sensitivePermissions > 0 ? (
+                              <>
+                                <span className="text-gray-300">·</span>
+                                <span>{rolePermissionSummary.sensitivePermissions} sensitive</span>
+                              </>
+                            ) : null}
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                              <label className="mb-2 block text-sm font-medium text-gray-700">Role name</label>
+                              <input
+                                type="text"
+                                value={roleForm.name}
+                                onChange={(event) =>
+                                  setRoleForm((current) => ({
+                                    ...current,
+                                    name: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
+                              <select
+                                value={roleForm.category}
+                                onChange={(event) =>
+                                  setRoleForm((current) => ({
+                                    ...current,
+                                    category: event.target.value as RoleRow['category'],
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+                              >
+                                {ROLE_CATEGORY_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
+                              <textarea
+                                value={roleForm.description}
+                                onChange={(event) =>
+                                  setRoleForm((current) => ({
+                                    ...current,
+                                    description: event.target.value,
+                                  }))
+                                }
+                                rows={4}
+                                className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-3 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          {!selectedRole.is_system ? (
+                            <div className="mt-6 pt-4 border-t border-[#E8E0D4]">
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteRole(selectedRole)}
+                                disabled={deletingRoleCode === selectedRole.code}
+                                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {deletingRoleCode === selectedRole.code ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                Delete role
+                              </button>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {detailTab === 'permissions' && (
+                    <>
+                      {!selectedRole ? (
+                        <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/40 py-10 text-center text-xs text-gray-500">
+                          Select a role to edit its permission matrix.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {groupedPermissions.map((group) => (
+                            <div key={group.module} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-900">{group.label}</h4>
+                                  <p className="text-xs text-gray-500">{group.permissions.length} permissions</p>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-gray-400" />
+                              </div>
+
+                              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                {group.permissions.map((permission) => {
+                                  const checked = selectedPermissionSet.has(permission.id)
+                                  const sensitive = ['roles', 'staff', 'settings', 'audit'].includes(permission.module)
+
+                                  return (
+                                    <label
+                                      key={permission.id}
+                                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors ${
+                                        checked ? 'border-indigo-300 bg-indigo-50' : 'border-[#D9D0C2] bg-white hover:bg-[#F7F2E8]'
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={() =>
+                                          setDraftPermissionIds((current) =>
+                                            checked
+                                              ? current.filter((permissionId) => permissionId !== permission.id)
+                                              : [...current, permission.id],
+                                          )
+                                        }
+                                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="text-sm font-medium text-gray-900">{permission.name}</span>
+                                          {sensitive && (
+                                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                                              Sensitive
+                                            </span>
+                                          )}
+                                        </div>
+                                        <p className="mt-1 text-xs text-gray-500">{permission.description}</p>
+                                      </div>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {detailTab === 'audit' && (
+                    <div className="space-y-3">
+                      {auditBatches.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-6 text-sm text-gray-500">
+                          No RBAC audit entries yet.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="rounded-lg border border-[#E8E0D4] bg-[#FBF8F2] px-3 py-2.5 text-[11px] text-gray-600">
+                            <span className="font-semibold text-gray-800">{auditChangeTotal}</span> recorded change
+                            {auditChangeTotal === 1 ? '' : 's'} across{' '}
+                            <span className="font-semibold text-gray-800">{auditBatches.length}</span> update
+                            {auditBatches.length === 1 ? '' : 's'}
+                          </div>
+                          {auditBatches.map((batch) => {
+                            const isOpen = openAuditBatchKey === batch.key
+                            const initials = batch.performedBy
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((part) => part[0]?.toUpperCase() ?? '')
+                              .join('')
+
+                            return (
+                              <div
+                                key={batch.key}
+                                className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/40 px-3 py-3"
+                              >
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div className="flex min-w-0 items-start gap-3">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[11px] font-bold text-white">
+                                      {initials || 'SY'}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                        Changes by
+                                      </p>
+                                      <p className="text-sm font-semibold text-gray-900 truncate">{batch.performedBy}</p>
+                                      {batch.performedByEmail ? (
+                                        <p className="text-[11px] text-gray-500 truncate">{batch.performedByEmail}</p>
+                                      ) : null}
+                                      <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                        Changed on
+                                      </p>
+                                      <p className="text-xs font-medium text-gray-800">{formatAuditWhen(batch.performedAt)}</p>
+                                      <p className="text-[11px] text-gray-500">{formatTimeAgo(batch.performedAt)}</p>
+                                    </div>
+                                  </div>
+                                  <div className="relative shrink-0 sm:text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setOpenAuditBatchKey((current) => (current === batch.key ? null : batch.key))
+                                      }
+                                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[11px] font-semibold text-indigo-900 hover:bg-indigo-100"
+                                    >
+                                      <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[10px] font-bold text-white">
+                                        {batch.changeCount}
+                                      </span>
+                                      change{batch.changeCount === 1 ? '' : 's'}
+                                    </button>
+                                    {isOpen ? (
+                                      <div className="absolute right-0 top-full z-30 mt-1.5 w-80 max-h-64 overflow-y-auto rounded-xl border border-[#D9D0C2] bg-white p-2 text-left shadow-lg sm:w-96">
+                                        <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                          What changed
+                                        </p>
+                                        <ul className="space-y-1">
+                                          {batch.changeLines.map((line, index) => (
+                                            <li
+                                              key={`${batch.key}-${index}`}
+                                              className="rounded-lg bg-[#F7F2E8]/80 px-2.5 py-1.5 text-[11px] leading-snug text-gray-700"
+                                            >
+                                              {line}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">

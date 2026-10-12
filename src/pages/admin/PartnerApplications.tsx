@@ -219,8 +219,7 @@ export default function PartnerApplications() {
   const [documents, setDocuments] = useState<PartnerApplicationDocument[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [savingAction, setSavingAction] = useState<SaveAction>(null)
-  const [activeSection, setActiveSection] = useState<MarketplaceSection>('stores')
-  const [sectionInitialized, setSectionInitialized] = useState(false)
+  const [activeSection, setActiveSection] = useState<MarketplaceSection>('store_setup')
   const [stores, setStores] = useState<PartnerStoreRow[]>([])
   const [storesLoading, setStoresLoading] = useState(true)
   const [storesError, setStoresError] = useState('')
@@ -465,27 +464,28 @@ export default function PartnerApplications() {
     const tab = searchParams.get('tab')
     if (tab === 'setup' || tab === 'store_setup') {
       setActiveSection('store_setup')
-      setSectionInitialized(true)
       return
     }
-    if (sectionInitialized || storesLoading || loading) return
-    if (partnersCount > 0) {
-      setActiveSection('stores')
-    } else if (applications.length > 0) {
+    if (tab === 'applications') {
       setActiveSection('applications')
-    } else {
-      setActiveSection('stores')
+      return
     }
-    setSectionInitialized(true)
-  }, [sectionInitialized, storesLoading, loading, partnersCount, applications.length, searchParams])
+    if (tab === 'stores') {
+      setActiveSection('stores')
+      return
+    }
+    setActiveSection('store_setup')
+    setSearchParams({ tab: 'setup' }, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const selectSection = (section: MarketplaceSection) => {
     setActiveSection(section)
-    if (section === 'store_setup') {
-      setSearchParams({ tab: 'setup' }, { replace: true })
-    } else if (searchParams.has('tab')) {
-      setSearchParams({}, { replace: true })
+    const tabBySection: Record<MarketplaceSection, string> = {
+      store_setup: 'setup',
+      stores: 'stores',
+      applications: 'applications',
     }
+    setSearchParams({ tab: tabBySection[section] }, { replace: true })
   }
 
   const handleMoveToReview = async () => {
@@ -664,6 +664,11 @@ export default function PartnerApplications() {
     allowEmpty: boolean
   }[] = [
     {
+      key: 'store_setup',
+      label: 'My Store setup',
+      allowEmpty: true,
+    },
+    {
       key: 'stores',
       label: 'Partner stores',
       count: partnersCount,
@@ -676,11 +681,6 @@ export default function PartnerApplications() {
       count: applicationsBadgeCount,
       emptyLabel: 'No applications yet',
       allowEmpty: false,
-    },
-    {
-      key: 'store_setup',
-      label: 'My Store setup',
-      allowEmpty: true,
     },
   ]
 

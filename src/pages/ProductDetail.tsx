@@ -127,18 +127,27 @@ function ProductDetailInner() {
     setAddedToCart(false)
   }, [id])
 
+  const unitPrice = (p: Product) => {
+    if (p.location === 'Pakistan' && p.price_pkr) return p.price_pkr
+    if (p.price_aed) return p.price_aed
+    if (p.price_pkr) return p.price_pkr
+    return p.price
+  }
+
   const handleAddToCart = () => {
     if (!product) return
-    const location = product.location as 'Pakistan' | 'UAE'
+    const location = (product.location === 'Pakistan' ? 'Pakistan' : 'UAE') as 'Pakistan' | 'UAE'
     const currency = location === 'Pakistan' ? 'PKR' : 'AED'
+    const base = unitPrice(product)
+    const price = purchaseType === 'subscribe' ? Math.round(base * 0.9 * 100) / 100 : base
     addToCart({
       id: product.id,
-      name: product.name,
-      price: product.price,
+      name: purchaseType === 'subscribe' ? `${product.name} (Subscribe −10%)` : product.name,
+      price,
       image: product.images?.[0] || '',
-      location: location || 'UAE',
+      location,
       delivery_charge: product.delivery_charge || 0,
-      currency: currency,
+      currency,
       quantity,
     })
     setAddedToCart(true)
@@ -153,9 +162,11 @@ function ProductDetailInner() {
   }
 
   const subscribePrice = (p: Product) => {
-    if (p.price_aed) return `AED ${(p.price_aed * 0.9).toFixed(2)}`
-    if (p.price_pkr) return `₨${Math.round(p.price_pkr * 0.9).toLocaleString()}`
-    return `${(p.price * 0.9).toFixed(2)}`
+    const base = unitPrice(p)
+    if (p.location === 'Pakistan' || (!p.price_aed && p.price_pkr)) {
+      return `₨${Math.round(base * 0.9).toLocaleString()}`
+    }
+    return `AED ${(base * 0.9).toFixed(2)}`
   }
 
   const inCartQty = product ? (items.find((i) => i.id === product.id)?.quantity ?? 0) : 0

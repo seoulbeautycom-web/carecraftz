@@ -27,8 +27,8 @@ export default function Footer() {
               <Link to="/about-us" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 About Us
               </Link>
-              <Link to="/seoul-beauty" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
-                Seoul Beauty
+              <Link to="/shop" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
+                Shop
               </Link>
               <Link to="/shop" className="font-['ABeeZee',sans-serif] text-sm text-ivory/60 hover:text-ivory transition-colors">
                 Shop

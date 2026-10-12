@@ -1,7 +1,8 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, type FormEvent } from 'react'
 import { motion, useScroll, useTransform, useMotionTemplate, useMotionValue, useAnimationFrame, animate } from 'framer-motion'
 import PageFrame from '../components/PageFrame'
 import { usePageShell } from '../contexts/PageShellContext'
+import { joinLaunchWaitlist } from '../lib/opsSettings'
 
 const VIDEO_SRC = 'https://d8j0ntlcm91z4.cloudfront.net/user_3BA1nJibL92zfZpAJB3BLBU6tQI/hf_20260520_114550_b72cc2b7-2267-4d9e-b19f-f3bb4b0c7084.mp4'
 const TARGET_RADIUS = 650
@@ -340,11 +341,31 @@ function OrbitImages({
 }
 
 function StaySection() {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
+  const [message, setMessage] = useState('')
+
   const blurUp = {
     initial: { opacity: 0, y: 40, filter: 'blur(20px)' },
     whileInView: { opacity: 1, y: 0, filter: 'blur(0px)' },
     viewport: { once: true, amount: 0.3 },
     transition: { duration: 1 },
+  }
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (status === 'saving') return
+    setStatus('saving')
+    setMessage('')
+    const result = await joinLaunchWaitlist(email)
+    if (result.error) {
+      setStatus('error')
+      setMessage(result.error)
+      return
+    }
+    setStatus('done')
+    setMessage(result.alreadyJoined ? 'You’re already on the list.' : 'You’re on the list — we’ll be in touch.')
+    setEmail('')
   }
 
   return (
@@ -357,7 +378,7 @@ function StaySection() {
         style={{ objectFit: 'cover', objectPosition: 'center bottom', maxHeight: '72%' }}
       />
 
-      <div className="relative max-w-[1480px] mx-auto px-8 md:px-16 pt-20 md:pt-24 pb-20 md:pb-24 min-h-[calc(100dvh-24px)] flex flex-col" style={{ gap: '32px' }}>
+      <div className="relative max-w-[1480px] mx-auto px-8 md:px-16 pt-20 md:pt-24 pb-20 md:pb-24 min-h-[calc(100svh-1.5rem)] flex flex-col" style={{ gap: '32px' }}>
         <motion.div {...blurUp}>
           <div
             style={{
@@ -394,17 +415,21 @@ function StaySection() {
               color: 'rgba(0,0,0,0.78)',
             }}
           >
-            Editions and invitations from the Bentley fragrance studio, sent twice a season.
+            Be first to hear about upcoming CareCraftz editions and limited drops.
           </p>
-          <form className="flex items-center border-b border-black/40 pb-2 gap-3" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex items-center border-b border-black/40 pb-2 gap-3" onSubmit={(e) => void handleSubmit(e)}>
             <input
               type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
               className="bg-transparent flex-1 outline-none"
               style={{ fontFamily: 'Manrope, ui-sans-serif, sans-serif', fontSize: '15px', color: '#000' }}
             />
             <button
               type="submit"
+              disabled={status === 'saving'}
               style={{
                 fontFamily: 'Manrope, ui-sans-serif, sans-serif',
                 fontSize: '11px',
@@ -412,11 +437,17 @@ function StaySection() {
                 letterSpacing: '0.25em',
                 textTransform: 'uppercase',
                 color: '#000',
+                opacity: status === 'saving' ? 0.5 : 1,
               }}
             >
-              Subscribe →
+              {status === 'saving' ? 'Saving…' : 'Subscribe →'}
             </button>
           </form>
+          {message ? (
+            <p className="mt-3 text-sm" style={{ color: status === 'error' ? '#b91c1c' : 'rgba(0,0,0,0.7)' }}>
+              {message}
+            </p>
+          ) : null}
         </motion.div>
       </div>
     </section>
@@ -485,7 +516,7 @@ function FutureLaunchesInner() {
     orbitProgress.set(orbitProgress.get() + frameSpeed)
   })
 
-  const stageH = 'calc(100dvh - 24px)'
+  const stageH = 'calc(100svh - 1.5rem)'
 
   return (
     <>

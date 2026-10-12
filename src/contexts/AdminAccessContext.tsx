@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { getFirstAccessibleAdminPath, hasAllPermissions, hasAnyPermission } from '../lib/adminNavigation'
+import { DEFAULT_OPS_SETTINGS, fetchPlatformOpsSettings } from '../lib/opsSettings'
 import { useAuth } from './auth-context'
 import { AdminAccessContext } from './admin-access-context'
 import type { AdminAccessSnapshot, AdminAccessState } from './admin-access-context'
 
 const EMPTY_PERMISSIONS: string[] = []
+const ADMIN_ACTIVITY_KEY = 'carecraftz_admin_last_activity'
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -86,6 +88,48 @@ export function AdminAccessProvider({ children }: { children: React.ReactNode })
 
     return () => window.clearTimeout(timer)
   }, [refresh])
+
+  // Enforce admin session timeout from platform ops security settings.
+  useEffect(() => {
+    if (!user) return
+
+    let cancelled = false
+
+    const touch = () => {
+      localStorage.setItem(ADMIN_ACTIVITY_KEY, String(Date.now()))
+    }
+
+    const checkTimeout = async () => {
+      const ops = await fetchPlatformOpsSettings()
+      if (cancelled) return
+      const hours = ops.security.session_timeout_hours || DEFAULT_OPS_SETTINGS.security.session_timeout_hours
+      const last = Number(localStorage.getItem(ADMIN_ACTIVITY_KEY) || '0')
+      const limitMs = Math.max(1, hours) * 60 * 60 * 1000
+      if (last > 0 && Date.now() - last > limitMs) {
+        localStorage.removeItem(ADMIN_ACTIVITY_KEY)
+        await supabase.auth.signOut()
+        return
+      }
+      touch()
+    }
+
+    void checkTimeout()
+    touch()
+
+    const onActivity = () => touch()
+    window.addEventListener('pointerdown', onActivity)
+    window.addEventListener('keydown', onActivity)
+    const interval = window.setInterval(() => {
+      void checkTimeout()
+    }, 60_000)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('pointerdown', onActivity)
+      window.removeEventListener('keydown', onActivity)
+      window.clearInterval(interval)
+    }
+  }, [user])
 
   const permissions = snapshot?.permissions ?? EMPTY_PERMISSIONS
   const permissionsSet = useMemo(() => new Set(permissions), [permissions])

@@ -3,6 +3,7 @@ import { User, ShoppingBag, Menu, X } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { usePageShellOptional } from '../contexts/PageShellContext'
+import { useStorefrontIdentity } from '../contexts/StorefrontIdentityContext'
 
 const NAV_ITEMS = [
   { label: 'Shop',            path: '/shop',           activeColor: 'bg-[#ffb347] text-white',  hoverColor: 'hover:bg-[#ffb347]/20' },
@@ -17,6 +18,7 @@ export default function NewHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { totalItems } = useCart()
+  const { store } = useStorefrontIdentity()
   const pageShell = usePageShellOptional()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -64,8 +66,8 @@ export default function NewHeader() {
           onClick={() => navigate('/')}
           className={`flex-shrink-0 ${pillBase} rounded-full px-4 py-2 flex items-center gap-2.5 transition-all duration-300`}
         >
-          <img src="/logo-icon.png" alt="CareCraftz" className="h-7 w-auto" />
-          <span className="text-sm font-semibold text-[#2b2b2b] whitespace-nowrap">Care Craftz</span>
+          <img src="/logo-icon.png" alt={store.name} className="h-7 w-auto" />
+          <span className="text-sm font-semibold text-[#2b2b2b] whitespace-nowrap">{store.name}</span>
         </button>
 
         {/* Main Nav Outer Pill — desktop only */}

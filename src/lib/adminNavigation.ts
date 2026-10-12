@@ -201,6 +201,13 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
   },
 ]
 
+/** First URL segment reserved for admin modules (not partner store slugs). */
+export const ADMIN_ROOT_SEGMENTS = new Set(
+  ADMIN_ROUTE_DEFINITIONS.map((route) => route.path.split('/').filter(Boolean)[0]).filter(Boolean),
+)
+
+export const isAdminRootPathSegment = (segment: string) => ADMIN_ROOT_SEGMENTS.has(segment)
+
 export const ADMIN_NAV_ITEMS = ADMIN_ROUTE_DEFINITIONS.filter(
   (item): item is AdminNavItem => item.showInNavigation && Boolean(item.icon),
 ).map((item) => ({

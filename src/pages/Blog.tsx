@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PageFrame from '../components/PageFrame'
@@ -17,6 +18,7 @@ interface BlogPost {
 }
 
 function BlogInner() {
+  const navigate = useNavigate()
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [loading, setLoading] = useState(true)
   const [featured, setFeatured] = useState<BlogPost | null>(null)
@@ -65,7 +67,7 @@ function BlogInner() {
             <div
               className="rounded-3xl overflow-hidden mb-10 cursor-pointer group relative"
               style={{ minHeight: 440 }}
-              onClick={() => { /* blog detail page coming soon */ }}
+              onClick={() => navigate(`/blog/${featured.slug}`)}
             >
               {featured.featured_image ? (
                 <img
@@ -110,7 +112,7 @@ function BlogInner() {
                     key={post.id}
                     className="rounded-2xl overflow-hidden cursor-pointer group flex flex-col"
                     style={{ backgroundColor: cardColor }}
-                    onClick={() => { /* blog detail page coming soon */ }}
+                    onClick={() => navigate(`/blog/${post.slug}`)}
                   >
                     <div className="h-48 overflow-hidden relative">
                       {post.featured_image ? (

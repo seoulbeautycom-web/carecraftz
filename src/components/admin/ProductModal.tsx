@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   X,
   Plus,
@@ -10,6 +11,9 @@ import {
   ShoppingBag,
   Star,
   MessageSquareText,
+  Bell,
+  LogOut,
+  Settings,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
@@ -207,7 +211,25 @@ const emptyLocationFulfilment = (deliveryType: DeliveryType = 'carecraftz'): Loc
   delivery_charge: 0,
 })
 
-const normalizePartnerShippingLocations = (raw: string[] | null | undefined): FulfilmentLocation[] => {
+/** CareCraftz own storefront location (My Store setup). Not both markets by default. */
+const PLATFORM_STORE_LOCATION: FulfilmentLocation = { name: 'UAE', currency: 'AED' }
+
+const isPlatformCareCraftzStore = (store: { display_name?: string | null; tenant_type?: string | null } | null) => {
+  if (!store) return false
+  const tenant = (store.tenant_type || '').toLowerCase()
+  if (tenant === 'carecraftz' || tenant === 'platform' || tenant === 'official') return true
+  return (store.display_name || '').trim().toLowerCase() === 'carecraftz'
+}
+
+const normalizePartnerShippingLocations = (
+  raw: string[] | null | undefined,
+  store?: { display_name?: string | null; tenant_type?: string | null } | null,
+): FulfilmentLocation[] => {
+  // Own CareCraftz store follows My Store location (UAE), not partner multi-market shipping lists.
+  if (isPlatformCareCraftzStore(store ?? null)) {
+    return [{ ...PLATFORM_STORE_LOCATION }]
+  }
+
   const found = new Set<'UAE' | 'Pakistan'>()
   ;(raw || []).forEach((item) => {
     const lower = String(item).toLowerCase()
@@ -230,7 +252,8 @@ const normalizePartnerShippingLocations = (raw: string[] | null | undefined): Fu
       found.add('UAE')
     }
   })
-  if (found.size === 0) return PRESET_LOCATIONS.map((item) => ({ ...item }))
+  // Empty shipping list → single default market (matches My Store), not both countries.
+  if (found.size === 0) return [{ ...PLATFORM_STORE_LOCATION }]
   return PRESET_LOCATIONS.filter((item) => found.has(item.name as 'UAE' | 'Pakistan')).map((item) => ({ ...item }))
 }
 
@@ -549,6 +572,34 @@ const buildProductUploadErrorMessage = (label: string, error: unknown): string =
   return `We couldn't upload the ${label}. ${reason}`
 }
 
+const getTimeOfDayLabel = (date: Date) => {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+const formatClock = (date: Date) =>
+  date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+
+const getTimeAgo = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+  return `${Math.floor(diffInMinutes / 1440)}d ago`
+}
+
+interface HeaderOrder {
+  id: string
+  order_code: string
+  customer_email: string
+  created_at: string
+  shipping_address?: { full_name?: string }
+}
+
 export default function ProductModal({
   product,
   onClose,
@@ -558,6 +609,7 @@ export default function ProductModal({
   stats = null,
   statsError = '',
 }: Props) {
+  const navigate = useNavigate()
   const isPageLayout = layout === 'page'
   const visibleTabs = TABS.filter((tab) => isPageLayout || !tab.pageOnly)
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
@@ -574,7 +626,55 @@ export default function ProductModal({
   const [brands, setBrands] = useState<BrandOption[]>([])
   const [brandsLoading, setBrandsLoading] = useState(false)
   const [activeLocationTab, setActiveLocationTab] = useState('UAE')
+  const [userName, setUserName] = useState('Admin')
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [recentOrders, setRecentOrders] = useState<HeaderOrder[]>([])
+  const [now, setNow] = useState(() => new Date())
   const imageInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!isPageLayout) return
+
+    const loadHeaderChrome = async () => {
+      const [{ data: sessionData }, ordersResult] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase
+          .from('orders')
+          .select('id,order_code,customer_email,created_at,shipping_address')
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ])
+
+      const email = sessionData.session?.user?.email
+      if (email) {
+        const name = email.split('@')[0]
+        setUserName(name.charAt(0).toUpperCase() + name.slice(1))
+      }
+
+      if (!ordersResult.error && ordersResult.data) {
+        setRecentOrders(ordersResult.data as HeaderOrder[])
+      }
+    }
+
+    void loadHeaderChrome()
+  }, [isPageLayout])
+
+  useEffect(() => {
+    if (!isPageLayout) return
+    const timer = window.setInterval(() => setNow(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [isPageLayout])
+
+  const newOrders = useMemo(() => {
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    return recentOrders.filter((order) => new Date(order.created_at) > last24Hours)
+  }, [recentOrders])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/login', { replace: true })
+  }
 
   const selectedPartner = useMemo(
     () => partnerStores.find((store) => store.id === form.partner_store_id) || null,
@@ -585,7 +685,7 @@ export default function ProductModal({
     [brands, form.brand_id],
   )
   const partnerLockedLocations = useMemo(
-    () => (selectedPartner ? normalizePartnerShippingLocations(selectedPartner.shipping_locations) : []),
+    () => (selectedPartner ? normalizePartnerShippingLocations(selectedPartner.shipping_locations, selectedPartner) : []),
     [selectedPartner],
   )
   const fulfilmentLocations = useMemo(() => parseLocations(form.location), [form.location])
@@ -620,7 +720,7 @@ export default function ProductModal({
         fulfilment_by_location: ensureLocationFulfilment(currentForm.fulfilment_by_location, [{ name: 'UAE', currency: 'AED' }]),
       })
     }
-    const locked = normalizePartnerShippingLocations(store.shipping_locations)
+    const locked = normalizePartnerShippingLocations(store.shipping_locations, store)
     return applyFulfilmentToProductFields({
       ...currentForm,
       partner_store_id: store.id,
@@ -789,7 +889,9 @@ export default function ProductModal({
   const handlePartnerStoreChange = (storeId: string) => {
     const store = storeId ? partnerStores.find((item) => item.id === storeId) || null : null
     setForm((current) => applyPartnerLocations(store, current))
-    const locked = store ? normalizePartnerShippingLocations(store.shipping_locations) : [{ name: 'UAE', currency: 'AED' as const }]
+    const locked = store
+      ? normalizePartnerShippingLocations(store.shipping_locations, store)
+      : [{ ...PLATFORM_STORE_LOCATION }]
     setActiveLocationTab(locked[0]?.name || 'UAE')
   }
 
@@ -814,11 +916,11 @@ export default function ProductModal({
     if (!form.partner_store_id || partnerStores.length === 0) return
     const store = partnerStores.find((item) => item.id === form.partner_store_id)
     if (!store) return
-    const locked = serializeLocations(normalizePartnerShippingLocations(store.shipping_locations))
+    const locked = serializeLocations(normalizePartnerShippingLocations(store.shipping_locations, store))
     if (locked === form.location) return
     setForm((current) => applyPartnerLocations(store, current))
     setBaselineForm((current) => applyPartnerLocations(store, current))
-    setActiveLocationTab(normalizePartnerShippingLocations(store.shipping_locations)[0]?.name || 'UAE')
+    setActiveLocationTab(normalizePartnerShippingLocations(store.shipping_locations, store)[0]?.name || 'UAE')
   }, [partnerStores, form.partner_store_id, form.location, applyPartnerLocations])
 
   const handleSectionImageUpload = async (idx: number, field: 'breakdown_image' | 'breakdown_left_image', file: File) => {
@@ -979,19 +1081,27 @@ export default function ProductModal({
         <button
           type="button"
           onClick={() => setShowChanges((open) => !open)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+          className={`inline-flex items-center gap-1.5 border border-amber-300 bg-amber-50 font-semibold text-amber-900 hover:bg-amber-100 transition-colors ${
+            isPageLayout
+              ? 'rounded-lg px-2.5 py-1.5 text-[11px]'
+              : 'rounded-full px-2.5 py-1 text-xs'
+          }`}
         >
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
             {pendingChanges.length}
           </span>
-          edit{pendingChanges.length === 1 ? '' : 's'}
+          pending
           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showChanges ? 'rotate-180' : ''}`} />
         </button>
       )}
       <button
         type="button"
         onClick={onClose}
-        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+        className={
+          isPageLayout
+            ? 'rounded-lg border border-[#D9D0C2] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-white/80 transition-colors'
+            : 'px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors'
+        }
       >
         Cancel
       </button>
@@ -999,20 +1109,24 @@ export default function ProductModal({
         type="button"
         onClick={handleSave}
         disabled={saving || !hasChanges}
-        className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300 disabled:cursor-not-allowed"
+        className={
+          isPageLayout
+            ? 'inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40'
+            : 'inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300 disabled:cursor-not-allowed'
+        }
       >
-        {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-        {saving ? 'Saving…' : product?.id ? 'Save changes' : 'Create product'}
+        {saving ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+        {saving ? 'Saving…' : product?.id ? 'Save' : 'Create'}
       </button>
 
       {showChanges && hasChanges && (
-        <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white shadow-lg z-30 overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
-            <p className="text-xs font-semibold text-gray-700">
+        <div className="absolute right-0 top-full mt-1.5 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-[#D9D0C2] bg-white shadow-lg z-30 overflow-hidden">
+          <div className="px-3 py-2 border-b border-[#E8E0D4] bg-[#F7F2E8]">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
               {pendingChanges.length} pending change{pendingChanges.length === 1 ? '' : 's'}
             </p>
           </div>
-          <ul className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+          <ul className="max-h-64 overflow-y-auto divide-y divide-[#F0E9DC]">
             {pendingChanges.map((change) => (
               <li key={change.field} className="px-3 py-2.5">
                 <p className="text-xs font-semibold text-gray-900">{change.label}</p>
@@ -1029,24 +1143,258 @@ export default function ProductModal({
     </div>
   )
 
+  const imageGallery = (
+    <div className={isPageLayout ? 'space-y-2.5' : undefined}>
+      <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product images</label>
+      {isPageLayout ? (
+        <div className="mt-1.5 rounded-xl border border-[#D9D0C2] bg-white p-2.5 space-y-2.5">
+          <div className="aspect-square w-full overflow-hidden rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]">
+            {form.images[0] ? (
+              <img src={form.images[0]} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-gray-400">
+                <Upload className="h-6 w-6" />
+                <p className="text-[11px]">No image yet</p>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {form.images.map((img, idx) => (
+              <div
+                key={`${img}-${idx}`}
+                className="relative aspect-square overflow-hidden rounded-lg border border-[#D9D0C2] bg-[#F7F2E8] group"
+              >
+                <img src={img} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            ))}
+            <label className="aspect-square border border-dashed border-[#D9D0C2] rounded-lg bg-[#FBF8F2] flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
+              {imageUploading ? (
+                <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 text-gray-400" />
+                  <span className="text-[9px] text-gray-400 mt-0.5">Upload</span>
+                </>
+              )}
+              <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {form.images.length === 0 && (
+            <p className="w-full text-[11px] text-gray-400">No images yet.</p>
+          )}
+          {form.images.map((img, idx) => (
+            <div
+              key={`${img}-${idx}`}
+              className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group bg-gray-50"
+            >
+              <img src={img} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-white" />
+              </button>
+            </div>
+          ))}
+          <label className="w-20 h-20 border border-dashed border-[#D9D0C2] rounded-lg bg-white flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
+            {imageUploading ? (
+              <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Upload className="w-4 h-4 text-gray-400" />
+                <span className="text-[9px] text-gray-400 mt-0.5">Upload</span>
+              </>
+            )}
+            <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+          </label>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className={isPageLayout ? 'w-full h-full' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center'}>
       <div className={isPageLayout ? 'flex h-full w-full flex-col overflow-hidden bg-[#F7F2E8]' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
 
-        {/* Header — locked (does not scroll) */}
-        <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-[#E8E0D4] ${isPageLayout ? 'px-3 py-2.5 bg-[#F7F2E8] z-20' : 'px-6 py-4'}`}>
-          <div className="min-w-0">
-            <h2 className={`font-bold text-gray-900 ${isPageLayout ? 'text-base' : 'text-lg'}`}>
-              {product?.id ? 'Edit product' : 'Add product'}
-            </h2>
-            {product?.id && <p className="text-[10px] text-gray-400 mt-0.5 font-mono truncate">ID: {product.id}</p>}
-          </div>
+        {/* Header — matches admin sticky chrome */}
+        <div
+          className={
+            isPageLayout
+              ? 'sticky top-0 z-20 shrink-0 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6'
+              : 'flex shrink-0 items-center justify-between gap-3 border-b border-[#E8E0D4] px-6 py-4'
+          }
+        >
           {isPageLayout ? (
-            actionButtons
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-gray-900">
+                  {product?.id ? 'Edit product' : 'Add product'}
+                </h1>
+                <p className="text-[11px] text-gray-500 truncate">
+                  {form.name?.trim()
+                    ? form.name
+                    : product?.id
+                      ? 'Update catalog details, images, and fulfilment.'
+                      : 'Create a new catalog product.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {actionButtons}
+
+                <div className="flex flex-col items-end leading-tight border-l border-[#D9D0C2] pl-2.5">
+                  <span className="hidden sm:inline text-[10px] font-medium text-gray-500">
+                    {getTimeOfDayLabel(now)}
+                  </span>
+                  <span className="text-[11px] sm:text-xs font-semibold text-gray-800 tabular-nums">
+                    {formatClock(now)}
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNotifications(!showNotifications)
+                      setShowProfileMenu(false)
+                      setShowChanges(false)
+                    }}
+                    className="relative p-1.5 text-gray-500 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {newOrders.length > 0 && (
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-[#E8E0D4] flex items-center justify-between bg-[#F7F2E8]">
+                        <h3 className="text-xs font-semibold text-gray-900">New orders</h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowNotifications(false)}
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded-md"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {newOrders.length === 0 ? (
+                          <div className="p-6 text-center">
+                            <Bell className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                            <p className="text-[11px] text-gray-500">No new orders in the last 24 hours</p>
+                          </div>
+                        ) : (
+                          newOrders.slice(0, 5).map((order) => (
+                            <button
+                              key={order.id}
+                              type="button"
+                              onClick={() => {
+                                setShowNotifications(false)
+                                navigate(`/orders?id=${order.id}`)
+                              }}
+                              className="w-full text-left px-3 py-2.5 border-b border-[#F0E9DC] hover:bg-[#F7F2E8] transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <span className="text-xs font-medium text-gray-900">{order.order_code}</span>
+                                <span className="text-[10px] text-gray-400">{getTimeAgo(order.created_at)}</span>
+                              </div>
+                              <p className="text-[11px] text-gray-600 truncate">
+                                {order.shipping_address?.full_name || order.customer_email}
+                              </p>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      <div className="p-2 border-t border-[#E8E0D4]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowNotifications(false)
+                            navigate('/orders')
+                          }}
+                          className="w-full rounded-lg py-1.5 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50"
+                        >
+                          View all orders
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfileMenu(!showProfileMenu)
+                      setShowNotifications(false)
+                      setShowChanges(false)
+                    }}
+                    className="flex items-center gap-1.5 p-1 pr-2 hover:bg-white rounded-lg transition-colors"
+                  >
+                    <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                      {userName.charAt(0)}
+                    </div>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                      <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]">
+                        <p className="text-xs font-semibold text-gray-900">{userName}</p>
+                        <p className="text-[10px] text-gray-500">Staff access</p>
+                      </div>
+                      <div className="p-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowProfileMenu(false)
+                            navigate('/settings')
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-[#F7F2E8] rounded-lg"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          Settings
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleLogout()}
+                          className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          Logout
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : (
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
-              <X className="w-5 h-5" />
-            </button>
+            <>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-gray-900">
+                  {product?.id ? 'Edit product' : 'Add product'}
+                </h2>
+                {product?.id && <p className="text-[10px] text-gray-400 mt-0.5 font-mono truncate">ID: {product.id}</p>}
+              </div>
+              <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </>
           )}
         </div>
 
@@ -1105,114 +1453,95 @@ export default function ProductModal({
 
           {/* ── TAB: BASICS ── */}
           {activeTab === 'basics' && (
-            <div className="space-y-3 max-w-3xl">
-              <div>
-                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product images</label>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {form.images.length === 0 && (
-                    <p className="w-full text-[11px] text-gray-400">No images yet.</p>
-                  )}
-                  {form.images.map((img, idx) => (
-                    <div
-                      key={`${img}-${idx}`}
-                      className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group bg-gray-50"
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
-                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-white" />
-                      </button>
+            <div
+              className={
+                isPageLayout
+                  ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem] gap-4 max-w-6xl items-start'
+                  : 'space-y-3 max-w-3xl'
+              }
+            >
+              {!isPageLayout && imageGallery}
+
+              <div className={`space-y-3 ${isPageLayout ? 'min-w-0 order-2 lg:order-1' : ''}`}>
+                <div className="grid grid-cols-1 sm:grid-cols-6 gap-2.5">
+                  <div className="sm:col-span-3">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product name *</label>
+                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                      placeholder="e.g. Moringa Soap Bar" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Subtitle</label>
+                    <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                      placeholder="e.g. Lavender Bergamot" />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">SKU</label>
+                    <input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                      placeholder="SKU-001" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Description</label>
+                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={7}
+                    className="mt-1 w-full px-3 py-2 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-y min-h-[10rem]"
+                    placeholder="Short product description..." />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Category</label>
+                    <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                      placeholder="Face, Body..." />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Skin type</label>
+                    <div className="relative mt-1">
+                      <select value={form.skin_type} onChange={e => setForm(f => ({ ...f, skin_type: e.target.value }))}
+                        className="w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
+                        <option value="">None</option>
+                        <option value="Oily">Oily</option>
+                        <option value="Dry">Dry</option>
+                        <option value="Combo">Combo</option>
+                        <option value="Sensitive">Sensitive</option>
+                        <option value="Normal">Normal</option>
+                      </select>
+                      <ChevronDown className="absolute right-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
-                  ))}
-                  <label className="w-20 h-20 border border-dashed border-[#D9D0C2] rounded-lg bg-white flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
-                    {imageUploading ? (
-                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 text-gray-400" />
-                        <span className="text-[9px] text-gray-400 mt-0.5">Upload</span>
-                      </>
-                    )}
-                    <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 1</label>
+                    <input value={form.tag1} onChange={e => setForm(f => ({ ...f, tag1: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 2</label>
+                    <input value={form.tag2} onChange={e => setForm(f => ({ ...f, tag2: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 pt-0.5">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
+                    <span className="text-xs text-gray-700">Active</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" checked={form.is_featured} onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
+                    <span className="text-xs text-gray-700">Featured</span>
                   </label>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-6 gap-2.5">
-                <div className="sm:col-span-3">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product name *</label>
-                  <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="e.g. Moringa Soap Bar" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Subtitle</label>
-                  <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="e.g. Lavender Bergamot" />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">SKU</label>
-                  <input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="SKU-001" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Description</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={7}
-                  className="mt-1 w-full px-3 py-2 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-y min-h-[10rem]"
-                  placeholder="Short product description..." />
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Category</label>
-                  <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="Face, Body..." />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Skin type</label>
-                  <div className="relative mt-1">
-                    <select value={form.skin_type} onChange={e => setForm(f => ({ ...f, skin_type: e.target.value }))}
-                      className="w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
-                      <option value="">None</option>
-                      <option value="Oily">Oily</option>
-                      <option value="Dry">Dry</option>
-                      <option value="Combo">Combo</option>
-                      <option value="Sensitive">Sensitive</option>
-                      <option value="Normal">Normal</option>
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 1</label>
-                  <input value={form.tag1} onChange={e => setForm(f => ({ ...f, tag1: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 2</label>
-                  <input value={form.tag2} onChange={e => setForm(f => ({ ...f, tag2: e.target.value }))}
-                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 pt-0.5">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
-                  <span className="text-xs text-gray-700">Active</span>
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={form.is_featured} onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
-                  <span className="text-xs text-gray-700">Featured</span>
-                </label>
-              </div>
+              {isPageLayout && (
+                <aside className="order-1 lg:order-2 lg:sticky lg:top-3">
+                  {imageGallery}
+                </aside>
+              )}
             </div>
           )}
 
@@ -1321,14 +1650,17 @@ export default function ProductModal({
                   ? 'Loading partner stores…'
                   : partnerStores.length === 0
                     ? 'No partner stores found yet.'
-                    : 'Partner selection fills and locks fulfilment locations.'}
+                    : 'Partner selection sets fulfilment locations for this product.'}
               </p>
               {selectedPartner && (
-                <div className="rounded-lg border border-[#D9D0C2] bg-white px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Locked locations</p>
+                <div className="rounded-lg border border-[#D9D0C2] bg-[#FBF8F2] px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Fulfilment locations</p>
                   <p className="mt-1 text-xs text-gray-800">
                     {partnerLockedLocations.map((loc) => `${loc.name} (${loc.currency})`).join(' · ') || 'UAE (AED)'}
                   </p>
+                  {isPlatformCareCraftzStore(selectedPartner) ? (
+                    <p className="mt-1 text-[10px] text-gray-500">Matches My Store location (UAE).</p>
+                  ) : null}
                 </div>
               )}
             </div>

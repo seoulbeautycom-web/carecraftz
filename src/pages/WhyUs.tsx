@@ -112,7 +112,7 @@ function WhyUsInner() {
   return (
     <div className="bg-[#fbfcf4] w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Hero + marquee — one laptop fold */}
-      <section className="relative w-full md:min-h-[calc(100dvh-24px)] md:max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col">
+      <section className="relative w-full md:min-h-[calc(100svh-1.5rem)] md:max-h-[calc(100dvh-1.5rem)] overflow-hidden flex flex-col">
         <div className="relative flex-1 min-h-[360px]">
           <img
             src="/bestseller-lifestyle.png"

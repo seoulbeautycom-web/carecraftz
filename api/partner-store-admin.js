@@ -600,6 +600,12 @@ async function restorePartnerStoreRow(adminClient, previousStoreRow) {
       display_name: previousStoreRow.display_name,
       legal_name: previousStoreRow.legal_name,
       primary_email: previousStoreRow.primary_email,
+      phone: previousStoreRow.phone ?? '',
+      country: previousStoreRow.country ?? '',
+      city: previousStoreRow.city ?? '',
+      location: previousStoreRow.location ?? '',
+      logo_url: previousStoreRow.logo_url ?? null,
+      delivery_mode: previousStoreRow.delivery_mode ?? 'carecraftz',
       status: previousStoreRow.status,
       approval_status: previousStoreRow.approval_status,
       commission_rate: previousStoreRow.commission_rate,
@@ -637,6 +643,13 @@ async function savePartnerStore(body, req) {
   const approvalStatus = normalizeText(body?.approvalStatus) || 'approved'
   const commissionRateValue = Number.parseFloat(body?.commissionRate)
   const commissionRate = Number.isFinite(commissionRateValue) ? commissionRateValue : 0
+  const phone = normalizeText(body?.phone)
+  const country = normalizeText(body?.country)
+  const city = normalizeText(body?.city)
+  const location = normalizeText(body?.location)
+  const logoUrl = normalizeText(body?.logoUrl) || null
+  const deliveryModeRaw = normalizeText(body?.deliveryMode).toLowerCase()
+  const deliveryMode = deliveryModeRaw === 'own' ? 'own' : 'carecraftz'
 
   if (!targetSlug) {
     return { statusCode: 400, message: 'slug is required.' }
@@ -684,6 +697,12 @@ async function savePartnerStore(body, req) {
         display_name: displayName,
         legal_name: legalName,
         primary_email: primaryEmail,
+        phone,
+        country,
+        city,
+        location,
+        logo_url: logoUrl,
+        delivery_mode: deliveryMode,
         status,
         approval_status: approvalStatus,
         commission_rate: commissionRate,
@@ -737,6 +756,26 @@ async function savePartnerStore(body, req) {
   const createdStoreId = createResult?.partner_store_id
   if (!createdStoreId) {
     return { statusCode: 500, message: 'The partner store was created, but no store id was returned.' }
+  }
+
+  const { error: profileUpdateError } = await adminClient
+    .from('partner_stores')
+    .update({
+      phone,
+      country,
+      city,
+      location,
+      logo_url: logoUrl,
+      delivery_mode: deliveryMode,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', createdStoreId)
+
+  if (profileUpdateError) {
+    return {
+      statusCode: 500,
+      message: profileUpdateError.message || 'Partner store was created, but identity fields failed to save.',
+    }
   }
 
   const syncResult = await syncMasterAdmin({

@@ -104,7 +104,7 @@ export default function AboutUs() {
   return (
     <div className="bg-[#fbfcf4] w-full" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       {/* Full-bleed video hero */}
-      <section className="relative w-full md:min-h-[calc(100dvh-24px)] md:max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col">
+      <section className="relative w-full md:min-h-[calc(100svh-1.5rem)] md:max-h-[calc(100dvh-1.5rem)] overflow-hidden flex flex-col">
         <div className="relative flex-1 min-h-[420px]">
           <LoopVideo src="/about/video-cream.mp4?v=3" poster="/about/hero-people.jpg" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0f1611]/90 via-[#0f1611]/55 to-[#0f1611]/25" />

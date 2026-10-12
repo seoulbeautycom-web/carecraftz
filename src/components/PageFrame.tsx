@@ -23,10 +23,13 @@ interface PageFrameProps {
 
 /**
  * Global CareCraftz.com shell — matches the main homepage:
- * - colored outer frame (p-3 / 12px)
- * - cream rounded stage (#fbfcf4, rounded-3xl)
+ * - colored outer frame
+ * - cream rounded stage (#fbfcf4)
  * - fixed NewHeader + SiteFooter on every page
  * Only `frameColor` changes between routes.
+ *
+ * Mobile: use svh (visible viewport with browser chrome) so the bottom frame
+ * is not clipped by the URL/toolbar band that classic 100vh includes.
  */
 export default function PageFrame({ children, frameColor }: PageFrameProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -38,17 +41,29 @@ export default function PageFrame({ children, frameColor }: PageFrameProps) {
   return (
     <PageShellProvider value={shellValue}>
       <div
-        className="h-screen w-screen p-3 overflow-hidden"
-        style={{ backgroundColor: frameColor, fontFamily: "'Poppins', sans-serif" }}
+        className="w-full overflow-hidden box-border flex flex-col"
+        style={{
+          backgroundColor: frameColor,
+          fontFamily: "'Poppins', sans-serif",
+          // svh = visible height on load (browser chrome expanded); classic 100vh
+          // is taller on mobile and clips the bottom colored frame.
+          height: '100svh',
+          maxHeight: '100dvh',
+          // Keep ≥12px frame; grow with notch / home-indicator safe areas.
+          paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))',
+          paddingRight: 'max(0.75rem, env(safe-area-inset-right, 0px))',
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))',
+          paddingLeft: 'max(0.75rem, env(safe-area-inset-left, 0px))',
+        }}
       >
-        <div className="bg-[#fbfcf4] h-[calc(100vh-24px)] rounded-3xl flex flex-col overflow-hidden relative">
+        <div className="bg-[#fbfcf4] flex-1 min-h-0 rounded-2xl sm:rounded-3xl flex flex-col overflow-hidden relative">
           {/* Header floats over page content (same as homepage) */}
           <NewHeader />
 
           <div
             ref={scrollRef}
             data-page-shell-scroll
-            className="flex-1 overflow-y-auto scrollbar-hide relative"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain scrollbar-hide relative"
           >
             {children}
             <SiteFooter />

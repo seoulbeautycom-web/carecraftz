@@ -7,6 +7,7 @@ import AdminLogin from './pages/admin/Login'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
 import StaffManagement from './pages/admin/Staff'
+import StaffDetail from './pages/admin/StaffDetail'
 import Products from './pages/admin/Products'
 import Brands from './pages/admin/Brands'
 import ProductEditor from './pages/admin/ProductEditor'
@@ -109,17 +110,7 @@ function AdminApp() {
             {/* Admin Login - No protected route */}
             <Route path="/login" element={<AdminLogin />} />
 
-            {/* Partner tenant portal */}
-            <Route path="/org/:slug/claim" element={<TenantClaimInvitePage />} />
-            <Route path="/:slug/claim" element={<TenantClaimInvitePage />} />
-            <Route path="/org/:slug" element={<TenantRouteScope />}>
-              {tenantPortalRouteChildren}
-            </Route>
-            <Route path="/:slug" element={<TenantRouteScope />}>
-              {tenantPortalRouteChildren}
-            </Route>
-
-            {/* Protected Admin Routes */}
+            {/* Protected Admin Routes — register before /:slug tenant routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.dashboard}>
                 <AdminDashboard />
@@ -133,6 +124,11 @@ function AdminApp() {
             <Route path="/staff" element={
               <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.staff}>
                 <StaffManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/:staffId" element={
+              <ProtectedRoute requiredAnyPermissions={ADMIN_MODULE_PERMISSIONS.staff}>
+                <StaffDetail />
               </ProtectedRoute>
             } />
             <Route path="/products/new" element={
@@ -200,6 +196,16 @@ function AdminApp() {
                 <SkinTypes />
               </ProtectedRoute>
             } />
+
+            {/* Partner tenant portal (after admin routes so /staff/:id etc. are not captured as store slugs) */}
+            <Route path="/org/:slug/claim" element={<TenantClaimInvitePage />} />
+            <Route path="/:slug/claim" element={<TenantClaimInvitePage />} />
+            <Route path="/org/:slug" element={<TenantRouteScope />}>
+              {tenantPortalRouteChildren}
+            </Route>
+            <Route path="/:slug" element={<TenantRouteScope />}>
+              {tenantPortalRouteChildren}
+            </Route>
 
             {/* Redirect root and unknown paths to the safest landing page */}
             <Route path="/" element={

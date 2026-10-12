@@ -19,6 +19,11 @@ import {
 import AdminLayout from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 import { ROLE_OPTIONS } from '../../lib/rbac'
+import {
+  callStaffAuthEdgeFunction,
+  processStaffMember,
+  type TeamMember,
+} from '../../lib/staffMembers'
 
 interface Order {
   id: string
@@ -30,26 +35,6 @@ interface Order {
   shipping_address?: { full_name: string }
 }
 
-interface TeamMember {
-  id: string
-  user_id: string
-  full_name: string
-  email: string
-  role: string
-  permissions: Record<string, boolean>
-  is_active: boolean
-  last_signed_in: string | null
-  created_at: string
-  status: 'online' | 'offline'
-  initials: string
-  avatarColor: string
-  roleColor: string
-  permissionsDisplay: string
-  last_active: string
-}
-
-const AVATAR_COLORS = ['bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-pink-500', 'bg-amber-500', 'bg-indigo-500', 'bg-rose-500']
-
 export default function Staff() {
   const navigate = useNavigate()
   const [staff, setStaff] = useState<TeamMember[]>([])
@@ -59,9 +44,9 @@ export default function Staff() {
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedStaff, setSelectedStaff] = useState<TeamMember | null>(null)
+  const [highlightedStaffId, setHighlightedStaffId] = useState<string | null>(null)
   
   // Add Staff form states
   const [newFullName, setNewFullName] = useState('')
@@ -73,11 +58,6 @@ export default function Staff() {
   const [addError, setAddError] = useState('')
   const [adding, setAdding] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-
-  // Edit Staff form states
-  const [editPassword, setEditPassword] = useState('')
-  const [showEditPassword, setShowEditPassword] = useState(false)
-  const [editError, setEditError] = useState('')
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -164,44 +144,6 @@ export default function Staff() {
     }
   }
 
-  const processStaffMember = (member: any, index: number): TeamMember => {
-    const names = member.full_name?.split(' ') || [member.email.split('@')[0]]
-    const initials = names.length > 1 
-      ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
-      : names[0].substring(0, 2).toUpperCase()
-    
-    const roleOption = ROLE_OPTIONS.find(r => r.value === member.role) || ROLE_OPTIONS.find(r => r.value === 'staff') || ROLE_OPTIONS[ROLE_OPTIONS.length - 1]
-    
-    // Determine online status based on last_signed_in
-    const lastSignIn = member.last_signed_in ? new Date(member.last_signed_in) : null
-    const isOnline = lastSignIn && (new Date().getTime() - lastSignIn.getTime()) < 5 * 60 * 1000 // 5 minutes
-    
-    // Format last active
-    let lastActive = 'Never'
-    if (lastSignIn) {
-      const diff = new Date().getTime() - lastSignIn.getTime()
-      const minutes = Math.floor(diff / 60000)
-      const hours = Math.floor(diff / 3600000)
-      const days = Math.floor(diff / 86400000)
-      
-      if (minutes < 1) lastActive = 'Now'
-      else if (minutes < 60) lastActive = `${minutes}m ago`
-      else if (hours < 24) lastActive = `${hours}h ago`
-      else if (days < 7) lastActive = `${days}d ago`
-      else lastActive = lastSignIn.toLocaleDateString()
-    }
-
-    return {
-      ...member,
-      initials,
-      avatarColor: AVATAR_COLORS[index % AVATAR_COLORS.length],
-      roleColor: roleOption.color,
-      permissionsDisplay: roleOption.permissions,
-      status: isOnline ? 'online' : 'offline',
-      last_active: lastActive
-    }
-  }
-
   const resetAddForm = () => {
     setNewFullName('')
     setNewEmail('')
@@ -210,21 +152,6 @@ export default function Staff() {
     setNewRole('staff')
     setNewIsActive(true)
     setAddError('')
-  }
-
-  const callEdgeFunction = async (action: string, payload: Record<string, unknown>) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://rbxiureeqjywsabxrckv.supabase.co'
-    const res = await fetch(`${supabaseUrl}/functions/v1/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-      },
-      body: JSON.stringify({ action, ...payload }),
-    })
-    return res.json()
   }
 
   const handleAddStaff = async () => {
@@ -239,7 +166,7 @@ export default function Staff() {
     setAddError('')
     try {
       // Step 1: Create auth.users entry via Edge Function (service role)
-      const edgeResult = await callEdgeFunction('create_user', {
+      const edgeResult = await callStaffAuthEdgeFunction('create_user', {
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
       })
@@ -300,7 +227,7 @@ export default function Staff() {
     setActionLoading(true)
     try {
       // Step 1: Delete from auth.users via Edge Function
-      const edgeResult = await callEdgeFunction('delete_user', {
+      const edgeResult = await callStaffAuthEdgeFunction('delete_user', {
         email: selectedStaff.email,
       })
 
@@ -326,75 +253,10 @@ export default function Staff() {
       setStaff(staff.filter(s => s.id !== selectedStaff.id))
       setShowDeleteModal(false)
       setSelectedStaff(null)
+      setHighlightedStaffId(null)
       showToast(`${deletedName} was removed successfully.`, 'success')
     } catch (err: any) {
       showToast(err?.message || 'Unexpected error. Please try again.', 'error')
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleUpdateStaff = async () => {
-    if (!selectedStaff) return
-
-    setActionLoading(true)
-    setEditError('')
-    try {
-      // Step 1: If password provided, update auth.users via Edge Function
-      if (editPassword.trim()) {
-        if (editPassword.length < 6) {
-          setEditError('Password must be at least 6 characters')
-          setActionLoading(false)
-          return
-        }
-
-        const edgeResult = await callEdgeFunction('reset_password', {
-          email: selectedStaff.email,
-          newPassword: editPassword,
-        })
-
-        if (edgeResult.error) {
-          setEditError(`Password update failed: ${edgeResult.error}`)
-          setActionLoading(false)
-          return
-        }
-      }
-
-      // Step 2: Update role/active status in public.staff
-      const { error } = await supabase
-        .from('staff')
-        .update({
-          role: selectedStaff.role,
-          is_active: selectedStaff.is_active,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedStaff.id)
-
-      if (error) {
-        setEditError(error.message || 'Failed to update staff record.')
-        return
-      }
-
-      const { error: syncError } = await supabase.rpc('sync_staff_role_assignment', {
-        target_staff_id: selectedStaff.id,
-        target_role_code: selectedStaff.role,
-      })
-
-      if (syncError) {
-        console.warn('Failed to sync updated staff role assignment:', syncError)
-      }
-
-      const updatedStaff = staff.map(s =>
-        s.id === selectedStaff.id ? processStaffMember({ ...s, ...selectedStaff }, 0) : s
-      )
-      setStaff(updatedStaff)
-      setShowEditModal(false)
-      setSelectedStaff(null)
-      setEditPassword('')
-      setShowEditPassword(false)
-      showToast('Staff member updated successfully.', 'success')
-    } catch (err: any) {
-      setEditError(err?.message || 'Unexpected error. Please try again.')
     } finally {
       setActionLoading(false)
     }
@@ -444,17 +306,19 @@ export default function Staff() {
     )
   }
 
-  const openEditModal = (member: TeamMember) => {
-    setSelectedStaff(member)
-    setEditPassword('')
-    setShowEditPassword(false)
-    setEditError('')
-    setShowEditModal(true)
+  const openStaffDetail = (member: TeamMember) => {
+    setHighlightedStaffId(member.id)
+    navigate(`/staff/${member.id}`)
   }
 
   const openDeleteModal = (member: TeamMember) => {
+    setHighlightedStaffId(member.id)
     setSelectedStaff(member)
     setShowDeleteModal(true)
+  }
+
+  const handleStaffTileClick = (member: TeamMember) => {
+    openStaffDetail(member)
   }
 
   return (
@@ -630,85 +494,97 @@ export default function Staff() {
               <span className="text-[11px] text-gray-500">{filteredStaff.length} shown</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[#E8E0D4] bg-[#FBF8F2]/60">
-                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Member</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Role</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Permissions</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                    <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Last active</th>
-                    <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
-                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-gray-400" />
-                        Loading team members…
-                      </td>
-                    </tr>
-                  ) : filteredStaff.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center">
-                        <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">No team members found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStaff.map((member) => (
-                      <tr key={member.id} className="border-b border-[#F0E9DC] last:border-0 hover:bg-[#F7F2E8]/50 transition-colors">
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 ${member.avatarColor} rounded-full flex items-center justify-center text-white text-[11px] font-semibold`}>
+            <div className="p-3">
+              {loading ? (
+                <div className="py-10 text-center text-sm text-gray-500">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-gray-400" />
+                  Loading team members…
+                </div>
+              ) : filteredStaff.length === 0 ? (
+                <div className="py-10 text-center">
+                  <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">No team members found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  {filteredStaff.map((member) => {
+                    const isHighlighted = highlightedStaffId === member.id
+                    return (
+                      <div
+                        key={member.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleStaffTileClick(member)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            handleStaffTileClick(member)
+                          }
+                        }}
+                        className={`rounded-xl border bg-white p-3 text-left transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
+                          isHighlighted
+                            ? 'border-indigo-300 bg-indigo-50/40 ring-1 ring-indigo-200/80 shadow-sm'
+                            : 'border-[#D9D0C2] hover:border-indigo-200 hover:bg-[#F7F2E8]/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className={`w-9 h-9 shrink-0 ${member.avatarColor} rounded-full flex items-center justify-center text-white text-[11px] font-semibold`}>
                               {member.initials}
                             </div>
                             <div className="min-w-0">
-                              <p className="text-xs font-medium text-gray-900 truncate">{member.full_name}</p>
+                              <p className="text-xs font-semibold text-gray-900 truncate">{member.full_name}</p>
                               <p className="text-[10px] text-gray-500 truncate">{member.email}</p>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-2.5">
+                          {isHighlighted ? (
+                            <span className="shrink-0 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                              Active
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
                           <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium ${member.roleColor}`}>
                             {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                           </span>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center gap-1 text-[11px] text-gray-600">
-                            <Shield className="w-3 h-3 text-gray-400" />
-                            <span className="truncate max-w-[10rem]">{member.permissionsDisplay}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5">{getStatusIndicator(member.status)}</td>
-                        <td className="px-4 py-2.5">
-                          <span className="text-[11px] text-gray-500">{member.last_active}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          <div className="inline-flex items-center gap-0.5">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(member)}
-                              className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-[#F7F2E8] rounded-lg"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openDeleteModal(member)}
-                              className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          {getStatusIndicator(member.status)}
+                        </div>
+
+                        <div className="mt-2 flex items-center gap-1 text-[11px] text-gray-600">
+                          <Shield className="w-3 h-3 shrink-0 text-gray-400" />
+                          <span className="line-clamp-1">{member.permissionsDisplay}</span>
+                        </div>
+
+                        <p className="mt-2 text-[10px] text-gray-400">Last active · {member.last_active}</p>
+
+                        <div
+                          className="mt-3 flex items-center justify-end gap-0.5 border-t border-[#F0E9DC] pt-2"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openStaffDetail(member)}
+                            className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-[#F7F2E8] rounded-lg"
+                            aria-label={`Open ${member.full_name}`}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(member)}
+                            className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                            aria-label={`Remove ${member.full_name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -809,92 +685,6 @@ export default function Staff() {
                 >
                   {adding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                   {adding ? 'Adding…' : 'Add staff'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showEditModal && selectedStaff && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false) }}
-          >
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="relative z-10 w-full max-w-md rounded-2xl border border-[#D9D0C2] bg-white shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between gap-2 border-b border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
-                <h2 className="text-sm font-semibold text-gray-900">Edit staff member</h2>
-                <button type="button" onClick={() => setShowEditModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-md">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-4 space-y-3">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-10 h-10 ${selectedStaff.avatarColor} rounded-full flex items-center justify-center text-white text-sm font-medium`}>
-                    {selectedStaff.initials}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-900">{selectedStaff.full_name}</p>
-                    <p className="text-[11px] text-gray-500">{selectedStaff.email}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-600 mb-1">Role</label>
-                  <select
-                    value={selectedStaff.role}
-                    onChange={(e) => setSelectedStaff({ ...selectedStaff, role: e.target.value })}
-                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                  >
-                    {ROLE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <label className="flex items-center gap-2 rounded-lg border border-[#E8E0D4] bg-[#F7F2E8] px-3 py-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedStaff.is_active}
-                    onChange={(e) => setSelectedStaff({ ...selectedStaff, is_active: e.target.checked })}
-                    className="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded"
-                  />
-                  <span className="text-xs text-gray-700">Account active</span>
-                </label>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-gray-600 mb-1">New password (optional)</label>
-                  <div className="relative">
-                    <input
-                      type={showEditPassword ? 'text' : 'password'}
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="Leave blank to keep current"
-                      className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                    />
-                    <button type="button" onClick={() => setShowEditPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {editError && (
-                  <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{editError}</p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3">
-                <button type="button" onClick={() => setShowEditModal(false)} className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white">
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleUpdateStaff()}
-                  disabled={actionLoading}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {actionLoading ? 'Saving…' : 'Save changes'}
                 </button>
               </div>
             </div>

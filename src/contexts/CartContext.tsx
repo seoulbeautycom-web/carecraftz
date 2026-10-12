@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { DEFAULT_OPS_SETTINGS, computeCartMoney, type ShippingSettings } from '../lib/opsSettings'
+import { useStorefrontIdentity } from './StorefrontIdentityContext'
 
 interface CartItem {
   id: string
@@ -27,11 +29,13 @@ interface CartContextType {
   addToCart: (product: AddToCartInput) => void
   removeFromCart: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
+  replaceItems: (next: CartItem[]) => void
   clearCart: () => void
   totalItems: number
   totalPriceByCurrency: { PKR: number; AED: number }
   deliveryChargesByCurrency: { PKR: number; AED: number }
   grandTotalByCurrency: { PKR: number; AED: number }
+  shipping: ShippingSettings
   isCartOpen: boolean
   setIsCartOpen: (open: boolean) => void
 }
@@ -39,6 +43,9 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+  const { ops } = useStorefrontIdentity()
+  const shipping = ops?.shipping ?? DEFAULT_OPS_SETTINGS.shipping
+
   const [items, setItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart')
     return saved ? JSON.parse(saved) : []
@@ -51,13 +58,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (product: AddToCartInput) => {
     const qty = Math.max(1, product.quantity ?? 1)
-    setItems(prev => {
-      const existing = prev.find(item => item.id === product.id)
+    setItems((prev) => {
+      const existing = prev.find((item) => item.id === product.id)
       if (existing) {
-        return prev.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + qty }
-            : item
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + qty } : item,
         )
       }
       const newItem: CartItem = {
@@ -68,14 +73,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         quantity: qty,
         location: product.location || 'UAE',
         delivery_charge: product.delivery_charge || 0,
-        currency: product.currency || 'AED'
+        currency: product.currency || 'AED',
       }
       return [...prev, newItem]
     })
   }
 
   const removeFromCart = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id))
+    setItems((prev) => prev.filter((item) => item.id !== id))
   }
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -83,9 +88,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeFromCart(id)
       return
     }
-    setItems(prev =>
-      prev.map(item => (item.id === id ? { ...item, quantity } : item))
-    )
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity } : item)))
+  }
+
+  const replaceItems = (next: CartItem[]) => {
+    setItems(next)
   }
 
   const clearCart = () => {
@@ -93,51 +100,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
-  
-  // Calculate totals by currency
-  const totals = items.reduce(
-    (acc, item) => {
-      const itemTotal = item.price * item.quantity
-      const deliveryTotal = item.delivery_charge * item.quantity
-      
-      if (item.currency === 'PKR') {
-        acc.price.PKR += itemTotal
-        acc.delivery.PKR += deliveryTotal
-      } else {
-        acc.price.AED += itemTotal
-        acc.delivery.AED += deliveryTotal
-      }
-      return acc
-    },
-    { price: { PKR: 0, AED: 0 }, delivery: { PKR: 0, AED: 0 } }
-  )
-  
-  const totalPriceByCurrency = totals.price
-  const deliveryChargesByCurrency = totals.delivery
-  const grandTotalByCurrency = {
-    PKR: totals.price.PKR + totals.delivery.PKR,
-    AED: totals.price.AED + totals.delivery.AED
+
+  const money = computeCartMoney(items, shipping)
+
+  const value: CartContextType = {
+    items,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    replaceItems,
+    clearCart,
+    totalItems,
+    totalPriceByCurrency: money.subtotal,
+    deliveryChargesByCurrency: money.delivery,
+    grandTotalByCurrency: money.grandTotal,
+    shipping,
+    isCartOpen,
+    setIsCartOpen,
   }
 
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        totalItems,
-        totalPriceByCurrency,
-        deliveryChargesByCurrency,
-        grandTotalByCurrency,
-        isCartOpen,
-        setIsCartOpen,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  )
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }
 
 export function useCart() {

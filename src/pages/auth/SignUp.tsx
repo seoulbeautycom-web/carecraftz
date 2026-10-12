@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/auth-context'
+import { useStorefrontIdentity } from '../../contexts/StorefrontIdentityContext'
 import { Mail, Lock, User, Eye, EyeOff, Leaf } from 'lucide-react'
 import PageFrame from '../../components/PageFrame'
 
 function SignUpInner() {
   const navigate = useNavigate()
   const { signUp } = useAuth()
+  const { ops } = useStorefrontIdentity()
+  const minPasswordLength = Math.max(6, ops.security.password_min_length || 6)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,8 +30,8 @@ function SignUpInner() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters`)
       setLoading(false)
       return
     }

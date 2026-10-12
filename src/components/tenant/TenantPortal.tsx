@@ -13,6 +13,8 @@ import { useAuth } from '../../contexts/auth-context'
 import { TenantAccessProvider } from '../../contexts/TenantAccessContext'
 import { useTenantAccess } from '../../contexts/tenant-access-context'
 import { TENANT_NAV_ITEMS, getTenantPath, getTenantRootPath } from '../../lib/tenantNavigation'
+import { isAdminRootPathSegment } from '../../lib/adminNavigation'
+import AdminReservedPathDispatcher from '../admin/AdminReservedPathDispatcher'
 
 interface TenantRouteScopeProps {
   children?: ReactNode
@@ -82,7 +84,12 @@ function TenantRestrictedCard({ reason, onSignOut }: { reason: string | null; on
 
 export function TenantRouteScope({ children }: TenantRouteScopeProps) {
   const params = useParams<{ slug: string }>()
+  const location = useLocation()
   const slug = params.slug ?? null
+
+  if (slug && isAdminRootPathSegment(slug) && location.pathname.startsWith(`/${slug}/`)) {
+    return <AdminReservedPathDispatcher />
+  }
 
   return (
     <TenantAccessProvider targetSlug={slug}>

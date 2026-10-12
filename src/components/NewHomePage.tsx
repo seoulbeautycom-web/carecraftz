@@ -5,6 +5,7 @@ import AnnouncementBar from './AnnouncementBar'
 import PageFrame from './PageFrame'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../contexts/CartContext'
+import { productPrimaryImage } from '../lib/storeSettings'
 
 const SKIN_TYPES = [
   { label: 'Oily',      color: 'bg-[#c8f135] text-[#2b2b2b]',  activeColor: 'bg-[#a8d41a]' },
@@ -24,6 +25,16 @@ interface Product {
   image: string
   bgColor: string
   shadowColor: string
+  delivery_charge: number
+  location: 'Pakistan' | 'UAE'
+}
+
+interface HomeReview {
+  id: string
+  customer_name: string
+  rating: number
+  review_text: string
+  products?: { name?: string } | null
 }
 
 interface BlogPost {
@@ -52,36 +63,51 @@ export default function NewHomePage() {
   const [skinTypeProducts, setSkinTypeProducts] = useState<Product[]>([])
   const [featuredBestseller, setFeaturedBestseller] = useState<Product | null>(null)
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
+  const [homeReviews, setHomeReviews] = useState<HomeReview[]>([])
+  const [reviewsAverage, setReviewsAverage] = useState(0)
   const [activeSkinType, setActiveSkinType] = useState('Oily')
   const [loading, setLoading] = useState(true)
 
+  const mapProduct = (p: Record<string, unknown>, index: number): Product => {
+    const colors = colorSchemes[index % colorSchemes.length]
+    const pricePkr = Number(p.price_pkr) || 0
+    const priceAed = Number(p.price_aed) || Number(p.price) || 0
+    const currency: 'PKR' | 'AED' =
+      priceAed > 0 && (!pricePkr || priceAed >= pricePkr) ? 'AED' : pricePkr > 0 ? 'PKR' : 'AED'
+    const location: 'Pakistan' | 'UAE' =
+      p.location === 'Pakistan' || currency === 'PKR' ? 'Pakistan' : 'UAE'
+    return {
+      id: String(p.id),
+      name: String(p.name || 'Product'),
+      subtitle: String(p.subtitle || (typeof p.description === 'string' ? p.description.substring(0, 40) : '') || 'Natural skincare'),
+      price: currency === 'PKR' ? pricePkr : priceAed,
+      price_pkr: pricePkr,
+      price_aed: priceAed,
+      currency,
+      image: productPrimaryImage(p as { images?: string[] | string | null; image?: string | null }),
+      bgColor: colors.bg,
+      shadowColor: colors.shadow,
+      delivery_charge: Number(p.delivery_charge) || 0,
+      location,
+    }
+  }
+
   useEffect(() => {
-    fetchProducts()
+    void fetchProducts()
   }, [])
 
   const fetchProducts = async () => {
     const { data } = await supabase
       .from('products')
       .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
       .limit(6)
 
     if (data) {
-      const mappedProducts = data.map((p, index) => {
-        const colors = colorSchemes[index % colorSchemes.length]
-        return {
-          id: p.id,
-          name: p.name,
-          subtitle: p.subtitle || p.description?.substring(0, 40) || 'Natural skincare',
-          price: p.price_pkr || p.price_aed || 0,
-          price_pkr: p.price_pkr || 0,
-          price_aed: p.price_aed || 0,
-          currency: (p.currency || 'PKR') as 'PKR' | 'AED',
-          image: p.image || '',
-          bgColor: colors.bg,
-          shadowColor: colors.shadow,
-        }
-      })
-      setProducts(mappedProducts)
+      setProducts(data.map((p, index) => mapProduct(p as Record<string, unknown>, index)))
+    } else {
+      setProducts([])
     }
     setLoading(false)
   }
@@ -90,61 +116,57 @@ export default function NewHomePage() {
     const { data } = await supabase
       .from('products')
       .select('*')
+      .eq('is_active', true)
       .eq('skin_type', skinType)
       .limit(6)
     if (data) {
-      const mapped = data.map((p, index) => {
-        const colors = colorSchemes[index % colorSchemes.length]
-        return {
-          id: p.id,
-          name: p.name,
-          subtitle: p.subtitle || p.description?.substring(0, 40) || 'Natural skincare',
-          price: p.price_pkr || p.price_aed || 0,
-          price_pkr: p.price_pkr || 0,
-          price_aed: p.price_aed || 0,
-          currency: (p.currency || 'PKR') as 'PKR' | 'AED',
-          image: p.image || '',
-          bgColor: colors.bg,
-          shadowColor: colors.shadow,
-        }
-      })
-      setSkinTypeProducts(mapped)
+      setSkinTypeProducts(data.map((p, index) => mapProduct(p as Record<string, unknown>, index)))
     } else {
       setSkinTypeProducts([])
     }
   }
 
   useEffect(() => {
-    fetchSkinTypeProducts(activeSkinType)
+    void fetchSkinTypeProducts(activeSkinType)
   }, [activeSkinType])
 
   const fetchFeaturedBestseller = async () => {
     const { data } = await supabase
       .from('products')
       .select('*')
+      .eq('is_active', true)
       .eq('is_featured', true)
       .limit(1)
-      .single()
+      .maybeSingle()
     if (data) {
-      const colors = colorSchemes[0]
-      setFeaturedBestseller({
-        id: data.id,
-        name: data.name,
-        subtitle: data.subtitle || data.description?.substring(0, 40) || 'Natural skincare',
-        price: data.price_pkr || data.price_aed || 0,
-        price_pkr: data.price_pkr || 0,
-        price_aed: data.price_aed || 0,
-        currency: (data.currency || 'PKR') as 'PKR' | 'AED',
-        image: data.image || '',
-        bgColor: colors.bg,
-        shadowColor: colors.shadow,
-      })
+      setFeaturedBestseller(mapProduct(data as Record<string, unknown>, 0))
+    } else {
+      setFeaturedBestseller(null)
+    }
+  }
+
+  const fetchHomeReviews = async () => {
+    const { data } = await supabase
+      .from('reviews')
+      .select('id, customer_name, rating, review_text, products(name)')
+      .eq('is_approved', true)
+      .order('created_at', { ascending: false })
+      .limit(6)
+
+    const rows = (data || []) as HomeReview[]
+    setHomeReviews(rows)
+    if (rows.length > 0) {
+      const avg = rows.reduce((sum, review) => sum + (Number(review.rating) || 0), 0) / rows.length
+      setReviewsAverage(avg)
+    } else {
+      setReviewsAverage(0)
     }
   }
 
   useEffect(() => {
-    fetchFeaturedBestseller()
-    fetchBlogPosts()
+    void fetchFeaturedBestseller()
+    void fetchBlogPosts()
+    void fetchHomeReviews()
   }, [])
 
   const fetchBlogPosts = async () => {
@@ -168,7 +190,7 @@ export default function NewHomePage() {
   return (
     <PageFrame frameColor="#E8A4E0">
           {/* Hero + pills — one laptop fold inside the cream frame */}
-          <section className="relative w-full md:h-[calc(100dvh-24px)] md:max-h-[calc(100dvh-24px)] overflow-hidden flex flex-col">
+          <section className="relative w-full md:h-[calc(100svh-1.5rem)] md:max-h-[calc(100dvh-1.5rem)] overflow-hidden flex flex-col">
             <div className="relative flex-1 min-h-[280px] overflow-hidden">
               <img
                 src="/herosec.png"
@@ -260,8 +282,8 @@ export default function NewHomePage() {
                           price: product.price,
                           image: product.image,
                           currency: product.currency,
-                          location: product.currency === 'PKR' ? 'Pakistan' : 'UAE',
-                          delivery_charge: product.currency === 'PKR' ? 200 : 15,
+                          location: product.location,
+                          delivery_charge: product.delivery_charge,
                         })
                       }}
                     >
@@ -282,18 +304,8 @@ export default function NewHomePage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                {colorSchemes.slice(0, 4).map((colors, i) => (
-                  <div
-                    key={i}
-                    className="relative rounded-xl p-3.5 flex flex-col min-h-[200px]"
-                    style={{ backgroundColor: colors.bg, boxShadow: `3px 3px 0px ${colors.shadow}` }}
-                  >
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="w-20 h-20 bg-white/30 rounded-xl" />
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-dashed border-[#2b2b2b]/15 bg-white/50 px-4 py-10 text-center">
+                <p className="text-sm text-[#696a67]">No products live yet. Check back soon.</p>
               </div>
             )}
           </section>
@@ -348,8 +360,8 @@ export default function NewHomePage() {
                           price: product.price,
                           image: product.image,
                           currency: product.currency,
-                          location: product.currency === 'PKR' ? 'Pakistan' : 'UAE',
-                          delivery_charge: product.currency === 'PKR' ? 200 : 15,
+                          location: product.location,
+                          delivery_charge: product.delivery_charge,
                         })
                       }}
                     >
@@ -367,17 +379,9 @@ export default function NewHomePage() {
                   </div>
                 ))
               ) : (
-                colorSchemes.map((colors, i) => (
-                  <div
-                    key={i}
-                    className="relative rounded-xl p-3.5 flex flex-col flex-shrink-0"
-                    style={{ width: '200px', backgroundColor: colors.bg, boxShadow: `3px 3px 0px ${colors.shadow}` }}
-                  >
-                    <div className="flex items-center justify-center min-h-[120px]">
-                      <div className="w-16 h-16 bg-white/30 rounded-xl" />
-                    </div>
-                  </div>
-                ))
+                <div className="rounded-xl border border-dashed border-[#2b2b2b]/15 bg-white/40 px-4 py-8 text-sm text-[#696a67]">
+                  No active products for {activeSkinType} yet.
+                </div>
               )}
             </div>
           </section>
@@ -594,38 +598,44 @@ export default function NewHomePage() {
                 </h2>
                 <p className="text-[#696a67] text-sm mt-0.5">Trusted by skincare buyers across UAE & Pakistan</p>
               </div>
-              <p className="text-[#2b2b2b] text-xs font-medium">
-                <span className="text-[#1db954]">★★★★★</span> 4.9/5 average
-              </p>
+              {homeReviews.length > 0 ? (
+                <p className="text-[#2b2b2b] text-xs font-medium">
+                  <span className="text-[#1db954]">★★★★★</span> {reviewsAverage.toFixed(1)}/5 average
+                </p>
+              ) : null}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {[
-                { name: 'Sarah M.', location: 'Dubai', text: 'Love that every listing feels vetted. I found a cleanser that actually suits my skin without guessing.' },
-                { name: 'Aisha K.', location: 'Lahore', text: 'Finally a marketplace that works for sensitive skin. Clear seller info and products that deliver.' },
-                { name: 'Fatima R.', location: 'Karachi', text: 'Ordered a serum through CareCraftz — packaging was solid and results showed within two weeks.' },
-                { name: 'Noor H.', location: 'Islamabad', text: 'Shop by skin type made browsing easy. Checkout was smooth and delivery was on time.' },
-                { name: 'Zara A.', location: 'Dubai', text: 'Prefer buying here over random stores. The curated assortment saves me from bad impulse picks.' },
-                { name: 'Maryam S.', location: 'London', text: 'Discovered CareCraftz in Dubai and still order from the UK. Products arrive well packed.' },
-              ].map((review, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-xl px-3.5 py-3.5 border border-[#2b2b2b]/08"
-                  style={{ boxShadow: `3px 3px 0px ${['#8DEBD1', '#F4956A', '#FFD94A', '#E8A4E0', '#7EC8E3', '#FF8FAB'][i % 6]}` }}
-                >
-                  <div className="flex gap-0.5 mb-2">
-                    {[...Array(5)].map((_, s) => (
-                      <span key={s} className="text-[#E8B800] text-xs">★</span>
-                    ))}
+            {homeReviews.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#2b2b2b]/15 bg-white/50 px-4 py-8 text-center text-sm text-[#696a67]">
+                Customer reviews will appear here once approved.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {homeReviews.map((review, i) => (
+                  <div
+                    key={review.id}
+                    className="bg-white rounded-xl px-3.5 py-3.5 border border-[#2b2b2b]/08"
+                    style={{ boxShadow: `3px 3px 0px ${['#8DEBD1', '#F4956A', '#FFD94A', '#E8A4E0', '#7EC8E3', '#FF8FAB'][i % 6]}` }}
+                  >
+                    <div className="flex gap-0.5 mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={`text-xs ${star <= review.rating ? 'text-[#E8B800]' : 'text-gray-300'}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[#2b2b2b] text-xs leading-snug mb-3">"{review.review_text}"</p>
+                    <div>
+                      <p className="text-[#2b2b2b] text-xs font-semibold">{review.customer_name}</p>
+                      <p className="text-[#696a67] text-[11px]">{review.products?.name || 'Verified purchase'}</p>
+                    </div>
                   </div>
-                  <p className="text-[#2b2b2b] text-xs leading-snug mb-3">"{review.text}"</p>
-                  <div>
-                    <p className="text-[#2b2b2b] text-xs font-semibold">{review.name}</p>
-                    <p className="text-[#696a67] text-[11px]">{review.location}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
     </PageFrame>

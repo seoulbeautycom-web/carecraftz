@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { CartProvider } from './contexts/CartContext'
 import { AuthProvider } from './contexts/AuthContext'
-import SeoulBeauty from './components/SeoulBeauty'
+import { StorefrontIdentityProvider } from './contexts/StorefrontIdentityContext'
+import BlogPostDetail from './pages/BlogPostDetail'
 import AboutUs from './components/AboutUs'
 import PageFrame from './components/PageFrame'
 import Shop from './pages/Shop'
@@ -20,10 +21,6 @@ import Terms from './pages/Terms'
 import Checkout from './pages/Checkout'
 import NewHomePage from './components/NewHomePage'
 
-// Inline page wrappers for components that are not yet standalone pages
-function SeoulBeautyPage() {
-  return <PageFrame frameColor="#F7B2BD"><SeoulBeauty /></PageFrame>
-}
 function AboutUsPage() {
   return <PageFrame frameColor="#B2D8B2"><AboutUs /></PageFrame>
 }
@@ -32,11 +29,12 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <CartProvider>
+        <StorefrontIdentityProvider>
+          <CartProvider>
           <Routes>
             {/* All storefront routes use PageFrame (global header/footer + home shell). Only frameColor differs. */}
             <Route path="/" element={<NewHomePage />} />               {/* #E8A4E0 lilac */}
-            <Route path="/seoul-beauty" element={<SeoulBeautyPage />} />
+            <Route path="/seoul-beauty" element={<Navigate to="/shop" replace />} />
             <Route path="/about"        element={<AboutUsPage />} />
             <Route path="/about-us"     element={<AboutUsPage />} />
             <Route path="/shop"         element={<Shop />} />           {/* #FF8C69 coral */}
@@ -44,6 +42,7 @@ function App() {
             <Route path="/craft"        element={<Navigate to="/about" replace />} />
             <Route path="/future-launches" element={<FutureLaunches />} /> {/* #7EC8E3 sky */}
             <Route path="/blog"         element={<Blog />} />           {/* #FFD94A yellow */}
+            <Route path="/blog/:slug"   element={<BlogPostDetail />} />
             <Route path="/why-us"       element={<WhyUs />} />          {/* #1F2A24 forest */}
             <Route path="/refill"       element={<Navigate to="/why-us" replace />} />
             <Route path="/partners"     element={<Partners />} />       {/* #E8A4E0 lilac */}
@@ -58,7 +57,8 @@ function App() {
             <Route path="/terms"        element={<Terms />} />          {/* #A3C4BC teal */}
             {/* Admin routes — use admin.carecraftz.com */}
           </Routes>
-        </CartProvider>
+          </CartProvider>
+        </StorefrontIdentityProvider>
       </AuthProvider>
     </BrowserRouter>
   )
