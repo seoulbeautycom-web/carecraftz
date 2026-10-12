@@ -3,7 +3,6 @@ import {
   BarChart3,
   Droplets,
   FileText,
-  Globe,
   LayoutDashboard,
   Package,
   Settings,
@@ -14,16 +13,25 @@ import {
   Users,
 } from 'lucide-react'
 
+export type AdminNavSectionId = 'top' | 'my-store' | 'growth' | 'team' | 'system'
+
 export interface AdminRouteDefinition {
   path: string
   label: string
   icon?: ComponentType<{ className?: string }>
   requiredAnyPermissions: string[]
   showInNavigation: boolean
+  section?: AdminNavSectionId
 }
 
-export interface AdminNavItem extends Omit<AdminRouteDefinition, 'icon'> {
+export interface AdminNavItem extends Omit<AdminRouteDefinition, 'icon' | 'section'> {
   icon: ComponentType<{ className?: string }>
+  section: AdminNavSectionId
+}
+
+export interface AdminNavSection {
+  id: AdminNavSectionId
+  label: string | null
 }
 
 const PRODUCT_PERMISSIONS = [
@@ -66,6 +74,14 @@ const ANALYTICS_PERMISSIONS = ['analytics.view', 'analytics.export']
 const DASHBOARD_PERMISSIONS = ['dashboard.view']
 const ACCESS_CONTROL_PERMISSIONS = ['roles.manage']
 
+export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
+  { id: 'top', label: null },
+  { id: 'my-store', label: 'My Store' },
+  { id: 'growth', label: 'Growth' },
+  { id: 'team', label: 'Team' },
+  { id: 'system', label: 'System' },
+]
+
 export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
   {
     path: '/dashboard',
@@ -73,27 +89,7 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: LayoutDashboard,
     requiredAnyPermissions: DASHBOARD_PERMISSIONS,
     showInNavigation: true,
-  },
-  {
-    path: '/content',
-    label: 'Content',
-    icon: FileText,
-    requiredAnyPermissions: CONTENT_PERMISSIONS,
-    showInNavigation: true,
-  },
-  {
-    path: '/reviews',
-    label: 'Reviews',
-    icon: Star,
-    requiredAnyPermissions: REVIEW_PERMISSIONS,
-    showInNavigation: true,
-  },
-  {
-    path: '/partners',
-    label: 'Partners',
-    icon: Users,
-    requiredAnyPermissions: PARTNER_PERMISSIONS,
-    showInNavigation: true,
+    section: 'top',
   },
   {
     path: '/orders',
@@ -101,6 +97,7 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: ShoppingCart,
     requiredAnyPermissions: ORDER_PERMISSIONS,
     showInNavigation: true,
+    section: 'my-store',
   },
   {
     path: '/products',
@@ -108,6 +105,15 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: Package,
     requiredAnyPermissions: PRODUCT_PERMISSIONS,
     showInNavigation: true,
+    section: 'my-store',
+  },
+  {
+    path: '/partners',
+    label: 'Partner Stores',
+    icon: Users,
+    requiredAnyPermissions: PARTNER_PERMISSIONS,
+    showInNavigation: true,
+    section: 'my-store',
   },
   {
     path: '/brands',
@@ -115,6 +121,23 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: Tag,
     requiredAnyPermissions: PRODUCT_PERMISSIONS,
     showInNavigation: true,
+    section: 'my-store',
+  },
+  {
+    path: '/content',
+    label: 'Content',
+    icon: FileText,
+    requiredAnyPermissions: CONTENT_PERMISSIONS,
+    showInNavigation: true,
+    section: 'growth',
+  },
+  {
+    path: '/reviews',
+    label: 'Reviews',
+    icon: Star,
+    requiredAnyPermissions: REVIEW_PERMISSIONS,
+    showInNavigation: true,
+    section: 'growth',
   },
   {
     path: '/skin-types',
@@ -122,20 +145,7 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: Droplets,
     requiredAnyPermissions: PRODUCT_PERMISSIONS,
     showInNavigation: true,
-  },
-  {
-    path: '/social',
-    label: 'Social & Contact',
-    icon: Globe,
-    requiredAnyPermissions: SETTINGS_PERMISSIONS,
-    showInNavigation: true,
-  },
-  {
-    path: '/staff',
-    label: 'Staff',
-    icon: Users,
-    requiredAnyPermissions: STAFF_PERMISSIONS,
-    showInNavigation: true,
+    section: 'growth',
   },
   {
     path: '/analytics',
@@ -143,13 +153,15 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: BarChart3,
     requiredAnyPermissions: ANALYTICS_PERMISSIONS,
     showInNavigation: true,
+    section: 'growth',
   },
   {
-    path: '/settings',
-    label: 'Settings',
-    icon: Settings,
-    requiredAnyPermissions: SETTINGS_PERMISSIONS,
+    path: '/staff',
+    label: 'Staff',
+    icon: Users,
+    requiredAnyPermissions: STAFF_PERMISSIONS,
     showInNavigation: true,
+    section: 'team',
   },
   {
     path: '/access-control',
@@ -157,6 +169,23 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
     icon: ShieldCheck,
     requiredAnyPermissions: ACCESS_CONTROL_PERMISSIONS,
     showInNavigation: true,
+    section: 'team',
+  },
+  {
+    path: '/settings',
+    label: 'Settings',
+    icon: Settings,
+    requiredAnyPermissions: SETTINGS_PERMISSIONS,
+    showInNavigation: true,
+    section: 'system',
+  },
+  // Kept as route for redirects; no longer shown in sidebar
+  {
+    path: '/social',
+    label: 'Social & Contact',
+    requiredAnyPermissions: SETTINGS_PERMISSIONS,
+    showInNavigation: false,
+    section: 'system',
   },
   {
     path: '/products/new',
@@ -172,7 +201,12 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
   },
 ]
 
-export const ADMIN_NAV_ITEMS = ADMIN_ROUTE_DEFINITIONS.filter((item): item is AdminNavItem => item.showInNavigation && Boolean(item.icon))
+export const ADMIN_NAV_ITEMS = ADMIN_ROUTE_DEFINITIONS.filter(
+  (item): item is AdminNavItem => item.showInNavigation && Boolean(item.icon),
+).map((item) => ({
+  ...item,
+  section: item.section ?? 'top',
+}))
 
 export const hasAnyPermission = (permissionSet: Set<string>, requiredAnyPermissions: string[]) => {
   if (requiredAnyPermissions.length === 0) {

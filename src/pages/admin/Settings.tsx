@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { 
   ChevronDown, 
   Bell,
-  Store,
   CreditCard,
   Truck,
   BellRing,
@@ -40,7 +39,7 @@ interface SettingsTab {
 export default function Settings() {
   const navigate = useNavigate()
   const [userName, setUserName] = useState('Admin')
-  const [activeTab, setActiveTab] = useState('store-details')
+  const [activeTab, setActiveTab] = useState('payments')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [allOrders, setAllOrders] = useState<Order[]>([])
@@ -96,17 +95,11 @@ export default function Settings() {
 
   const settingsTabs: SettingsTab[] = [
     { 
-      id: 'store-details', 
-      label: 'Store Details', 
-      description: 'Name, address, contact info',
-      icon: <Store className="w-5 h-5" />,
-      active: true 
-    },
-    { 
       id: 'payments', 
       label: 'Payments', 
       description: 'Gateways, currencies, billing',
-      icon: <CreditCard className="w-5 h-5" /> 
+      icon: <CreditCard className="w-5 h-5" />,
+      active: true,
     },
     { 
       id: 'shipping', 
@@ -278,137 +271,19 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Right Content - Store Information Form */}
             <div className="flex-1">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Store Information</h2>
-                
-                <div className="space-y-6">
-                  {/* Store Name & URL */}
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-                      <input
-                        type="text"
-                        defaultValue="Petal & Root"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Store URL</label>
-                      <input
-                        type="text"
-                        defaultValue="petalandroot.myshopify.com"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email & Phone */}
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                      <input
-                        type="email"
-                        defaultValue="hello@petalandroot.co"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                      <input
-                        type="tel"
-                        defaultValue="+1 (807) 555-0192"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Currency & Timezone */}
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                      <div className="relative">
-                        <select
-                          defaultValue="USD"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent appearance-none"
-                        >
-                          <option value="USD">USD — US Dollar</option>
-                          <option value="EUR">EUR — Euro</option>
-                          <option value="GBP">GBP — British Pound</option>
-                          <option value="CAD">CAD — Canadian Dollar</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                      <div className="relative">
-                        <select
-                          defaultValue="America/New_York"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent appearance-none"
-                        >
-                          <option value="America/New_York">America/New_York</option>
-                          <option value="America/Los_Angeles">America/Los_Angeles</option>
-                          <option value="Europe/London">Europe/London</option>
-                          <option value="Asia/Tokyo">Asia/Tokyo</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-gray-100 pt-6">
-                    <h3 className="text-base font-medium text-gray-900 mb-4">Address</h3>
-                    
-                    {/* Street Address & City */}
-                    <div className="grid grid-cols-2 gap-6 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                        <input
-                          type="text"
-                          defaultValue="44 Maple Hill Rd"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                        <input
-                          type="text"
-                          defaultValue="Burlington"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Suite & ZIP */}
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Suite</label>
-                        <input
-                          type="text"
-                          defaultValue="Vermont"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                        <input
-                          type="text"
-                          defaultValue="05401"
-                          className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end mt-8 pt-6 border-t border-gray-100">
-                  <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors">
-                    Save Changes
-                  </button>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  {settingsTabs.find((tab) => tab.id === activeTab)?.label || 'Settings'}
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  {settingsTabs.find((tab) => tab.id === activeTab)?.description}
+                </p>
+                <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center">
+                  <p className="text-sm text-gray-600">This settings area is coming soon.</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Store details and social/contact live under Partner Stores → My Store setup.
+                  </p>
                 </div>
               </div>
             </div>

@@ -1,27 +1,32 @@
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowUpRight,
   BadgeCheck,
+  Bell,
   Building2,
   CheckCircle2,
-  Clock3,
+  ChevronDown,
   ExternalLink,
   FileText,
   Filter,
   Globe,
+  LogOut,
   Mail,
   Phone,
+  Plus,
   Search,
+  Settings,
   ShieldCheck,
   Store,
+  X,
   XCircle,
 } from 'lucide-react'
 import AdminLayout from '../../components/admin/AdminLayout'
+import MyStoreSetupPanel from '../../components/admin/MyStoreSetupPanel'
 import { useAdminAccess } from '../../contexts/admin-access-context'
 import { supabase } from '../../lib/supabase'
-import { getTenantRootPath } from '../../lib/tenantNavigation'
 
 interface VerificationChecklist {
   identity_business?: boolean
@@ -126,32 +131,8 @@ interface PartnerStoreRow {
 }
 
 type ApplicationFilter = 'all' | PartnerApplicationRow['status']
-type MarketplaceSection = 'applications' | 'stores'
+type MarketplaceSection = 'applications' | 'stores' | 'store_setup'
 type SaveAction = 'review' | 'approve' | 'reject' | 'needs_info' | 'checklist' | null
-type StoreSaveAction = 'create' | 'update' | 'delete' | null
-
-interface StoreFormState {
-  slug: string
-  displayName: string
-  legalName: string
-  primaryEmail: string
-  masterAdminEmail: string
-  masterAdminPassword: string
-  status: PartnerStoreRow['status']
-  approvalStatus: PartnerStoreRow['approval_status']
-  commissionRate: string
-}
-
-interface PartnerStoreAdminApiResponse {
-  ok?: boolean
-  storeId?: string
-  master_admin_email?: string
-  master_admin_user_id?: string
-  partner_member_id?: string
-  partner_store_slug?: string
-  warning?: string
-  error?: string
-}
 
 const STATUS_LABELS: Record<PartnerApplicationRow['status'], string> = {
   submitted: 'Submitted',
@@ -200,90 +181,36 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback
 }
 
-const getStoreActionErrorMessage = (error: unknown, fallback: string) => {
-  const message = getErrorMessage(error, fallback)
-  const normalizedMessage = message.toLowerCase()
+const getTimeAgo = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
 
-  if (
-    normalizedMessage.includes('provision_partner_store')
-    && (normalizedMessage.includes('does not exist') || normalizedMessage.includes('could not find the function'))
-  ) {
-    return 'The direct store provisioning RPC is not deployed in the database yet. Wait for the Supabase migration workflow to finish, then try again.'
-  }
-
-  if (normalizedMessage.includes('insufficient permissions')) {
-    return 'You need partners.provision, partners.manage, or roles.manage access to create or edit partner stores.'
-  }
-
-  if (
-    normalizedMessage.includes('/api/partner-store-admin')
-    && (normalizedMessage.includes('not found') || normalizedMessage.includes('404'))
-  ) {
-    return 'The partner store master admin API route is not deployed yet. Wait for the Vercel deployment to finish, then try again.'
-  }
-
-  return message
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+  return `${Math.floor(diffInMinutes / 1440)}d ago`
 }
 
-const partnerStoreAdminEndpoint = '/api/partner-store-admin'
-
-const callPartnerStoreAdminApi = async (method: 'POST' | 'DELETE', body: Record<string, unknown>) => {
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
-
-  if (!accessToken) {
-    throw new Error('You must be signed in to manage partner store credentials.')
-  }
-
-  const response = await fetch(partnerStoreAdminEndpoint, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: method === 'DELETE' ? JSON.stringify(body) : JSON.stringify(body),
-  })
-
-  const payload = (await response.json().catch(() => ({}))) as PartnerStoreAdminApiResponse
-
-  if (!response.ok || payload.ok === false) {
-    throw new Error(payload.error || 'Failed to manage the master admin account.')
-  }
-
-  return payload
+interface HeaderOrder {
+  id: string
+  order_code: string
+  customer_email: string
+  created_at: string
+  time_ago?: string
+  shipping_address?: { full_name: string }
 }
-
-const emptyStoreForm = (): StoreFormState => ({
-  slug: '',
-  displayName: '',
-  legalName: '',
-  primaryEmail: '',
-  masterAdminEmail: '',
-  masterAdminPassword: '',
-  status: 'active',
-  approvalStatus: 'approved',
-  commissionRate: '0',
-})
-
-const storeFormFromRow = (store: PartnerStoreRow): StoreFormState => ({
-  slug: store.slug,
-  displayName: store.display_name,
-  legalName: store.legal_name,
-  primaryEmail: store.primary_email,
-  masterAdminEmail: store.master_admin_email ?? '',
-  masterAdminPassword: '',
-  status: store.status,
-  approvalStatus: store.approval_status,
-  commissionRate: String(store.commission_rate ?? 0),
-})
 
 export default function PartnerApplications() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { hasAnyPermission: hasAdminAnyPermission } = useAdminAccess()
   const [applications, setApplications] = useState<PartnerApplicationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
   const [pageSuccess, setPageSuccess] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [partnerSearch, setPartnerSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ApplicationFilter>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [slugInput, setSlugInput] = useState('')
@@ -292,14 +219,16 @@ export default function PartnerApplications() {
   const [documents, setDocuments] = useState<PartnerApplicationDocument[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [savingAction, setSavingAction] = useState<SaveAction>(null)
-  const [activeSection, setActiveSection] = useState<MarketplaceSection>('applications')
+  const [activeSection, setActiveSection] = useState<MarketplaceSection>('stores')
+  const [sectionInitialized, setSectionInitialized] = useState(false)
   const [stores, setStores] = useState<PartnerStoreRow[]>([])
   const [storesLoading, setStoresLoading] = useState(true)
   const [storesError, setStoresError] = useState('')
-  const [storesSuccess, setStoresSuccess] = useState('')
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
-  const [storeForm, setStoreForm] = useState<StoreFormState>(emptyStoreForm())
-  const [storeSavingAction, setStoreSavingAction] = useState<StoreSaveAction>(null)
+  const [userName, setUserName] = useState('Admin')
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [recentOrders, setRecentOrders] = useState<HeaderOrder[]>([])
+  const [newOrdersCount, setNewOrdersCount] = useState(0)
 
   const loadApplications = useCallback(async (preferredId?: string | null) => {
     setLoading(true)
@@ -341,7 +270,7 @@ export default function PartnerApplications() {
     }
   }, [])
 
-  const loadStores = useCallback(async (preferredId?: string | null) => {
+  const loadStores = useCallback(async () => {
     setStoresLoading(true)
     setStoresError('')
 
@@ -349,25 +278,10 @@ export default function PartnerApplications() {
       const { data, error } = await supabase
         .from('partner_stores')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('display_name', { ascending: true })
 
       if (error) throw error
-
-      const rows = (data ?? []) as PartnerStoreRow[]
-      setStores(rows)
-
-      const nextStore = preferredId
-        ? rows.find((store) => store.id === preferredId) ?? null
-        : rows[0] ?? null
-
-      if (!nextStore) {
-        setSelectedStoreId(null)
-        setStoreForm(emptyStoreForm())
-        return
-      }
-
-      setSelectedStoreId(nextStore.id)
-      setStoreForm(storeFormFromRow(nextStore))
+      setStores((data ?? []) as PartnerStoreRow[])
     } catch (error) {
       console.error('Failed to load partner stores:', error)
       setStoresError(getErrorMessage(error, 'Failed to load partner stores'))
@@ -376,17 +290,47 @@ export default function PartnerApplications() {
     }
   }, [])
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      void loadApplications()
-    })
-  }, [loadApplications])
+  const fetchUserName = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user?.email) {
+      const name = session.user.email.split('@')[0]
+      setUserName(name.charAt(0).toUpperCase() + name.slice(1))
+    }
+  }, [])
+
+  const fetchOrdersForNotifications = useCallback(async () => {
+    const { data } = await supabase
+      .from('orders')
+      .select('id, order_code, customer_email, created_at, shipping_address')
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (data) {
+      const ordersWithTime = data.map((order: HeaderOrder) => ({
+        ...order,
+        time_ago: getTimeAgo(order.created_at),
+      }))
+      setRecentOrders(ordersWithTime)
+
+      const last24Hours = new Date()
+      last24Hours.setHours(last24Hours.getHours() - 24)
+      setNewOrdersCount(data.filter((order: HeaderOrder) => new Date(order.created_at) > last24Hours).length)
+    }
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    navigate('/login', { replace: true })
+  }
 
   useEffect(() => {
     queueMicrotask(() => {
+      void loadApplications()
       void loadStores()
+      void fetchUserName()
+      void fetchOrdersForNotifications()
     })
-  }, [loadStores])
+  }, [loadApplications, loadStores, fetchUserName, fetchOrdersForNotifications])
 
   const filteredApplications = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -488,23 +432,61 @@ export default function PartnerApplications() {
     }
   }, [selectedApplication?.id])
 
-  const selectedStore = useMemo(
-    () => stores.find((store) => store.id === selectedStoreId) ?? null,
-    [selectedStoreId, stores],
-  )
-
   const canManagePartnerStores = hasAdminAnyPermission(['partners.provision', 'partners.manage', 'roles.manage'])
-  const storePreviewSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
 
-  const metrics = useMemo(() => {
-    return {
-      total: applications.length,
-      submitted: applications.filter((application) => application.status === 'submitted').length,
-      inReview: applications.filter((application) => application.status === 'in_review').length,
-      needsInfo: applications.filter((application) => application.status === 'needs_info').length,
-      approved: applications.filter((application) => application.status === 'approved').length,
+  const filteredStores = useMemo(() => {
+    const query = partnerSearch.trim().toLowerCase()
+    if (!query) return stores
+    return stores.filter((store) =>
+      [
+        store.display_name,
+        store.legal_name,
+        store.primary_email,
+        store.slug,
+        store.master_admin_email ?? '',
+        store.status,
+      ].some((value) => value.toLowerCase().includes(query)),
+    )
+  }, [partnerSearch, stores])
+
+  const partnersCount = stores.length
+  const pendingReviewCount = useMemo(
+    () =>
+      applications.filter((application) =>
+        application.status === 'submitted' ||
+        application.status === 'in_review' ||
+        application.status === 'needs_info'
+      ).length,
+    [applications],
+  )
+  const applicationsBadgeCount = pendingReviewCount > 0 ? pendingReviewCount : applications.length
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'setup' || tab === 'store_setup') {
+      setActiveSection('store_setup')
+      setSectionInitialized(true)
+      return
     }
-  }, [applications])
+    if (sectionInitialized || storesLoading || loading) return
+    if (partnersCount > 0) {
+      setActiveSection('stores')
+    } else if (applications.length > 0) {
+      setActiveSection('applications')
+    } else {
+      setActiveSection('stores')
+    }
+    setSectionInitialized(true)
+  }, [sectionInitialized, storesLoading, loading, partnersCount, applications.length, searchParams])
+
+  const selectSection = (section: MarketplaceSection) => {
+    setActiveSection(section)
+    if (section === 'store_setup') {
+      setSearchParams({ tab: 'setup' }, { replace: true })
+    } else if (searchParams.has('tab')) {
+      setSearchParams({}, { replace: true })
+    }
+  }
 
   const handleMoveToReview = async () => {
     if (!selectedApplication) return
@@ -670,243 +652,267 @@ export default function PartnerApplications() {
     }
   }
 
-  const startNewStoreDraft = () => {
-    setSelectedStoreId(null)
-    setStoreForm(emptyStoreForm())
-    setStoresError('')
-    setStoresSuccess('')
-    setActiveSection('stores')
+  const openPartnerEditor = (id?: string) => {
+    navigate(id ? `/partners/${id}` : '/partners/new')
   }
 
-  const selectStoreForEdit = (store: PartnerStoreRow) => {
-    setSelectedStoreId(store.id)
-    setStoreForm(storeFormFromRow(store))
-    setStoresError('')
-    setStoresSuccess('')
-    setActiveSection('stores')
-  }
-
-  const handleDeleteStore = async () => {
-    if (!selectedStore) return
-
-    if (!window.confirm(`Delete ${selectedStore.display_name}? This removes the partner store and its master admin account.`)) {
-      return
-    }
-
-    setStoreSavingAction('delete')
-    setStoresError('')
-    setStoresSuccess('')
-
-    try {
-      const payload = (await callPartnerStoreAdminApi('DELETE', {
-        storeId: selectedStore.id,
-      })) as PartnerStoreAdminApiResponse
-
-      const deletedSlug = payload.partner_store_slug ?? selectedStore.slug
-      const warningSuffix = payload.warning ? ` ${payload.warning}` : ''
-
-      setStoresSuccess(`Deleted store "${deletedSlug}" and removed its master admin account.${warningSuffix}`)
-      setSelectedStoreId(null)
-      setStoreForm(emptyStoreForm())
-      await loadStores()
-    } catch (error) {
-      console.error('Failed to delete partner store:', error)
-      setStoresError(getStoreActionErrorMessage(error, 'Failed to delete partner store'))
-    } finally {
-      setStoreSavingAction(null)
-    }
-  }
-
-  const handleSaveStore = async () => {
-    if (!canManagePartnerStores) {
-      setStoresError('You need partners.provision, partners.manage, or roles.manage access to create or edit partner stores.')
-      return
-    }
-
-    const normalizedSlug = slugifyPreview(storeForm.slug || storeForm.displayName || 'partner-store')
-    const displayName = storeForm.displayName.trim()
-    const legalName = storeForm.legalName.trim()
-    const primaryEmail = storeForm.primaryEmail.trim().toLowerCase()
-    const masterAdminEmail = storeForm.masterAdminEmail.trim().toLowerCase()
-    const masterAdminPassword = storeForm.masterAdminPassword.trim()
-    const commissionRate = Number.parseFloat(storeForm.commissionRate)
-    const resolvedMasterAdminEmail = masterAdminEmail || selectedStore?.master_admin_email?.trim().toLowerCase() || ''
-
-    if (!displayName) {
-      setStoresError('Display name is required.')
-      return
-    }
-
-    if (!legalName) {
-      setStoresError('Legal name is required.')
-      return
-    }
-
-    if (!primaryEmail) {
-      setStoresError('Primary email is required.')
-      return
-    }
-
-    if (!resolvedMasterAdminEmail) {
-      setStoresError('Master admin email is required.')
-      return
-    }
-
-    if (!selectedStoreId && !masterAdminPassword) {
-      setStoresError('Master admin password is required when creating a new store.')
-      return
-    }
-
-    setStoresError('')
-    setStoresSuccess('')
-
-    setStoreSavingAction(selectedStoreId ? 'update' : 'create')
-
-    try {
-      const payload = (await callPartnerStoreAdminApi('POST', {
-        action: 'save-store',
-        storeId: selectedStoreId ?? undefined,
-        slug: normalizedSlug,
-        displayName,
-        legalName,
-        primaryEmail,
-        masterAdminEmail: resolvedMasterAdminEmail,
-        masterAdminPassword: masterAdminPassword || undefined,
-        status: storeForm.status,
-        approvalStatus: storeForm.approvalStatus,
-        commissionRate: Number.isFinite(commissionRate) ? commissionRate : 0,
-      })) as PartnerStoreAdminApiResponse
-
-      const savedStoreId = payload.storeId ?? selectedStoreId ?? null
-      const savedSlug = payload.partner_store_slug ?? normalizedSlug
-      const actionLabel = selectedStoreId ? 'Updated' : 'Created'
-      const warningSuffix = payload.warning ? ` ${payload.warning}` : ''
-
-      setStoresSuccess(`${actionLabel} store "${savedSlug}" and synced the master admin account.${warningSuffix}`)
-
-      if (savedStoreId) {
-        setSelectedStoreId(savedStoreId)
-        await loadStores(savedStoreId)
-      } else {
-        await loadStores()
-      }
-
-      setActiveSection('stores')
-    } catch (error) {
-      console.error(selectedStoreId ? 'Failed to update partner store:' : 'Failed to create partner store:', error)
-      setStoresError(getStoreActionErrorMessage(error, selectedStoreId ? 'Failed to update partner store' : 'Failed to create partner store'))
-    } finally {
-      setStoreSavingAction(null)
-    }
-  }
+  const sectionTabs: {
+    key: MarketplaceSection
+    label: string
+    count?: number
+    emptyLabel?: string
+    allowEmpty: boolean
+  }[] = [
+    {
+      key: 'stores',
+      label: 'Partner stores',
+      count: partnersCount,
+      emptyLabel: 'No partner stores yet',
+      allowEmpty: true,
+    },
+    {
+      key: 'applications',
+      label: 'Application review',
+      count: applicationsBadgeCount,
+      emptyLabel: 'No applications yet',
+      allowEmpty: false,
+    },
+    {
+      key: 'store_setup',
+      label: 'My Store setup',
+      allowEmpty: true,
+    },
+  ]
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-slate-50">
-        <div className="px-8 py-8 border-b border-slate-200 bg-white">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-                <Store className="w-3.5 h-3.5" /> Partner Marketplace
-              </div>
-              <h1 className="text-3xl font-semibold text-slate-900">Partner marketplace</h1>
-              <p className="mt-2 text-slate-600 max-w-2xl">
-                Review incoming partner applications, or jump into store setup to create a partner slug directly and manage the tenant record from the master control plane.
-              </p>
+      <div className="min-h-full bg-[#F7F2E8]">
+        <div className="sticky top-0 z-20 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-gray-900">Partner Stores</h1>
+              <p className="text-[11px] text-gray-500">Partner stores, applications, and CareCraftz store setup.</p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              <MetricCard icon={FileText} label="Total" value={metrics.total} tone="bg-slate-900 text-white" />
-              <MetricCard icon={Clock3} label="Submitted" value={metrics.submitted} tone="bg-sky-50 text-sky-700" />
-              <MetricCard icon={ShieldCheck} label="In review" value={metrics.inReview} tone="bg-amber-50 text-amber-700" />
-              <MetricCard icon={BadgeCheck} label="Approved" value={metrics.approved} tone="bg-emerald-50 text-emerald-700" />
-              <MetricCard icon={AlertTriangle} label="Needs info" value={metrics.needsInfo} tone="bg-orange-50 text-orange-700" />
+            <div className="flex items-center gap-2 shrink-0">
+              {activeSection !== 'store_setup' ? (
+                <button
+                  type="button"
+                  onClick={() => openPartnerEditor()}
+                  disabled={!canManagePartnerStores}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:text-gray-500 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  New partner
+                </button>
+              ) : null}
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotifications(!showNotifications)
+                    setShowProfileMenu(false)
+                  }}
+                  className="relative p-1.5 text-gray-500 hover:text-gray-800 hover:bg-white rounded-lg transition-colors"
+                >
+                  <Bell className="w-4 h-4" />
+                  {newOrdersCount > 0 && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-[#E8E0D4] flex items-center justify-between bg-[#F7F2E8]">
+                      <h3 className="text-xs font-semibold text-gray-900">New orders</h3>
+                      <button type="button" onClick={() => setShowNotifications(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-md">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {newOrdersCount === 0 ? (
+                        <div className="p-6 text-center">
+                          <Bell className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                          <p className="text-[11px] text-gray-500">No new orders in the last 24 hours</p>
+                        </div>
+                      ) : (
+                        recentOrders.slice(0, 5).map((order) => (
+                          <button
+                            key={order.id}
+                            type="button"
+                            onClick={() => { setShowNotifications(false); navigate('/orders') }}
+                            className="w-full text-left px-3 py-2.5 border-b border-[#F0E9DC] hover:bg-[#F7F2E8] transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-0.5">
+                              <span className="text-xs font-medium text-gray-900">{order.order_code}</span>
+                              <span className="text-[10px] text-gray-400">{order.time_ago}</span>
+                            </div>
+                            <p className="text-[11px] text-gray-600 truncate">
+                              {order.shipping_address?.full_name || order.customer_email}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-[#E8E0D4] bg-[#F7F2E8]">
+                      <button
+                        type="button"
+                        onClick={() => { setShowNotifications(false); navigate('/orders') }}
+                        className="w-full py-1.5 text-[11px] font-semibold text-indigo-600 hover:bg-white rounded-lg"
+                      >
+                        View all orders
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu)
+                    setShowNotifications(false)
+                  }}
+                  className="flex items-center gap-1.5 p-0.5 pr-2 hover:bg-white rounded-lg transition-colors"
+                >
+                  <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                    {userName.charAt(0)}
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-[#D9D0C2] z-50 overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]">
+                      <p className="text-xs font-semibold text-gray-900">{userName}</p>
+                      <p className="text-[10px] text-gray-500">Staff access</p>
+                    </div>
+                    <div className="p-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setShowProfileMenu(false); navigate('/settings') }}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-[#F7F2E8] rounded-lg"
+                      >
+                        <Settings className="w-3.5 h-3.5" /> Settings
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleLogout()}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg"
+                      >
+                        <LogOut className="w-3.5 h-3.5" /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="px-8 py-8 space-y-6">
+        <div className="px-4 py-4 sm:px-6 space-y-3">
           {pageError ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
-              <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">{pageError}</p>
+            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-rose-700">
+              <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p className="text-xs">{pageError}</p>
             </div>
           ) : null}
 
           {pageSuccess ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
-              <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              <p className="text-sm">{pageSuccess}</p>
+            <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-700">
+              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p className="text-xs">{pageSuccess}</p>
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveSection('applications')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                activeSection === 'applications'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Application review
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSection('stores')}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                activeSection === 'stores'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Store setup
-            </button>
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-[#E8E0D4] pb-2">
+            {sectionTabs.map((tab) => {
+              const hasCount = typeof tab.count === 'number'
+              const isEmpty = hasCount && tab.count === 0
+              const isDisabled = Boolean(isEmpty && !tab.allowEmpty)
+              const isActive = activeSection === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  disabled={isDisabled}
+                  title={isEmpty ? tab.emptyLabel : undefined}
+                  onClick={() => {
+                    if (!isDisabled) selectSection(tab.key)
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
+                    isDisabled
+                      ? 'border-transparent bg-transparent text-gray-400 cursor-not-allowed opacity-45'
+                      : isActive
+                        ? 'border-indigo-300 bg-indigo-600 text-white'
+                        : isEmpty
+                          ? 'border-[#E8E0D4] bg-[#F0E9DC]/60 text-gray-400'
+                          : 'border-[#D9D0C2] bg-white text-gray-600 hover:bg-[#F0E9DC]'
+                  }`}
+                >
+                  {tab.label}
+                  {hasCount ? (
+                    tab.count! > 0 ? (
+                      <span
+                        className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] font-medium ${isActive ? 'text-white/70' : 'text-gray-400'}`}>0</span>
+                    )
+                  ) : null}
+                </button>
+              )
+            })}
           </div>
 
           <div className={activeSection === 'applications' ? 'block' : 'hidden'}>
-          <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
-            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-3">
+            <section className="bg-white rounded-xl border border-[#D9D0C2] overflow-hidden">
+              <div className="p-3 border-b border-[#E8E0D4] space-y-2.5 bg-[#F7F2E8]/40">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                   <input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search company, email, or slug"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white pl-8 pr-3 py-1.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1">
                   {(['all', 'submitted', 'in_review', 'needs_info', 'approved', 'rejected'] as const).map((status) => (
                     <button
                       key={status}
                       type="button"
                       onClick={() => setStatusFilter(status)}
-                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${
                         statusFilter === status
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border border-[#D9D0C2] text-gray-600 hover:bg-[#F7F2E8]'
                       }`}
                     >
-                      <Filter className="w-3.5 h-3.5" />
+                      <Filter className="w-3 h-3" />
                       {status === 'all' ? 'All' : STATUS_LABELS[status]}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
+              <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
                 {loading ? (
-                  <div className="p-8 text-center text-slate-500">Loading partner applications...</div>
+                  <div className="p-6 text-center text-xs text-gray-500">Loading partner applications…</div>
                 ) : filteredApplications.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500">
+                  <div className="p-6 text-center text-xs text-gray-500">
                     No partner applications match the current filters.
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-[#F0E9DC]">
                     {filteredApplications.map((application) => {
                       const isSelected = application.id === selectedId
 
@@ -915,8 +921,8 @@ export default function PartnerApplications() {
                           key={application.id}
                           type="button"
                           onClick={() => setSelectedId(application.id)}
-                          className={`w-full text-left px-4 py-4 transition-colors ${
-                            isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'
+                          className={`w-full text-left px-3 py-3 transition-colors ${
+                            isSelected ? 'bg-indigo-50/70' : 'hover:bg-[#F7F2E8]/70'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -948,17 +954,17 @@ export default function PartnerApplications() {
               </div>
             </section>
 
-            <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <section className="bg-white rounded-xl border border-[#D9D0C2] overflow-hidden">
               {selectedApplication ? (
                 <div className="h-full flex flex-col">
-                  <div className="px-6 py-5 border-b border-slate-200 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-7 h-7" />
+                  <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#F7F2E8]/40 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h2 className="text-2xl font-semibold text-slate-900">{selectedApplication.company_name}</h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-lg font-semibold text-gray-900">{selectedApplication.company_name}</h2>
                           <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_CLASSES[selectedApplication.status]}`}>
                             {STATUS_LABELS[selectedApplication.status]}
                           </span>
@@ -1165,325 +1171,117 @@ export default function PartnerApplications() {
           </div>
           </div>
 
-          <div className={activeSection === 'stores' ? 'block' : 'hidden'}>
+          <div className={activeSection === 'stores' ? 'block space-y-3' : 'hidden'}>
             {storesError ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
-                <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <p className="text-sm">{storesError}</p>
+              <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-rose-700">
+                <XCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <p className="text-xs">{storesError}</p>
               </div>
             ) : null}
 
-            {storesSuccess ? (
-              <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
-                <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <p>{storesSuccess}</p>
+            <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
+              <div className="px-3 py-2.5 border-b border-[#E8E0D4] bg-[#F7F2E8]/50">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={partnerSearch}
+                    onChange={(event) => setPartnerSearch(event.target.value)}
+                    placeholder="Search partners by name, email, slug…"
+                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#D9D0C2] rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                  />
                 </div>
               </div>
-            ) : null}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-6">
-              <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 border-b border-slate-200 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold text-slate-900">Partner stores</h2>
-                      <p className="mt-1 text-sm text-slate-500">Create a store slug and keep its public tenant record in sync.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={startNewStoreDraft}
-                      className="rounded-2xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-black"
-                    >
-                      New store
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
-                      <div className="font-semibold text-slate-500 uppercase tracking-[0.18em]">Total</div>
-                      <div className="mt-1 text-lg font-bold text-slate-900">{stores.length}</div>
-                    </div>
-                    <div className="rounded-2xl bg-emerald-50 px-3 py-2.5">
-                      <div className="font-semibold text-emerald-700 uppercase tracking-[0.18em]">Active</div>
-                      <div className="mt-1 text-lg font-bold text-emerald-900">{stores.filter((store) => store.status === 'active').length}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="max-h-[calc(100vh-280px)] overflow-y-auto">
-                  {storesLoading ? (
-                    <div className="p-8 text-center text-slate-500">Loading partner stores...</div>
-                  ) : stores.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500">
-                      No partner stores yet. Use the form on the right to create your first slug.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {stores.map((store) => {
-                        const isSelected = store.id === selectedStoreId
-
-                        return (
-                          <button
-                            key={store.id}
-                            type="button"
-                            onClick={() => selectStoreForEdit(store)}
-                            className={`w-full text-left px-4 py-4 transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold text-slate-900">{store.display_name}</h3>
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${store.status === 'active' ? 'bg-emerald-100 text-emerald-700' : store.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                                    {store.status}
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-sm text-slate-500">{store.primary_email}</p>
-                                {store.master_admin_email ? (
-                                  <p className="mt-1 text-xs font-medium text-slate-600">Master admin: {store.master_admin_email}</p>
-                                ) : null}
-                                <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
-                                  <Store className="w-3.5 h-3.5" /> /{store.slug}
-                                </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-[#E8E0D4] bg-[#F7F2E8]/40">
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Partner</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Slug</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Approval</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Commission</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {storesLoading ? (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-8 text-center text-xs text-gray-500">Loading partners…</td>
+                      </tr>
+                    ) : filteredStores.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-8 text-center text-xs text-gray-500">
+                          {stores.length === 0 ? 'No partners yet. Create the first partner store.' : 'No partners match your search.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStores.map((store) => (
+                        <tr
+                          key={store.id}
+                          tabIndex={0}
+                          onClick={() => openPartnerEditor(store.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              openPartnerEditor(store.id)
+                            }
+                          }}
+                          className="group border-b border-[#F0E9DC] last:border-0 cursor-pointer hover:bg-[#F7F2E8]/70 transition-colors focus:bg-[#F7F2E8] focus:outline-none"
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                                <Store className="w-4 h-4 text-indigo-600" />
                               </div>
-                              <ArrowUpRight className={`w-4 h-4 flex-shrink-0 ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 truncate">{store.display_name}</p>
+                                <p className="text-[11px] text-gray-500 truncate">{store.legal_name || store.tenant_type}</p>
+                              </div>
                             </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-200 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h2 className="text-2xl font-semibold text-slate-900">
-                        {selectedStore ? `Edit ${selectedStore.slug}` : 'Create a partner store'}
-                      </h2>
-                      {selectedStore ? (
-                        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
-                          {selectedStore.approval_status}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500">
-                      {selectedStore
-                        ? 'Update the slug, tenant metadata, or master admin account for an existing partner store.'
-                        : 'Create your own slug, tenant metadata, and the initial master admin account.'}
-                    </p>
-                  </div>
-
-                  {selectedStore ? (
-                    <Link
-                      to={getTenantRootPath(selectedStore.slug)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
-                    >
-                      Open tenant portal <ExternalLink className="w-4 h-4" />
-                    </Link>
-                  ) : null}
-                </div>
-
-                <div className="p-6 space-y-6">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <div className="flex items-center gap-2 font-semibold text-slate-900 mb-2">
-                      <ShieldCheck className="w-4 h-4 text-indigo-600" /> Slug-based partner setup
-                    </div>
-                    <p>
-                      The slug becomes the public tenant key for admin.carecraftz.com/[slug]/*. The /org prefix is just an internal routing namespace, not a security boundary. Provide a master admin email and password to provision the initial owner directly.
-                    </p>
-                  </div>
-
-                  {!canManagePartnerStores ? (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                      You can view partner stores, but you need partners.provision, partners.manage, or roles.manage access to create or edit them.
-                    </div>
-                  ) : null}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Store slug</label>
-                      <input
-                        value={storeForm.slug}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, slug: event.target.value }))}
-                        placeholder="my-partner-store"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">Normalized to a safe slug automatically. The public preview uses the direct slug path.</p>
-                      <p className="mt-1 text-xs font-medium text-slate-700">
-                        Preview: <span className="font-mono">admin.carecraftz.com/{storePreviewSlug}/*</span>
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Display name</label>
-                      <input
-                        value={storeForm.displayName}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, displayName: event.target.value }))}
-                        placeholder="Partner store name"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Legal name</label>
-                      <input
-                        value={storeForm.legalName}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, legalName: event.target.value }))}
-                        placeholder="Registered legal entity"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Primary email</label>
-                      <input
-                        value={storeForm.primaryEmail}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, primaryEmail: event.target.value }))}
-                        placeholder="store@example.com"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Master admin email</label>
-                      <input
-                        value={storeForm.masterAdminEmail}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, masterAdminEmail: event.target.value }))}
-                        placeholder="admin@example.com"
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        This account will be linked as the store owner and can be updated later.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">
-                        Master admin password {selectedStore ? '(leave blank to keep the current password)' : '(required)'}
-                      </label>
-                      <input
-                        type="password"
-                        value={storeForm.masterAdminPassword}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, masterAdminPassword: event.target.value }))}
-                        placeholder={selectedStore ? 'Enter a new password to rotate it' : 'Set an initial password'}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                      <p className="mt-2 text-xs text-slate-500">
-                        Password changes are applied through the admin API and only when you provide a new value.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Commission rate</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={storeForm.commissionRate}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, commissionRate: event.target.value }))}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Status</label>
-                      <select
-                        value={storeForm.status}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, status: event.target.value as PartnerStoreRow['status'] }))}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="active">Active</option>
-                        <option value="suspended">Suspended</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-900 mb-2">Approval status</label>
-                      <select
-                        value={storeForm.approvalStatus}
-                        onChange={(event) => setStoreForm((current) => ({ ...current, approvalStatus: event.target.value as PartnerStoreRow['approval_status'] }))}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
-                    {selectedStore ? (
-                      <button
-                        type="button"
-                        onClick={startNewStoreDraft}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        Create new store
-                      </button>
-                    ) : null}
-
-                    {selectedStore ? (
-                      <button
-                        type="button"
-                        onClick={handleDeleteStore}
-                        disabled={storeSavingAction !== null || !canManagePartnerStores}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-white px-5 py-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {storeSavingAction === 'delete' ? 'Deleting...' : 'Delete store'}
-                      </button>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={handleSaveStore}
-                      disabled={storeSavingAction !== null || !canManagePartnerStores}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {storeSavingAction === 'create'
-                        ? 'Creating...'
-                        : storeSavingAction === 'update'
-                          ? 'Saving...'
-                          : selectedStore
-                            ? 'Save store'
-                            : 'Create store & master admin'}
-                    </button>
-                  </div>
-                </div>
-              </section>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs font-mono text-gray-600">/{store.slug}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <p className="text-xs text-gray-700 truncate max-w-[12rem]">{store.primary_email}</p>
+                            {store.master_admin_email ? (
+                              <p className="text-[10px] text-gray-400 truncate max-w-[12rem]">Admin: {store.master_admin_email}</p>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium capitalize ${
+                              store.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                : store.status === 'pending'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-100'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}>
+                              {store.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="text-xs capitalize text-gray-600">{store.approval_status}</span>
+                          </td>
+                          <td className="px-3 py-2.5 text-right">
+                            <span className="text-xs font-semibold text-gray-900">{Number(store.commission_rate || 0)}%</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          </div>
+
+          <div className={activeSection === 'store_setup' ? 'block' : 'hidden'}>
+            <MyStoreSetupPanel />
           </div>
         </div>
       </div>
     </AdminLayout>
-  )
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  value: number
-  tone: string
-}) {
-  return (
-    <div className={`rounded-2xl px-4 py-3 shadow-sm ${tone}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] opacity-70">{label}</div>
-          <div className="mt-1 text-2xl font-bold">{value}</div>
-        </div>
-        <Icon className="w-5 h-5 opacity-70" />
-      </div>
-    </div>
   )
 }
 
