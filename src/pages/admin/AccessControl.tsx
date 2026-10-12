@@ -132,7 +132,7 @@ const fallbackRoleMeta = (code: string) => {
       .split('_')
       .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
       .join(' '),
-    color: 'bg-slate-100 text-slate-700',
+    color: 'bg-[#F0E9DC] text-gray-700',
     ringClass: 'ring-slate-200',
     permissions: 'Custom role',
   }
@@ -363,7 +363,7 @@ export default function AccessControl() {
       value: auditRows.length,
       icon: Eye,
       hint: 'security events',
-      tone: 'bg-slate-100 text-slate-600',
+      tone: 'bg-[#F0E9DC] text-gray-600',
     },
   ], [auditRows.length, permissions.length, roles.length, staffRoles.length])
 
@@ -672,68 +672,64 @@ export default function AccessControl() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gray-50">
-        <div className="px-6 py-6 space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                <ShieldCheck className="h-4 w-4" />
-                Enterprise RBAC
-              </div>
-              <h1 className="mt-3 text-3xl font-bold text-slate-900">Access Control</h1>
-              <p className="mt-2 max-w-3xl text-sm text-slate-500">
-                Manage roles, atomic permissions, and staff assignments through normalized Supabase tables with RLS-backed enforcement.
-              </p>
+      <div className="min-h-full bg-[#F7F2E8]">
+        <div className="sticky top-0 z-20 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-gray-900">Access Control</h1>
+              <p className="text-[11px] text-gray-500">Roles, permissions, and staff assignments.</p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={loadData}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#D9D0C2] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-white/80"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="w-3.5 h-3.5" />
                 Refresh
               </button>
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
               >
-                <Plus className="h-4 w-4" />
-                New Role
+                <Plus className="w-3.5 h-3.5" />
+                New role
               </button>
             </div>
           </div>
+        </div>
 
+        <div className="px-4 py-5 sm:px-6 space-y-4">
           {pageError && (
-            <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               <span>{pageError}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-2.5 grid-cols-2 xl:grid-cols-4">
             {stats.map((stat) => {
               const Icon = stat.icon
               return (
-                <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
+                <div key={stat.label} className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
+                  <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-                      <p className="mt-1 text-3xl font-bold text-slate-900">{stat.value}</p>
+                      <p className="text-[11px] font-medium text-gray-500">{stat.label}</p>
+                      <p className="mt-0.5 text-xl font-bold text-gray-900">{stat.value}</p>
                     </div>
-                    <div className={`rounded-2xl p-3 ${stat.tone}`}>
-                      <Icon className="h-5 w-5" />
+                    <div className={`rounded-lg p-2 ${stat.tone}`}>
+                      <Icon className="w-4 h-4" />
                     </div>
                   </div>
-                  <p className="mt-3 text-xs uppercase tracking-wide text-slate-400">{stat.hint}</p>
+                  <p className="mt-2 text-[10px] uppercase tracking-wide text-gray-400">{stat.hint}</p>
                 </div>
               )
             })}
@@ -741,23 +737,23 @@ export default function AccessControl() {
 
           <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Roles</h2>
-                    <p className="text-sm text-slate-500">System roles and custom templates</p>
+                    <h2 className="text-xs font-semibold text-gray-900">Roles</h2>
+                    <p className="text-sm text-gray-500">System roles and custom templates</p>
                   </div>
                   <ShieldCheck className="h-5 w-5 text-indigo-600" />
                 </div>
 
                 <div className="relative mt-4">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     value={roleSearch}
                     onChange={(event) => setRoleSearch(event.target.value)}
                     placeholder="Search roles"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#D9D0C2] bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
@@ -776,7 +772,7 @@ export default function AccessControl() {
                         className={`group w-full rounded-2xl border p-4 text-left transition-all ${
                           isSelected
                             ? 'border-indigo-500 bg-indigo-50/70 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                            : 'border-[#D9D0C2] bg-white hover:border-indigo-300 hover:bg-[#F7F2E8]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -786,12 +782,12 @@ export default function AccessControl() {
                                 {role.name}
                               </span>
                               {role.is_system && (
-                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                <span className="rounded-full bg-[#F0E9DC] px-2.5 py-1 text-xs font-medium text-gray-600">
                                   System
                                 </span>
                               )}
                             </div>
-                            <p className="mt-2 text-sm text-slate-500 line-clamp-2">{role.description}</p>
+                            <p className="mt-2 text-sm text-gray-500 line-clamp-2">{role.description}</p>
                           </div>
                           {!role.is_system && assignedCount === 0 && (
                             <button
@@ -800,7 +796,7 @@ export default function AccessControl() {
                                 event.stopPropagation()
                                 void handleDeleteRole(role)
                               }}
-                              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                               title="Delete role"
                             >
                               {deletingRoleCode === role.code ? (
@@ -812,7 +808,7 @@ export default function AccessControl() {
                           )}
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
                           <span>{assignedCount} staff</span>
                           <span>{permissionCount} permissions</span>
                         </div>
@@ -822,23 +818,23 @@ export default function AccessControl() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Staff assignments</h2>
-                    <p className="text-sm text-slate-500">Assign one role to each staff member</p>
+                    <h2 className="text-xs font-semibold text-gray-900">Staff assignments</h2>
+                    <p className="text-sm text-gray-500">Assign one role to each staff member</p>
                   </div>
                   <Users className="h-5 w-5 text-emerald-600" />
                 </div>
 
                 <div className="relative mt-4">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     value={staffSearch}
                     onChange={(event) => setStaffSearch(event.target.value)}
                     placeholder="Search staff"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#D9D0C2] bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
 
@@ -855,7 +851,7 @@ export default function AccessControl() {
                       .toUpperCase()
 
                     return (
-                      <div key={member.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div key={member.id} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
                         <div className="flex items-start gap-3">
                           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
                             {initials}
@@ -863,15 +859,15 @@ export default function AccessControl() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-900">{member.full_name}</p>
-                                <p className="truncate text-xs text-slate-500">{member.email}</p>
+                                <p className="truncate text-sm font-semibold text-gray-900">{member.full_name}</p>
+                                <p className="truncate text-xs text-gray-500">{member.email}</p>
                               </div>
-                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${member.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${member.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-gray-600'}`}>
                                 {member.is_active ? 'Active' : 'Inactive'}
                               </span>
                             </div>
 
-                            <p className="mt-2 text-xs text-slate-500">Last signed in {formatLastSignedIn(member.last_signed_in)}</p>
+                            <p className="mt-2 text-xs text-gray-500">Last signed in {formatLastSignedIn(member.last_signed_in)}</p>
 
                             <div className="mt-3 flex items-center gap-2">
                               <select
@@ -882,7 +878,7 @@ export default function AccessControl() {
                                     [member.id]: event.target.value,
                                   }))
                                 }
-                                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                                className="flex-1 rounded-xl border border-[#D9D0C2] bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
                               >
                                 {roles.map((role) => (
                                   <option key={role.id} value={role.code}>
@@ -905,7 +901,7 @@ export default function AccessControl() {
                               </button>
                             </div>
 
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                               <span className={`rounded-full px-2.5 py-1 font-medium ${currentRole.color}`}>
                                 {currentRole.label}
                               </span>
@@ -921,7 +917,7 @@ export default function AccessControl() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
                 {selectedRole ? (
                   <>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -935,43 +931,43 @@ export default function AccessControl() {
                               System role
                             </span>
                           )}
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                          <span className="rounded-full bg-[#F0E9DC] px-3 py-1 text-xs font-medium text-gray-600">
                             {selectedRole.code}
                           </span>
                         </div>
-                        <h2 className="mt-4 text-2xl font-bold text-slate-900">Role details</h2>
-                        <p className="mt-2 max-w-2xl text-sm text-slate-500">
+                        <h2 className="mt-4 text-base font-bold text-gray-900">Role details</h2>
+                        <p className="mt-2 max-w-2xl text-sm text-gray-500">
                           Edit the role profile and permission matrix. Writes go through Supabase helpers so the RLS layer stays authoritative.
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-3 text-center text-sm">
-                        <div className="rounded-2xl bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-wide text-slate-400">Staff</p>
-                          <p className="mt-1 font-semibold text-slate-900">{rolePermissionSummary?.assignedStaff ?? 0}</p>
+                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Staff</p>
+                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.assignedStaff ?? 0}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-wide text-slate-400">Permissions</p>
-                          <p className="mt-1 font-semibold text-slate-900">{rolePermissionSummary?.permissions ?? 0}</p>
+                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Permissions</p>
+                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.permissions ?? 0}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-wide text-slate-400">Sensitive</p>
-                          <p className="mt-1 font-semibold text-slate-900">{rolePermissionSummary?.sensitivePermissions ?? 0}</p>
+                        <div className="rounded-2xl bg-[#F7F2E8] p-3">
+                          <p className="text-xs uppercase tracking-wide text-gray-400">Sensitive</p>
+                          <p className="mt-1 font-semibold text-gray-900">{rolePermissionSummary?.sensitivePermissions ?? 0}</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">Code</label>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">Code</label>
                         <input
                           type="text"
                           value={selectedRole.code}
                           disabled
-                          className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-500"
+                          className="w-full rounded-xl border border-[#D9D0C2] bg-[#F0E9DC] px-4 py-2.5 text-sm text-gray-500"
                         />
                       </div>
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-slate-700">Category</label>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
                         <select
                           value={roleForm.category}
                           onChange={(event) =>
@@ -980,7 +976,7 @@ export default function AccessControl() {
                               category: event.target.value as RoleRow['category'],
                             }))
                           }
-                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
                         >
                           {ROLE_CATEGORY_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -990,7 +986,7 @@ export default function AccessControl() {
                         </select>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-slate-700">Role name</label>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">Role name</label>
                         <input
                           type="text"
                           value={roleForm.name}
@@ -1000,11 +996,11 @@ export default function AccessControl() {
                               name: event.target.value,
                             }))
                           }
-                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
+                        <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
                         <textarea
                           value={roleForm.description}
                           onChange={(event) =>
@@ -1014,7 +1010,7 @@ export default function AccessControl() {
                             }))
                           }
                           rows={4}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-3 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -1047,21 +1043,21 @@ export default function AccessControl() {
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                  <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-8 text-center text-sm text-gray-500">
                     Select a role to view and edit its permissions.
                   </div>
                 )}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                       <KeyRound className="h-4 w-4" />
                       Permission matrix
                     </div>
-                    <h3 className="mt-3 text-xl font-bold text-slate-900">Atomic permissions</h3>
-                    <p className="mt-2 text-sm text-slate-500">
+                    <h3 className="mt-3 text-sm font-semibold text-gray-900">Atomic permissions</h3>
+                    <p className="mt-2 text-sm text-gray-500">
                       Toggle permissions by module. The selected set is persisted through the `replace_role_permissions` RPC.
                     </p>
                   </div>
@@ -1078,13 +1074,13 @@ export default function AccessControl() {
 
                 <div className="mt-6 space-y-5">
                   {groupedPermissions.map((group) => (
-                    <div key={group.module} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div key={group.module} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h4 className="text-sm font-semibold text-slate-900">{group.label}</h4>
-                          <p className="text-xs text-slate-500">{group.permissions.length} permissions</p>
+                          <h4 className="text-sm font-semibold text-gray-900">{group.label}</h4>
+                          <p className="text-xs text-gray-500">{group.permissions.length} permissions</p>
                         </div>
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <ChevronDown className="h-4 w-4 text-gray-400" />
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1096,7 +1092,7 @@ export default function AccessControl() {
                             <label
                               key={permission.id}
                               className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition-colors ${
-                                checked ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                                checked ? 'border-indigo-300 bg-indigo-50' : 'border-[#D9D0C2] bg-white hover:bg-[#F7F2E8]'
                               }`}
                             >
                               <input
@@ -1113,15 +1109,15 @@ export default function AccessControl() {
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="text-sm font-medium text-slate-900">{permission.name}</span>
+                                  <span className="text-sm font-medium text-gray-900">{permission.name}</span>
                                   {sensitive && (
                                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                                       Sensitive
                                     </span>
                                   )}
                                 </div>
-                                <p className="mt-1 text-xs text-slate-500">{permission.description}</p>
-                                <p className="mt-2 text-[11px] uppercase tracking-wide text-slate-400">{permission.code}</p>
+                                <p className="mt-1 text-xs text-gray-500">{permission.description}</p>
+                                <p className="mt-2 text-[11px] uppercase tracking-wide text-gray-400">{permission.code}</p>
                               </div>
                             </label>
                           )
@@ -1132,43 +1128,43 @@ export default function AccessControl() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#F0E9DC] px-3 py-1 text-xs font-semibold text-gray-700">
                       <Eye className="h-4 w-4" />
                       Audit trail
                     </div>
-                    <h3 className="mt-3 text-xl font-bold text-slate-900">Security-sensitive changes</h3>
-                    <p className="mt-2 text-sm text-slate-500">Latest changes to roles, permissions, and staff-role assignments.</p>
+                    <h3 className="mt-3 text-sm font-semibold text-gray-900">Security-sensitive changes</h3>
+                    <p className="mt-2 text-sm text-gray-500">Latest changes to roles, permissions, and staff-role assignments.</p>
                   </div>
                 </div>
 
                 <div className="mt-4 space-y-3">
                   {auditRows.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-sm text-slate-500">
+                    <div className="rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8]/50 p-6 text-sm text-gray-500">
                       No RBAC audit entries yet.
                     </div>
                   ) : (
                     auditRows.map((row) => (
-                      <div key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div key={row.id} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
+                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700">
                                 {row.table_name}
                               </span>
                               <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${row.action === 'DELETE' ? 'bg-red-100 text-red-700' : row.action === 'UPDATE' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                 {row.action}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm font-medium text-slate-900">{getAuditTitle(row)}</p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-2 text-sm font-medium text-gray-900">{getAuditTitle(row)}</p>
+                            <p className="mt-1 text-xs text-gray-500">
                               {row.performed_by_name ?? row.performed_by_email ?? 'System'} · {formatTimeAgo(row.performed_at)}
                             </p>
                           </div>
-                          <div className="max-w-md rounded-xl bg-white p-3 text-xs text-slate-500">
-                            <p className="font-medium text-slate-700">Snapshot</p>
+                          <div className="max-w-md rounded-xl bg-white p-3 text-xs text-gray-500">
+                            <p className="font-medium text-gray-700">Snapshot</p>
                             <p className="mt-1 line-clamp-3">
                               {JSON.stringify(row.new_data ?? row.old_data ?? {}, null, 2)}
                             </p>
@@ -1184,17 +1180,17 @@ export default function AccessControl() {
         </div>
 
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center">
-            <div className="my-8 w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+            <div className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-900">Create new role</h2>
-                  <p className="text-sm text-slate-500">Add a custom role template and then tune its permissions.</p>
+                  <h2 className="text-sm font-semibold text-gray-900">Create new role</h2>
+                  <p className="text-sm text-gray-500">Add a custom role template and then tune its permissions.</p>
                 </div>
                 <button
                   type="button"
                   onClick={closeCreateModal}
-                  className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-[#F0E9DC] hover:text-gray-600"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1202,7 +1198,7 @@ export default function AccessControl() {
 
               <form className="mt-6 space-y-4" onSubmit={(event) => void handleCreateRole(event)}>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Code</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Code</label>
                   <input
                     type="text"
                     value={createRoleForm.code}
@@ -1213,11 +1209,11 @@ export default function AccessControl() {
                       }))
                     }
                     placeholder="content_lead"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Name</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Name</label>
                   <input
                     type="text"
                     value={createRoleForm.name}
@@ -1229,11 +1225,11 @@ export default function AccessControl() {
                       }))
                     }
                     placeholder="Content Lead"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Category</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
                   <select
                     value={createRoleForm.category}
                     onChange={(event) =>
@@ -1242,7 +1238,7 @@ export default function AccessControl() {
                         category: event.target.value as RoleRow['category'],
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
                   >
                     {ROLE_CATEGORY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1252,7 +1248,7 @@ export default function AccessControl() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">Description</label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
                   <textarea
                     value={createRoleForm.description}
                     onChange={(event) =>
@@ -1263,10 +1259,10 @@ export default function AccessControl() {
                     }
                     rows={4}
                     placeholder="Describe what this role can do"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 px-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
-                <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <label className="flex items-start gap-3 rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
                   <input
                     type="checkbox"
                     checked={createRoleForm.clone_permissions}
@@ -1279,15 +1275,15 @@ export default function AccessControl() {
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Clone the selected role's permissions</p>
-                    <p className="text-xs text-slate-500">The new role will inherit the current permission matrix and can be adjusted later.</p>
+                    <p className="text-sm font-medium text-gray-900">Clone the selected role's permissions</p>
+                    <p className="text-xs text-gray-500">The new role will inherit the current permission matrix and can be adjusted later.</p>
                   </div>
                 </label>
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={closeCreateModal}
-                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                    className="flex-1 rounded-xl border border-[#D9D0C2] bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-[#F7F2E8]"
                   >
                     Cancel
                   </button>
@@ -1305,10 +1301,10 @@ export default function AccessControl() {
         )}
 
         {loading && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-lg">
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#F7F2E8]/70 backdrop-blur-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-[#D9D0C2] bg-white px-5 py-4 shadow-lg">
               <RefreshCw className="h-5 w-5 animate-spin text-indigo-600" />
-              <span className="text-sm font-medium text-slate-700">Loading RBAC data...</span>
+              <span className="text-sm font-medium text-gray-700">Loading RBAC data...</span>
             </div>
           </div>
         )}
