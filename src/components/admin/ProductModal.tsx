@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
-  ArrowLeft,
   X,
   Plus,
   Trash2,
@@ -23,6 +22,36 @@ export interface ProductPerformanceStats {
   latestReviewAt: string | null
 }
 
+type DeliveryType = 'carecraftz' | 'partner'
+
+interface PartnerStoreOption {
+  id: string
+  display_name: string
+  status: string
+  approval_status: string
+  tenant_type?: string | null
+  shipping_locations: string[]
+}
+
+interface BrandOption {
+  id: string
+  name: string
+  logo_url: string
+}
+
+interface LocationFulfilmentData {
+  price: number
+  compare_at_price: number | null
+  inventory: number
+  low_stock_threshold: number
+  weight: number | null
+  discount_percent: number
+  delivery_type: DeliveryType
+  delivery_charge: number
+}
+
+type FulfilmentByLocation = Record<string, LocationFulfilmentData>
+
 interface Product {
   id?: string
   name: string
@@ -30,9 +59,11 @@ interface Product {
   description: string
   how_to_use: string
   ingredients: string
+  brand_id: string | null
   brand_name: string
   brand_logo: string
   seller_name: string
+  partner_store_id: string | null
   price: number
   price_pkr: number | null
   price_aed: number | null
@@ -42,6 +73,8 @@ interface Product {
   category: string
   location: string
   delivery_charge: number
+  delivery_type: DeliveryType
+  fulfilment_by_location: FulfilmentByLocation
   images: string[]
   is_active: boolean
   is_featured: boolean
@@ -66,22 +99,6 @@ interface ProductSection {
   _uploading?: boolean
 }
 
-interface BlogPost {
-  id: string
-  title: string
-  slug: string
-}
-
-interface Review {
-  id: string
-  customer_name: string
-  rating: number
-  review_text: string
-  is_approved: boolean
-  is_verified_purchase: boolean
-  created_at: string
-}
-
 interface Props {
   product?: Product & { id: string }
   onClose: () => void
@@ -92,17 +109,262 @@ interface Props {
   statsError?: string
 }
 
-type ModalTab = 'basics' | 'branding' | 'details' | 'sections' | 'blog' | 'reviews' | 'stats'
+type ModalTab = 'basics' | 'brand' | 'partner' | 'fulfilment' | 'details' | 'sections' | 'stats'
 
 const TABS: { key: ModalTab; label: string; pageOnly?: boolean }[] = [
   { key: 'basics', label: 'Basics' },
-  { key: 'branding', label: 'Branding' },
+  { key: 'brand', label: 'Brand' },
+  { key: 'partner', label: 'Partner' },
+  { key: 'fulfilment', label: 'Fulfilment' },
   { key: 'details', label: 'How To Use & Ingredients' },
   { key: 'sections', label: 'Page Sections' },
-  { key: 'blog', label: 'Blog Assignment' },
-  { key: 'reviews', label: 'Reviews' },
   { key: 'stats', label: 'Stats', pageOnly: true },
 ]
+
+const FIELD_LABELS: Partial<Record<keyof Product, string>> = {
+  name: 'Product name',
+  subtitle: 'Subtitle',
+  description: 'Description',
+  how_to_use: 'How to use',
+  ingredients: 'Ingredients',
+  brand_id: 'Brand',
+  brand_name: 'Brand name',
+  brand_logo: 'Brand logo',
+  seller_name: 'Seller name',
+  partner_store_id: 'Partner store',
+  price: 'Price (base)',
+  price_pkr: 'Price PKR',
+  price_aed: 'Price AED',
+  compare_at_price: 'Compare-at price',
+  inventory: 'Inventory',
+  low_stock_threshold: 'Low stock alert',
+  category: 'Category',
+  location: 'Fulfilment location',
+  delivery_charge: 'Delivery charge',
+  delivery_type: 'Delivery type',
+  fulfilment_by_location: 'Location fulfilment',
+  images: 'Product images',
+  is_active: 'Active',
+  is_featured: 'Featured',
+  sku: 'SKU',
+  weight: 'Weight',
+  discount_percent: 'Discount %',
+  tag1: 'Tag 1',
+  tag2: 'Tag 2',
+  skin_type: 'Skin type',
+}
+
+const DELIVERY_TYPE_LABELS: Record<DeliveryType, string> = {
+  carecraftz: 'CareCraftz delivery',
+  partner: 'Partner own delivery',
+}
+
+type LocationCurrency = 'AED' | 'PKR'
+
+interface FulfilmentLocation {
+  name: string
+  currency: LocationCurrency
+}
+
+const PRESET_LOCATIONS: FulfilmentLocation[] = [
+  { name: 'UAE', currency: 'AED' },
+  { name: 'Pakistan', currency: 'PKR' },
+]
+
+const normalizeDeliveryType = (value: unknown): DeliveryType =>
+  value === 'partner' ? 'partner' : 'carecraftz'
+
+const parseLocations = (raw: string | null | undefined): FulfilmentLocation[] => {
+  if (!raw || !raw.trim()) return [{ name: 'UAE', currency: 'AED' }]
+  return raw.split(',').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const preset = PRESET_LOCATIONS.find((item) => item.name.toLowerCase() === part.toLowerCase())
+    if (preset) return { ...preset }
+    const [namePart, currencyPart] = part.split(':').map((piece) => piece.trim())
+    const currency: LocationCurrency = currencyPart?.toUpperCase() === 'PKR' ? 'PKR' : 'AED'
+    if (namePart.toLowerCase() === 'pakistan') return { name: 'Pakistan', currency: 'PKR' }
+    if (namePart.toLowerCase() === 'uae') return { name: 'UAE', currency: 'AED' }
+    return { name: namePart, currency }
+  })
+}
+
+const serializeLocations = (locations: FulfilmentLocation[]): string => {
+  if (locations.length === 0) return 'UAE'
+  return locations.map((loc) => {
+    const preset = PRESET_LOCATIONS.find((item) => item.name === loc.name)
+    if (preset) return preset.name
+    return `${loc.name}:${loc.currency}`
+  }).join(',')
+}
+
+const emptyLocationFulfilment = (deliveryType: DeliveryType = 'carecraftz'): LocationFulfilmentData => ({
+  price: 0,
+  compare_at_price: null,
+  inventory: 0,
+  low_stock_threshold: 10,
+  weight: null,
+  discount_percent: 0,
+  delivery_type: deliveryType,
+  delivery_charge: 0,
+})
+
+const normalizePartnerShippingLocations = (raw: string[] | null | undefined): FulfilmentLocation[] => {
+  const found = new Set<'UAE' | 'Pakistan'>()
+  ;(raw || []).forEach((item) => {
+    const lower = String(item).toLowerCase()
+    if (
+      lower.includes('pakistan') ||
+      lower.includes('pkr') ||
+      lower.includes('lahore') ||
+      lower.includes('karachi') ||
+      lower.includes('islamabad')
+    ) {
+      found.add('Pakistan')
+    }
+    if (
+      lower.includes('uae') ||
+      lower.includes('dubai') ||
+      lower.includes('abu dhabi') ||
+      lower.includes('emirates') ||
+      lower.includes('aed')
+    ) {
+      found.add('UAE')
+    }
+  })
+  if (found.size === 0) return PRESET_LOCATIONS.map((item) => ({ ...item }))
+  return PRESET_LOCATIONS.filter((item) => found.has(item.name as 'UAE' | 'Pakistan')).map((item) => ({ ...item }))
+}
+
+const ensureLocationFulfilment = (
+  current: FulfilmentByLocation,
+  locations: FulfilmentLocation[],
+  fallback?: Partial<LocationFulfilmentData>,
+): FulfilmentByLocation => {
+  const next: FulfilmentByLocation = {}
+  locations.forEach((loc) => {
+    next[loc.name] = {
+      ...emptyLocationFulfilment(fallback?.delivery_type),
+      ...fallback,
+      ...current[loc.name],
+    }
+  })
+  return next
+}
+
+const hydrateFulfilmentByLocation = (product?: Partial<Product>): FulfilmentByLocation => {
+  const locations = parseLocations(product?.location)
+  const existing = (product?.fulfilment_by_location && typeof product.fulfilment_by_location === 'object')
+    ? product.fulfilment_by_location
+    : {}
+  const seeded = ensureLocationFulfilment(existing, locations, {
+    delivery_type: normalizeDeliveryType(product?.delivery_type),
+    delivery_charge: product?.delivery_charge ?? 0,
+    inventory: product?.inventory ?? 0,
+    low_stock_threshold: product?.low_stock_threshold ?? 10,
+    weight: product?.weight ?? null,
+    discount_percent: product?.discount_percent ?? 0,
+  })
+
+  if (seeded.UAE) {
+    seeded.UAE = {
+      ...seeded.UAE,
+      price: product?.price_aed ?? product?.price ?? seeded.UAE.price,
+      compare_at_price: product?.compare_at_price ?? seeded.UAE.compare_at_price,
+    }
+  }
+  if (seeded.Pakistan) {
+    seeded.Pakistan = {
+      ...seeded.Pakistan,
+      price: product?.price_pkr ?? seeded.Pakistan.price,
+    }
+  }
+  return seeded
+}
+
+const applyFulfilmentToProductFields = (form: Product): Product => {
+  const locations = parseLocations(form.location)
+  const byLocation = ensureLocationFulfilment(form.fulfilment_by_location || {}, locations, {
+    delivery_type: form.delivery_type,
+  })
+  const uae = byLocation.UAE
+  const pakistan = byLocation.Pakistan
+  const primary = uae || pakistan || emptyLocationFulfilment(form.delivery_type)
+  const inventory = locations.reduce((sum, loc) => sum + (byLocation[loc.name]?.inventory || 0), 0)
+
+  return {
+    ...form,
+    fulfilment_by_location: byLocation,
+    price_aed: uae ? uae.price : null,
+    price_pkr: pakistan ? pakistan.price : null,
+    price: primary.price,
+    compare_at_price: uae?.compare_at_price ?? primary.compare_at_price,
+    inventory,
+    low_stock_threshold: primary.low_stock_threshold,
+    weight: primary.weight,
+    discount_percent: primary.discount_percent,
+    delivery_type: primary.delivery_type,
+    delivery_charge: primary.delivery_charge,
+  }
+}
+
+type FieldChange = { field: string; label: string; from: string; to: string }
+
+const formatChangeValue = (value: unknown, field?: string): string => {
+  if (value === null || value === undefined || value === '') return '—'
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (field === 'delivery_type' && (value === 'carecraftz' || value === 'partner')) {
+    return DELIVERY_TYPE_LABELS[value]
+  }
+  if (field === 'fulfilment_by_location' && value && typeof value === 'object') {
+    const keys = Object.keys(value as FulfilmentByLocation)
+    return keys.length ? keys.join(', ') : '—'
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'None'
+    if (typeof value[0] === 'string' && (value[0] as string).startsWith('http')) {
+      return `${value.length} image${value.length === 1 ? '' : 's'}`
+    }
+    return `${value.length} item${value.length === 1 ? '' : 's'}`
+  }
+  const text = String(value)
+  return text.length > 48 ? `${text.slice(0, 48)}…` : text
+}
+
+const normalizeSections = (list: ProductSection[]) =>
+  list.map(({ _uploading: _u, id: _id, ...rest }) => rest)
+
+const collectProductChanges = (
+  baseline: Product,
+  current: Product,
+  baselineSections: ProductSection[],
+  currentSections: ProductSection[],
+): FieldChange[] => {
+  const changes: FieldChange[] = []
+  ;(Object.keys(FIELD_LABELS) as (keyof Product)[]).forEach((key) => {
+    const fromVal = baseline[key]
+    const toVal = current[key]
+    const fromStr = JSON.stringify(fromVal ?? null)
+    const toStr = JSON.stringify(toVal ?? null)
+    if (fromStr !== toStr) {
+      changes.push({
+        field: String(key),
+        label: FIELD_LABELS[key] || String(key),
+        from: formatChangeValue(fromVal, String(key)),
+        to: formatChangeValue(toVal, String(key)),
+      })
+    }
+  })
+
+  if (JSON.stringify(normalizeSections(baselineSections)) !== JSON.stringify(normalizeSections(currentSections))) {
+    changes.push({
+      field: 'sections',
+      label: 'Page sections',
+      from: `${baselineSections.length} block${baselineSections.length === 1 ? '' : 's'}`,
+      to: `${currentSections.length} block${currentSections.length === 1 ? '' : 's'}`,
+    })
+  }
+
+  return changes
+}
 
 const formatStatNumber = (value: number) => new Intl.NumberFormat('en-US').format(value)
 const formatStatDate = (value: string | null) => {
@@ -117,32 +379,55 @@ const formatStatRating = (value: number) => `${value > 0 ? value.toFixed(1) : '0
 
 const EMPTY_PRODUCT: Product = {
   name: '', subtitle: '', description: '', how_to_use: '', ingredients: '',
-  brand_name: '', brand_logo: '', seller_name: '',
+  brand_id: null, brand_name: '', brand_logo: '', seller_name: '', partner_store_id: null,
   price: 0, price_pkr: null, price_aed: null, compare_at_price: null,
   inventory: 0, low_stock_threshold: 10, category: '', location: 'UAE',
-  delivery_charge: 0, images: [], is_active: true, is_featured: false,
+  delivery_charge: 0, delivery_type: 'carecraftz', fulfilment_by_location: { UAE: emptyLocationFulfilment() },
+  images: [], is_active: true, is_featured: false,
   sku: '', weight: null, discount_percent: 0, tag1: '', tag2: '', skin_type: '',
 }
 
-const buildProductForm = (product?: Partial<Product> & { id?: string }): Product => ({
-  ...EMPTY_PRODUCT,
-  ...product,
-  name: product?.name || '',
-  subtitle: product?.subtitle || '',
-  description: product?.description || '',
-  how_to_use: product?.how_to_use || '',
-  ingredients: product?.ingredients || '',
-  brand_name: product?.brand_name || '',
-  brand_logo: product?.brand_logo || '',
-  seller_name: product?.seller_name || '',
-  category: product?.category || '',
-  location: product?.location || 'UAE',
-  sku: product?.sku || '',
-  tag1: product?.tag1 || '',
-  tag2: product?.tag2 || '',
-  skin_type: product?.skin_type || '',
-  images: Array.isArray(product?.images) ? product.images : [],
-})
+const buildProductForm = (product?: Partial<Product> & { id?: string }): Product => {
+  const base: Product = {
+    ...EMPTY_PRODUCT,
+    ...product,
+    name: product?.name || '',
+    subtitle: product?.subtitle || '',
+    description: product?.description || '',
+    how_to_use: product?.how_to_use || '',
+    ingredients: product?.ingredients || '',
+    brand_id: product?.brand_id || null,
+    brand_name: product?.brand_name || '',
+    brand_logo: product?.brand_logo || '',
+    seller_name: product?.seller_name || '',
+    partner_store_id: product?.partner_store_id || null,
+    category: product?.category || '',
+    location: product?.location || 'UAE',
+    delivery_type: normalizeDeliveryType(product?.delivery_type),
+    sku: product?.sku || '',
+    tag1: product?.tag1 || '',
+    tag2: product?.tag2 || '',
+    skin_type: product?.skin_type || '',
+    images: (() => {
+      const raw = product as (Partial<Product> & { image?: string | null; images?: string[] | string | null }) | undefined
+      if (Array.isArray(raw?.images) && raw.images.length > 0) {
+        return raw.images.filter(Boolean)
+      }
+      if (typeof raw?.images === 'string' && raw.images) {
+        return [raw.images]
+      }
+      if (raw?.image) {
+        return [raw.image]
+      }
+      return []
+    })(),
+    fulfilment_by_location: {},
+  }
+  return applyFulfilmentToProductFields({
+    ...base,
+    fulfilment_by_location: hydrateFulfilmentByLocation(product),
+  })
+}
 
 type SupabaseErrorLike = {
   message?: string
@@ -151,7 +436,7 @@ type SupabaseErrorLike = {
   code?: string | number | null
 }
 
-type ProductSaveStage = 'product details' | 'page sections' | 'blog assignment'
+type ProductSaveStage = 'product details' | 'page sections'
 
 const cleanErrorText = (value?: string | null) => (value || '').trim()
 
@@ -276,26 +561,80 @@ export default function ProductModal({
   const isPageLayout = layout === 'page'
   const visibleTabs = TABS.filter((tab) => isPageLayout || !tab.pageOnly)
   const [activeTab, setActiveTab] = useState<ModalTab>('basics')
-  const [form, setForm] = useState<Product>(buildProductForm(product))
+  const [form, setForm] = useState<Product>(() => buildProductForm(product))
+  const [baselineForm, setBaselineForm] = useState<Product>(() => buildProductForm(product))
   const [sections, setSections] = useState<ProductSection[]>([])
-  const [allBlogPosts, setAllBlogPosts] = useState<BlogPost[]>([])
-  const [assignedBlogId, setAssignedBlogId] = useState<string>('')
-  const [reviews, setReviews] = useState<Review[]>([])
+  const [baselineSections, setBaselineSections] = useState<ProductSection[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [imageUploading, setImageUploading] = useState(false)
-  const [brandLogoUploading, setBrandLogoUploading] = useState(false)
+  const [showChanges, setShowChanges] = useState(false)
+  const [partnerStores, setPartnerStores] = useState<PartnerStoreOption[]>([])
+  const [partnerStoresLoading, setPartnerStoresLoading] = useState(false)
+  const [brands, setBrands] = useState<BrandOption[]>([])
+  const [brandsLoading, setBrandsLoading] = useState(false)
+  const [activeLocationTab, setActiveLocationTab] = useState('UAE')
   const imageInputRef = useRef<HTMLInputElement>(null)
-  const brandLogoInputRef = useRef<HTMLInputElement>(null)
 
-  const fetchBlogPosts = useCallback(async () => {
-    const { data } = await supabase.from('blog_posts').select('id,title,slug').eq('status', 'published').order('title')
-    setAllBlogPosts(data || [])
+  const selectedPartner = useMemo(
+    () => partnerStores.find((store) => store.id === form.partner_store_id) || null,
+    [partnerStores, form.partner_store_id],
+  )
+  const selectedBrand = useMemo(
+    () => brands.find((brand) => brand.id === form.brand_id) || null,
+    [brands, form.brand_id],
+  )
+  const partnerLockedLocations = useMemo(
+    () => (selectedPartner ? normalizePartnerShippingLocations(selectedPartner.shipping_locations) : []),
+    [selectedPartner],
+  )
+  const fulfilmentLocations = useMemo(() => parseLocations(form.location), [form.location])
+  const activeLocation = fulfilmentLocations.find((loc) => loc.name === activeLocationTab) || fulfilmentLocations[0] || null
+  const activeLocationData = activeLocation
+    ? form.fulfilment_by_location[activeLocation.name] || emptyLocationFulfilment(form.delivery_type)
+    : emptyLocationFulfilment(form.delivery_type)
+
+  const updateActiveLocationData = (patch: Partial<LocationFulfilmentData>) => {
+    if (!activeLocation) return
+    setForm((current) => {
+      const nextByLocation = {
+        ...current.fulfilment_by_location,
+        [activeLocation.name]: {
+          ...(current.fulfilment_by_location[activeLocation.name] || emptyLocationFulfilment(current.delivery_type)),
+          ...patch,
+        },
+      }
+      return applyFulfilmentToProductFields({
+        ...current,
+        fulfilment_by_location: nextByLocation,
+      })
+    })
+  }
+
+  const applyPartnerLocations = useCallback((store: PartnerStoreOption | null, currentForm: Product): Product => {
+    if (!store) {
+      return applyFulfilmentToProductFields({
+        ...currentForm,
+        partner_store_id: null,
+        location: 'UAE',
+        fulfilment_by_location: ensureLocationFulfilment(currentForm.fulfilment_by_location, [{ name: 'UAE', currency: 'AED' }]),
+      })
+    }
+    const locked = normalizePartnerShippingLocations(store.shipping_locations)
+    return applyFulfilmentToProductFields({
+      ...currentForm,
+      partner_store_id: store.id,
+      seller_name: store.display_name || currentForm.seller_name,
+      location: serializeLocations(locked),
+      fulfilment_by_location: ensureLocationFulfilment(currentForm.fulfilment_by_location, locked, {
+        delivery_type: currentForm.delivery_type,
+      }),
+    })
   }, [])
 
   const fetchSections = useCallback(async (productId: string) => {
     const { data } = await supabase.from('product_sections').select('*').eq('product_id', productId).order('sort_order')
-    setSections((data || []).map((s: ProductSection) => ({
+    const mapped = (data || []).map((s: ProductSection) => ({
       ...s,
       manifesto_title: s.manifesto_title || '',
       manifesto_body: s.manifesto_body || '',
@@ -303,17 +642,113 @@ export default function ProductModal({
       breakdown_body: s.breakdown_body || '',
       breakdown_image: s.breakdown_image || '',
       breakdown_left_image: s.breakdown_left_image || '',
-    })))
+    }))
+    setSections(mapped)
+    setBaselineSections(mapped)
   }, [])
 
-  const fetchBlogAssignment = useCallback(async (productId: string) => {
-    const { data } = await supabase.from('product_blog_assignments').select('blog_post_id').eq('product_id', productId).maybeSingle()
-    if (data?.blog_post_id) setAssignedBlogId(data.blog_post_id)
+  const pendingChanges = useMemo(() => {
+    const changes = collectProductChanges(baselineForm, form, baselineSections, sections)
+    const storeLabel = (id: string | null) => {
+      if (!id) return '—'
+      return partnerStores.find((store) => store.id === id)?.display_name || id
+    }
+    const brandLabel = (id: string | null) => {
+      if (!id) return '—'
+      return brands.find((brand) => brand.id === id)?.name || id
+    }
+    return changes
+      .filter((change) => change.field !== 'brand_name' && change.field !== 'brand_logo')
+      .map((change) => {
+        if (change.field === 'partner_store_id') {
+          return {
+            ...change,
+            from: storeLabel(baselineForm.partner_store_id),
+            to: storeLabel(form.partner_store_id),
+          }
+        }
+        if (change.field === 'brand_id') {
+          return {
+            ...change,
+            from: brandLabel(baselineForm.brand_id),
+            to: brandLabel(form.brand_id),
+          }
+        }
+        return change
+      })
+  }, [baselineForm, form, baselineSections, sections, partnerStores, brands])
+  const hasChanges = pendingChanges.length > 0
+
+  useEffect(() => {
+    let cancelled = false
+    const loadBrands = async () => {
+      setBrandsLoading(true)
+      try {
+        const { data, error: brandsError } = await supabase
+          .from('brands')
+          .select('id, name, logo_url')
+          .order('name', { ascending: true })
+        if (brandsError) throw brandsError
+        if (!cancelled) setBrands((data || []) as BrandOption[])
+      } catch (loadError) {
+        console.error('Failed to load brands:', loadError)
+        if (!cancelled) setBrands([])
+      } finally {
+        if (!cancelled) setBrandsLoading(false)
+      }
+    }
+    void loadBrands()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const fetchReviews = useCallback(async (productId: string) => {
-    const { data } = await supabase.from('reviews').select('*').eq('product_id', productId).order('created_at', { ascending: false })
-    setReviews(data || [])
+  useEffect(() => {
+    let cancelled = false
+    const loadPartnerStores = async () => {
+      setPartnerStoresLoading(true)
+      try {
+        const { data, error: storesError } = await supabase
+          .from('partner_stores')
+          .select('id, display_name, status, approval_status, tenant_type, partner_applications(shipping_locations)')
+          .order('display_name', { ascending: true })
+
+        if (storesError) throw storesError
+        if (!cancelled) {
+          const mapped = (data || []).map((row) => {
+            const record = row as {
+              id: string
+              display_name: string
+              status: string
+              approval_status: string
+              tenant_type?: string | null
+              partner_applications?: { shipping_locations?: string[] | null } | { shipping_locations?: string[] | null }[] | null
+            }
+            const application = Array.isArray(record.partner_applications)
+              ? record.partner_applications[0]
+              : record.partner_applications
+            return {
+              id: record.id,
+              display_name: record.display_name,
+              status: record.status,
+              approval_status: record.approval_status,
+              tenant_type: record.tenant_type,
+              shipping_locations: application?.shipping_locations || [],
+            } satisfies PartnerStoreOption
+          })
+          setPartnerStores(mapped)
+        }
+      } catch (storesError) {
+        console.error('Failed to load partner stores:', storesError)
+        if (!cancelled) setPartnerStores([])
+      } finally {
+        if (!cancelled) setPartnerStoresLoading(false)
+      }
+    }
+    void loadPartnerStores()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,30 +786,40 @@ export default function ProductModal({
     }
   }
 
-  const handleBrandLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    const file = files[0]
-    setBrandLogoUploading(true)
-    setError('')
-
-    try {
-      const ext = file.name.split('.').pop()
-      const path = `product-branding/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error: uploadError } = await supabase.storage.from('product-images').upload(path, file)
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage.from('product-images').getPublicUrl(path)
-      setForm((current) => ({ ...current, brand_logo: data.publicUrl }))
-    } catch (uploadError) {
-      setError(buildProductUploadErrorMessage('brand logo', uploadError))
-    } finally {
-      setBrandLogoUploading(false)
-      if (brandLogoInputRef.current) brandLogoInputRef.current.value = ''
-    }
+  const handlePartnerStoreChange = (storeId: string) => {
+    const store = storeId ? partnerStores.find((item) => item.id === storeId) || null : null
+    setForm((current) => applyPartnerLocations(store, current))
+    const locked = store ? normalizePartnerShippingLocations(store.shipping_locations) : [{ name: 'UAE', currency: 'AED' as const }]
+    setActiveLocationTab(locked[0]?.name || 'UAE')
   }
+
+  const handleBrandSelect = (brandId: string) => {
+    const brand = brandId ? brands.find((item) => item.id === brandId) || null : null
+    setForm((current) => ({
+      ...current,
+      brand_id: brand?.id || null,
+      brand_name: brand?.name || '',
+      brand_logo: brand?.logo_url || '',
+    }))
+  }
+
+  useEffect(() => {
+    if (fulfilmentLocations.length === 0) return
+    if (!fulfilmentLocations.some((loc) => loc.name === activeLocationTab)) {
+      setActiveLocationTab(fulfilmentLocations[0].name)
+    }
+  }, [fulfilmentLocations, activeLocationTab])
+
+  useEffect(() => {
+    if (!form.partner_store_id || partnerStores.length === 0) return
+    const store = partnerStores.find((item) => item.id === form.partner_store_id)
+    if (!store) return
+    const locked = serializeLocations(normalizePartnerShippingLocations(store.shipping_locations))
+    if (locked === form.location) return
+    setForm((current) => applyPartnerLocations(store, current))
+    setBaselineForm((current) => applyPartnerLocations(store, current))
+    setActiveLocationTab(normalizePartnerShippingLocations(store.shipping_locations)[0]?.name || 'UAE')
+  }, [partnerStores, form.partner_store_id, form.location, applyPartnerLocations])
 
   const handleSectionImageUpload = async (idx: number, field: 'breakdown_image' | 'breakdown_left_image', file: File) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, _uploading: true } : s))
@@ -408,17 +853,20 @@ export default function ProductModal({
   const removeSection = (idx: number) => setSections(prev => prev.filter((_, i) => i !== idx))
 
   useEffect(() => {
+    const nextForm = buildProductForm(product)
+    setForm(nextForm)
+    setBaselineForm(nextForm)
+    setShowChanges(false)
+    if (!product?.id) {
+      setSections([])
+      setBaselineSections([])
+      return
+    }
     const timeoutId = window.setTimeout(() => {
-      void fetchBlogPosts()
-      if (product?.id) {
-        void fetchSections(product.id)
-        void fetchBlogAssignment(product.id)
-        void fetchReviews(product.id)
-      }
+      void fetchSections(product.id)
     }, 0)
-
     return () => window.clearTimeout(timeoutId)
-  }, [fetchBlogPosts, fetchSections, fetchBlogAssignment, fetchReviews, product?.id])
+  }, [fetchSections, product])
 
   const updateSection = (idx: number, field: keyof ProductSection, value: string | number) => {
     setSections(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
@@ -436,20 +884,25 @@ export default function ProductModal({
     let productId = product?.id
     let productWasSaved = Boolean(productId)
     let saveStage: ProductSaveStage = 'product details'
+    const payload = applyFulfilmentToProductFields(form)
 
     try {
       if (productId) {
         const { data: updatedProduct, error } = await supabase.from('products').update({
-          name: form.name, subtitle: form.subtitle, description: form.description,
-          how_to_use: form.how_to_use, ingredients: form.ingredients,
-          brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
-          price: form.price, price_pkr: form.price_pkr, price_aed: form.price_aed,
-          compare_at_price: form.compare_at_price, inventory: form.inventory,
-          low_stock_threshold: form.low_stock_threshold, category: form.category,
-          location: form.location, delivery_charge: form.delivery_charge,
-          images: form.images, is_active: form.is_active, is_featured: form.is_featured,
-          sku: form.sku, weight: form.weight, discount_percent: form.discount_percent,
-          tag1: form.tag1, tag2: form.tag2, skin_type: form.skin_type,
+          name: payload.name, subtitle: payload.subtitle, description: payload.description,
+          how_to_use: payload.how_to_use, ingredients: payload.ingredients,
+          brand_id: payload.brand_id, brand_name: payload.brand_name, brand_logo: payload.brand_logo,
+          seller_name: payload.seller_name,
+          partner_store_id: payload.partner_store_id,
+          price: payload.price, price_pkr: payload.price_pkr, price_aed: payload.price_aed,
+          compare_at_price: payload.compare_at_price, inventory: payload.inventory,
+          low_stock_threshold: payload.low_stock_threshold, category: payload.category,
+          location: payload.location, delivery_charge: payload.delivery_charge,
+          delivery_type: payload.delivery_type,
+          fulfilment_by_location: payload.fulfilment_by_location,
+          images: payload.images, is_active: payload.is_active, is_featured: payload.is_featured,
+          sku: payload.sku, weight: payload.weight, discount_percent: payload.discount_percent,
+          tag1: payload.tag1, tag2: payload.tag2, skin_type: payload.skin_type,
           updated_at: new Date().toISOString(),
         }).eq('id', productId).select('id').maybeSingle()
         if (error) throw error
@@ -458,16 +911,20 @@ export default function ProductModal({
         }
       } else {
         const { data: insertedProduct, error } = await supabase.from('products').insert({
-          name: form.name, subtitle: form.subtitle, description: form.description,
-          how_to_use: form.how_to_use, ingredients: form.ingredients,
-          brand_name: form.brand_name, brand_logo: form.brand_logo, seller_name: form.seller_name,
-          price: form.price, price_pkr: form.price_pkr, price_aed: form.price_aed,
-          compare_at_price: form.compare_at_price, inventory: form.inventory,
-          low_stock_threshold: form.low_stock_threshold, category: form.category,
-          location: form.location, delivery_charge: form.delivery_charge,
-          images: form.images, is_active: form.is_active, is_featured: form.is_featured,
-          sku: form.sku, weight: form.weight, discount_percent: form.discount_percent,
-          tag1: form.tag1, tag2: form.tag2, skin_type: form.skin_type,
+          name: payload.name, subtitle: payload.subtitle, description: payload.description,
+          how_to_use: payload.how_to_use, ingredients: payload.ingredients,
+          brand_id: payload.brand_id, brand_name: payload.brand_name, brand_logo: payload.brand_logo,
+          seller_name: payload.seller_name,
+          partner_store_id: payload.partner_store_id,
+          price: payload.price, price_pkr: payload.price_pkr, price_aed: payload.price_aed,
+          compare_at_price: payload.compare_at_price, inventory: payload.inventory,
+          low_stock_threshold: payload.low_stock_threshold, category: payload.category,
+          location: payload.location, delivery_charge: payload.delivery_charge,
+          delivery_type: payload.delivery_type,
+          fulfilment_by_location: payload.fulfilment_by_location,
+          images: payload.images, is_active: payload.is_active, is_featured: payload.is_featured,
+          sku: payload.sku, weight: payload.weight, discount_percent: payload.discount_percent,
+          tag1: payload.tag1, tag2: payload.tag2, skin_type: payload.skin_type,
         }).select('id').maybeSingle()
         if (error) throw error
         if (!insertedProduct?.id) {
@@ -500,15 +957,10 @@ export default function ProductModal({
         if (error) throw error
       }
 
-      saveStage = 'blog assignment'
-      const { error: deleteBlogError } = await supabase.from('product_blog_assignments').delete().eq('product_id', productId)
-      if (deleteBlogError) throw deleteBlogError
-
-      if (assignedBlogId) {
-        const { error: blogAssignmentError } = await supabase.from('product_blog_assignments').insert({ product_id: productId, blog_post_id: assignedBlogId })
-        if (blogAssignmentError) throw blogAssignmentError
-      }
-
+      setForm(payload)
+      setBaselineForm({ ...payload })
+      setBaselineSections(sections.map((s) => ({ ...s })))
+      setShowChanges(false)
       onSaved(productId)
       if (closeOnSave) {
         onClose()
@@ -521,36 +973,76 @@ export default function ProductModal({
     }
   }
 
-  const toggleReviewApproval = async (reviewId: string, current: boolean) => {
-    await supabase.from('reviews').update({ is_approved: !current }).eq('id', reviewId)
-    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, is_approved: !current } : r))
-  }
+  const actionButtons = (
+    <div className="relative flex items-center gap-2 shrink-0">
+      {hasChanges && (
+        <button
+          type="button"
+          onClick={() => setShowChanges((open) => !open)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+        >
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">
+            {pendingChanges.length}
+          </span>
+          edit{pendingChanges.length === 1 ? '' : 's'}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showChanges ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving || !hasChanges}
+        className="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300 disabled:cursor-not-allowed"
+      >
+        {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+        {saving ? 'Saving…' : product?.id ? 'Save changes' : 'Create product'}
+      </button>
 
-  const deleteReview = async (reviewId: string) => {
-    await supabase.from('reviews').delete().eq('id', reviewId)
-    setReviews(prev => prev.filter(r => r.id !== reviewId))
-  }
+      {showChanges && hasChanges && (
+        <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white shadow-lg z-30 overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-700">
+              {pendingChanges.length} pending change{pendingChanges.length === 1 ? '' : 's'}
+            </p>
+          </div>
+          <ul className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+            {pendingChanges.map((change) => (
+              <li key={change.field} className="px-3 py-2.5">
+                <p className="text-xs font-semibold text-gray-900">{change.label}</p>
+                <p className="mt-0.5 text-[11px] text-gray-500">
+                  <span className="line-through decoration-gray-400">{change.from}</span>
+                  <span className="mx-1.5 text-gray-300">→</span>
+                  <span className="text-gray-800 font-medium">{change.to}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
 
   return (
-    <div className={isPageLayout ? 'w-full' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center'}>
-      <div className={isPageLayout ? 'flex w-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
+    <div className={isPageLayout ? 'w-full h-full' : 'fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4 sm:items-center'}>
+      <div className={isPageLayout ? 'flex h-full w-full flex-col overflow-hidden bg-[#F7F2E8]' : 'my-8 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl'}>
 
-        {/* Header */}
-        <div className={`flex items-center justify-between border-b border-gray-100 ${isPageLayout ? 'px-5 py-3.5' : 'px-8 py-5'}`}>
-          <div>
-            <h2 className={`font-bold text-gray-900 ${isPageLayout ? 'text-lg' : 'text-xl'}`}>
+        {/* Header — locked (does not scroll) */}
+        <div className={`flex shrink-0 items-center justify-between gap-3 border-b border-[#E8E0D4] ${isPageLayout ? 'px-3 py-2.5 bg-[#F7F2E8] z-20' : 'px-6 py-4'}`}>
+          <div className="min-w-0">
+            <h2 className={`font-bold text-gray-900 ${isPageLayout ? 'text-base' : 'text-lg'}`}>
               {product?.id ? 'Edit product' : 'Add product'}
             </h2>
-            {product?.id && <p className="text-xs text-gray-400 mt-0.5 font-mono truncate max-w-[280px] sm:max-w-md">ID: {product.id}</p>}
+            {product?.id && <p className="text-[10px] text-gray-400 mt-0.5 font-mono truncate">ID: {product.id}</p>}
           </div>
           {isPageLayout ? (
-            <button
-              onClick={onClose}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to products
-            </button>
+            actionButtons
           ) : (
             <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
               <X className="w-5 h-5" />
@@ -559,7 +1051,7 @@ export default function ProductModal({
         </div>
 
         {error && (
-          <div className={isPageLayout ? 'px-5 pt-3' : 'px-8 pt-4'}>
+          <div className={`shrink-0 ${isPageLayout ? 'px-5 pt-3' : 'px-8 pt-4'}`}>
             <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700" role="alert" aria-live="polite">
               {error}
             </div>
@@ -568,7 +1060,7 @@ export default function ProductModal({
 
         {/* Modal: horizontal tabs */}
         {!isPageLayout && (
-          <div className="flex gap-1 px-8 pt-4 border-b border-gray-100 overflow-x-auto">
+          <div className="flex shrink-0 gap-1 px-8 pt-4 border-b border-gray-100 overflow-x-auto">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.key}
@@ -586,20 +1078,20 @@ export default function ProductModal({
         )}
 
         {/* Page: left sections + content | Modal: content only */}
-        <div className={isPageLayout ? 'flex flex-col md:flex-row min-h-[520px]' : 'contents'}>
+        <div className={isPageLayout ? 'flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden' : 'contents'}>
           {isPageLayout && (
-            <aside className="md:w-56 shrink-0 border-b md:border-b-0 md:border-r border-gray-100 bg-gray-50/80 p-3">
-              <p className="px-2.5 mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">Sections</p>
-              <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
+            <aside className="md:w-48 lg:w-52 shrink-0 border-b md:border-b-0 md:border-r border-[#E8E0D4] bg-[#F0E9DC] p-2.5 md:overflow-y-auto">
+              <p className="px-2 mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-gray-500">Sections</p>
+              <nav className="flex md:flex-col gap-0.5 overflow-x-auto md:overflow-visible pb-1 md:pb-0">
                 {visibleTabs.map((tab) => (
                   <button
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className={`whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`whitespace-nowrap text-left px-2.5 py-1.5 rounded-md text-[12px] font-medium leading-snug transition-colors ${
                       activeTab === tab.key
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-gray-600 hover:bg-[#F7F2E8] hover:text-gray-900'
                     }`}
                   >
                     {tab.label}
@@ -609,95 +1101,86 @@ export default function ProductModal({
             </aside>
           )}
 
-          <div className={isPageLayout ? 'flex-1 min-w-0 px-5 py-4 md:px-6 md:py-5' : 'flex-1 overflow-y-auto px-8 py-6'}>
+          <div className={isPageLayout ? 'flex-1 min-w-0 min-h-0 overflow-y-auto px-3 py-3 sm:px-5 lg:px-6 pb-8' : 'flex-1 overflow-y-auto px-6 py-4'}>
 
           {/* ── TAB: BASICS ── */}
           {activeTab === 'basics' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Name *</label>
+            <div className="space-y-3 max-w-3xl">
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product images</label>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {form.images.length === 0 && (
+                    <p className="w-full text-[11px] text-gray-400">No images yet.</p>
+                  )}
+                  {form.images.map((img, idx) => (
+                    <div
+                      key={`${img}-${idx}`}
+                      className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group bg-gray-50"
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  <label className="w-20 h-20 border border-dashed border-[#D9D0C2] rounded-lg bg-white flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
+                    {imageUploading ? (
+                      <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-gray-400" />
+                        <span className="text-[9px] text-gray-400 mt-0.5">Upload</span>
+                      </>
+                    )}
+                    <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-6 gap-2.5">
+                <div className="sm:col-span-3">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Product name *</label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
                     placeholder="e.g. Moringa Soap Bar" />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Subtitle / Variant</label>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Subtitle</label>
                   <input value={form.subtitle} onChange={e => setForm(f => ({ ...f, subtitle: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
                     placeholder="e.g. Lavender Bergamot" />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">SKU</label>
+                <div className="sm:col-span-1">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">SKU</label>
                   <input value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
                     placeholder="SKU-001" />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</label>
-                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3}
-                  className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-none"
-                  placeholder="Short product description shown in What It Is tab..." />
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Description</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={7}
+                  className="mt-1 w-full px-3 py-2 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-y min-h-[10rem]"
+                  placeholder="Short product description..." />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Price (base)</label>
-                  <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Price AED</label>
-                  <input type="number" value={form.price_aed ?? ''} onChange={e => setForm(f => ({ ...f, price_aed: e.target.value ? parseFloat(e.target.value) : null }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Price PKR</label>
-                  <input type="number" value={form.price_pkr ?? ''} onChange={e => setForm(f => ({ ...f, price_pkr: e.target.value ? parseFloat(e.target.value) : null }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Compare-at Price</label>
-                  <input type="number" value={form.compare_at_price ?? ''} onChange={e => setForm(f => ({ ...f, compare_at_price: e.target.value ? parseFloat(e.target.value) : null }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Inventory</label>
-                  <input type="number" value={form.inventory} onChange={e => setForm(f => ({ ...f, inventory: parseInt(e.target.value) || 0 }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Low Stock Alert</label>
-                  <input type="number" value={form.low_stock_threshold} onChange={e => setForm(f => ({ ...f, low_stock_threshold: parseInt(e.target.value) || 10 }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Category</label>
                   <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="Face, Body, Soap..." />
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                    placeholder="Face, Body..." />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</label>
-                  <div className="relative mt-1">
-                    <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
-                      <option value="UAE">UAE</option>
-                      <option value="Pakistan">Pakistan</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Skin Type</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Skin type</label>
                   <div className="relative mt-1">
                     <select value={form.skin_type} onChange={e => setForm(f => ({ ...f, skin_type: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
+                      className="w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
                       <option value="">None</option>
                       <option value="Oily">Oily</option>
                       <option value="Dry">Dry</option>
@@ -705,160 +1188,318 @@ export default function ProductModal({
                       <option value="Sensitive">Sensitive</option>
                       <option value="Normal">Normal</option>
                     </select>
-                    <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tag 1</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 1</label>
                   <input value={form.tag1} onChange={e => setForm(f => ({ ...f, tag1: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Tag 2</label>
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Tag 2</label>
                   <input value={form.tag2} onChange={e => setForm(f => ({ ...f, tag2: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
-                </div>
-                <div className="flex flex-col gap-2 justify-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4 text-indigo-600 rounded" />
-                    <span className="text-sm text-gray-700">Active</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={form.is_featured} onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))} className="w-4 h-4 text-indigo-600 rounded" />
-                    <span className="text-sm text-gray-700">Featured</span>
-                  </label>
+                    className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none" />
                 </div>
               </div>
 
-              {/* Images */}
-              <div>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Product Images</label>
-                <div className="mt-2 flex flex-wrap gap-3">
-                  {form.images.map((img, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                      <button
-                        onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
-                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-                  ))}
-                  <label className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
-                    {imageUploading ? (
-                      <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Upload className="w-5 h-5 text-gray-400" />
-                        <span className="text-[10px] text-gray-400 mt-1">Upload</span>
-                      </>
-                    )}
-                    <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                  </label>
-                </div>
+              <div className="flex flex-wrap items-center gap-4 pt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
+                  <span className="text-xs text-gray-700">Active</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={form.is_featured} onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))} className="w-3.5 h-3.5 text-indigo-600 rounded" />
+                  <span className="text-xs text-gray-700">Featured</span>
+                </label>
               </div>
             </div>
           )}
 
-          {/* ── TAB: BRANDING ── */}
-          {activeTab === 'branding' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand Name</label>
-                  <input
-                    value={form.brand_name}
-                    onChange={(e) => setForm((current) => ({ ...current, brand_name: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="e.g. CareCraftz"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Seller Name</label>
-                  <input
-                    value={form.seller_name}
-                    onChange={(e) => setForm((current) => ({ ...current, seller_name: e.target.value }))}
-                    className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
-                    placeholder="e.g. CareCraftz Official"
-                  />
-                </div>
+          {/* ── TAB: BRAND ── */}
+          {activeTab === 'brand' && (
+            <div className="max-w-lg space-y-3">
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Brand</label>
+                <p className="mt-0.5 text-[11px] text-gray-400">
+                  Select one brand for this product. Clear to leave unassigned.
+                </p>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand Logo</label>
-                <p className="text-xs text-gray-400 mt-0.5 mb-3">Upload a public logo image for this product's brand identity.</p>
-
-                {form.brand_logo ? (
-                  <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="h-20 w-20 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-                      <img src={form.brand_logo} alt={form.brand_name || 'Brand logo'} className="h-full w-full object-cover" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{form.brand_name || 'Brand logo uploaded'}</p>
-                      <p className="text-xs text-gray-500 break-all">{form.brand_logo}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => brandLogoInputRef.current?.click()}
-                        className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                      >
-                        Replace
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setForm((current) => ({ ...current, brand_logo: '' }))}
-                        className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+              {brandsLoading ? (
+                <p className="text-xs text-gray-500">Loading brands…</p>
+              ) : brands.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-[#D9D0C2] bg-white px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-gray-800">No brands yet</p>
+                  <p className="mt-1 text-[11px] text-gray-500">Add brands from the Brands page first.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => brandLogoInputRef.current?.click()}
-                    className="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-sm text-gray-500 transition-colors hover:border-indigo-400 hover:bg-indigo-50"
+                    onClick={() => handleBrandSelect('')}
+                    className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      !form.brand_id
+                        ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500/30'
+                        : 'border-[#D9D0C2] bg-white hover:border-indigo-300'
+                    }`}
                   >
-                    {brandLogoUploading ? (
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-                    ) : (
-                      <>
-                        <Upload className="h-5 w-5 text-gray-400" />
-                        <span className="mt-2 font-medium text-gray-700">Click to upload brand logo</span>
-                      </>
-                    )}
+                    <div className="h-10 w-10 rounded-lg border border-[#E8E0D4] bg-[#F7F2E8] flex items-center justify-center text-[10px] text-gray-400">
+                      None
+                    </div>
+                    <span className="text-xs font-medium text-gray-700">No brand</span>
                   </button>
-                )}
 
-                <input
-                  ref={brandLogoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleBrandLogoUpload}
-                />
+                  {brands.map((brand) => {
+                    const selected = form.brand_id === brand.id
+                    return (
+                      <button
+                        key={brand.id}
+                        type="button"
+                        onClick={() => handleBrandSelect(brand.id)}
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                          selected
+                            ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500/30'
+                            : 'border-[#D9D0C2] bg-white hover:border-indigo-300'
+                        }`}
+                      >
+                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-[#E8E0D4] bg-[#F7F2E8]">
+                          {brand.logo_url ? (
+                            <img src={brand.logo_url} alt="" className="h-full w-full object-contain p-1" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-gray-400">
+                              {brand.name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-gray-900 truncate">{brand.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {selectedBrand && (
+                <div className="rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 flex items-center gap-2.5">
+                  <div className="h-8 w-8 overflow-hidden rounded-md border border-[#E8E0D4] bg-[#F7F2E8]">
+                    {selectedBrand.logo_url ? (
+                      <img src={selectedBrand.logo_url} alt="" className="h-full w-full object-contain p-0.5" />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Selected</p>
+                    <p className="text-xs font-medium text-gray-900 truncate">{selectedBrand.name}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: PARTNER ── */}
+          {activeTab === 'partner' && (
+            <div className="max-w-md space-y-2">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Partner store</label>
+              <div className="relative">
+                <select
+                  value={form.partner_store_id || ''}
+                  onChange={(e) => handlePartnerStoreChange(e.target.value)}
+                  disabled={partnerStoresLoading}
+                  className="w-full px-3 py-2 border border-[#D9D0C2] rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">Select partner store</option>
+                  {partnerStores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.display_name}
+                      {store.approval_status !== 'approved' || store.status !== 'active' ? ` (${store.status})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-2.5 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>
+              <p className="text-[11px] text-gray-400">
+                {partnerStoresLoading
+                  ? 'Loading partner stores…'
+                  : partnerStores.length === 0
+                    ? 'No partner stores found yet.'
+                    : 'Partner selection fills and locks fulfilment locations.'}
+              </p>
+              {selectedPartner && (
+                <div className="rounded-lg border border-[#D9D0C2] bg-white px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Locked locations</p>
+                  <p className="mt-1 text-xs text-gray-800">
+                    {partnerLockedLocations.map((loc) => `${loc.name} (${loc.currency})`).join(' · ') || 'UAE (AED)'}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── TAB: FULFILMENT ── */}
+          {activeTab === 'fulfilment' && (
+            <div className="space-y-3 max-w-3xl">
+              {!form.partner_store_id ? (
+                <div className="rounded-lg border border-dashed border-[#D9D0C2] bg-white px-4 py-8 text-center">
+                  <p className="text-sm font-medium text-gray-800">Select a partner first</p>
+                  <p className="mt-1 text-[11px] text-gray-500">Fulfilment locations are filled and locked from the partner store.</p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('partner')}
+                    className="mt-3 inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Go to Partner
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fulfilment locations</label>
+                    <p className="mt-0.5 text-[11px] text-gray-400">
+                      Locked from {selectedPartner?.display_name || 'partner'}. Switch tabs to fill each country.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {fulfilmentLocations.map((loc) => (
+                        <span
+                          key={loc.name}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#D9D0C2] bg-white px-2.5 py-1 text-[11px] font-medium text-gray-700"
+                        >
+                          {loc.name}
+                          <span className="text-[10px] text-gray-400">{loc.currency}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {fulfilmentLocations.length > 1 && (
+                    <div className="flex gap-1 border-b border-[#E8E0D4]">
+                      {fulfilmentLocations.map((loc) => (
+                        <button
+                          key={loc.name}
+                          type="button"
+                          onClick={() => setActiveLocationTab(loc.name)}
+                          className={`px-3 py-1.5 text-xs font-semibold border-b-2 -mb-px transition-colors ${
+                            activeLocation?.name === loc.name
+                              ? 'border-indigo-600 text-indigo-700'
+                              : 'border-transparent text-gray-500 hover:text-gray-800'
+                          }`}
+                        >
+                          {loc.name}
+                          <span className="ml-1 font-medium opacity-70">{loc.currency}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeLocation && (
+                    <div className="space-y-3 rounded-lg border border-[#D9D0C2] bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                        {activeLocation.name} · {activeLocation.currency}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Price ({activeLocation.currency})</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.price || ''}
+                            onChange={(e) => updateActiveLocationData({ price: parseFloat(e.target.value) || 0 })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Compare-at</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.compare_at_price ?? ''}
+                            onChange={(e) => updateActiveLocationData({ compare_at_price: e.target.value ? parseFloat(e.target.value) : null })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Inventory</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.inventory}
+                            onChange={(e) => updateActiveLocationData({ inventory: parseInt(e.target.value) || 0 })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Low stock</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.low_stock_threshold}
+                            onChange={(e) => updateActiveLocationData({ low_stock_threshold: parseInt(e.target.value) || 10 })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Weight (g)</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.weight ?? ''}
+                            onChange={(e) => updateActiveLocationData({ weight: e.target.value ? parseFloat(e.target.value) : null })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                            placeholder="Optional"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Discount %</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.discount_percent}
+                            onChange={(e) => updateActiveLocationData({ discount_percent: parseFloat(e.target.value) || 0 })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Delivery type</label>
+                          <div className="relative mt-1">
+                            <select
+                              value={activeLocationData.delivery_type}
+                              onChange={(e) => updateActiveLocationData({ delivery_type: normalizeDeliveryType(e.target.value) })}
+                              className="w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                            >
+                              <option value="carecraftz">CareCraftz delivery</option>
+                              <option value="partner">Partner own delivery</option>
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Delivery charge ({activeLocation.currency})</label>
+                          <input
+                            type="number"
+                            value={activeLocationData.delivery_charge}
+                            onChange={(e) => updateActiveLocationData({ delivery_charge: parseFloat(e.target.value) || 0 })}
+                            className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
           {/* ── TAB: DETAILS ── */}
           {activeTab === 'details' && (
-            <div className="space-y-5">
+            <div className="space-y-3 max-w-3xl">
               <div>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">How To Use</label>
-                <p className="text-xs text-gray-400 mt-0.5 mb-1">Shown in "How To Use" tab on product page. Use line breaks for steps.</p>
-                <textarea value={form.how_to_use} onChange={e => setForm(f => ({ ...f, how_to_use: e.target.value }))} rows={8}
-                  className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-none font-mono"
-                  placeholder="Step 1: Apply a small amount to damp skin...&#10;Step 2: Massage in circular motions...&#10;Step 3: Rinse thoroughly..." />
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">How to use</label>
+                <textarea value={form.how_to_use} onChange={e => setForm(f => ({ ...f, how_to_use: e.target.value }))} rows={6}
+                  className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-none font-mono"
+                  placeholder="Step 1: Apply a small amount to damp skin..." />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Ingredients</label>
-                <p className="text-xs text-gray-400 mt-0.5 mb-1">Full INCI list shown in "Ingredients" tab.</p>
-                <textarea value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} rows={8}
-                  className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-none font-mono"
-                  placeholder="Aqua, Sodium Palmate, Glycerin, Olea Europaea (Olive) Fruit Oil..." />
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Ingredients</label>
+                <textarea value={form.ingredients} onChange={e => setForm(f => ({ ...f, ingredients: e.target.value }))} rows={6}
+                  className="mt-1 w-full px-3 py-1.5 border border-[#D9D0C2] rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none resize-none font-mono"
+                  placeholder="Aqua, Sodium Palmate, Glycerin..." />
               </div>
             </div>
           )}
@@ -902,13 +1543,13 @@ export default function ProductModal({
                       <div>
                         <label className="text-xs font-semibold text-gray-600">Title</label>
                         <input value={section.manifesto_title} onChange={e => updateSection(idx, 'manifesto_title', e.target.value)}
-                          className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400"
+                          className="mt-1 w-full px-4 py-2.5 border border-[#D9D0C2] rounded-xl text-sm bg-white outline-none focus:border-indigo-400"
                           placeholder="e.g. Multipurpose Manifesto" />
                       </div>
                       <div>
                         <label className="text-xs font-semibold text-gray-600">Body Text</label>
                         <textarea value={section.manifesto_body} onChange={e => updateSection(idx, 'manifesto_body', e.target.value)} rows={3}
-                          className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400 resize-none"
+                          className="mt-1 w-full px-4 py-2.5 border border-[#D9D0C2] rounded-xl text-sm bg-white outline-none focus:border-indigo-400 resize-none"
                           placeholder="Not just for your underarms, freshen up your décolletage (neck and chest) and feet." />
                       </div>
                     </>
@@ -919,13 +1560,13 @@ export default function ProductModal({
                       <div>
                         <label className="text-xs font-semibold text-gray-600">Title</label>
                         <input value={section.breakdown_title} onChange={e => updateSection(idx, 'breakdown_title', e.target.value)}
-                          className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-400"
+                          className="mt-1 w-full px-4 py-2.5 border border-[#D9D0C2] rounded-xl text-sm bg-white outline-none focus:border-emerald-400"
                           placeholder="e.g. The Breakdown" />
                       </div>
                       <div>
                         <label className="text-xs font-semibold text-gray-600">Body Text</label>
                         <textarea value={section.breakdown_body} onChange={e => updateSection(idx, 'breakdown_body', e.target.value)} rows={4}
-                          className="mt-1 w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-emerald-400 resize-none"
+                          className="mt-1 w-full px-4 py-2.5 border border-[#D9D0C2] rounded-xl text-sm bg-white outline-none focus:border-emerald-400 resize-none"
                           placeholder="Paper Tube + Seal: Compost (Backyard Or Municipal)&#10;Applicator: Recycle" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -974,83 +1615,6 @@ export default function ProductModal({
                   )}
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* ── TAB: BLOG ASSIGNMENT ── */}
-          {activeTab === 'blog' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">Assign one blog post to appear as the "Read the Blog" section on this product's page.</p>
-              <div className="relative">
-                <select value={assignedBlogId} onChange={e => setAssignedBlogId(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none">
-                  <option value="">— No blog post assigned —</option>
-                  {allBlogPosts.map(p => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-              {assignedBlogId && (
-                <div className="p-4 bg-indigo-50 rounded-2xl">
-                  <p className="text-xs text-indigo-600 font-medium">✓ Blog post assigned. It will display below the product sections with its featured image and excerpt.</p>
-                </div>
-              )}
-              {allBlogPosts.length === 0 && (
-                <p className="text-sm text-gray-400">No published blog posts yet. Create and publish a blog post in the Content section first.</p>
-              )}
-            </div>
-          )}
-
-          {/* ── TAB: REVIEWS ── */}
-          {activeTab === 'reviews' && (
-            <div className="space-y-4">
-              {!product?.id ? (
-                <div className="py-12 text-center">
-                  <p className="text-gray-400 text-sm">Save the product first, then come back to manage reviews.</p>
-                </div>
-              ) : reviews.length === 0 ? (
-                <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl">
-                  <p className="text-4xl mb-3">💬</p>
-                  <p className="text-gray-400 text-sm">No reviews for this product yet.</p>
-                </div>
-              ) : (
-                reviews.map(review => (
-                  <div key={review.id} className="flex items-start gap-4 p-4 border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm text-gray-900">{review.customer_name}</span>
-                        {review.is_verified_purchase && <span className="text-[10px] text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-full">Verified</span>}
-                        <span className="text-[10px] text-gray-400">{new Date(review.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex gap-0.5 mb-1">
-                        {[1,2,3,4,5].map(s => (
-                          <span key={s} className={`text-sm ${s <= review.rating ? 'text-amber-400' : 'text-gray-200'}`}>★</span>
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">{review.review_text}</p>
-                    </div>
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => toggleReviewApproval(review.id, review.is_approved)}
-                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                          review.is_approved
-                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {review.is_approved ? '✓ Approved' : 'Approve'}
-                      </button>
-                      <button
-                        onClick={() => deleteReview(review.id)}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
           )}
 
@@ -1116,23 +1680,12 @@ export default function ProductModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className={`flex items-center justify-between border-t border-gray-100 bg-gray-50/50 ${isPageLayout ? 'px-5 py-3.5' : 'px-8 py-5'}`}>
-          <span />
-          <div className="flex gap-3">
-            <button onClick={onClose} className="px-5 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors">
-              {isPageLayout ? 'Back to products' : 'Cancel'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
-            >
-              {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-              {saving ? 'Saving...' : (product?.id ? 'Save Changes' : 'Create Product')}
-            </button>
+        {/* Footer — modal only; page actions live in the header */}
+        {!isPageLayout && (
+          <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-gray-100 bg-gray-50/50">
+            {actionButtons}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
