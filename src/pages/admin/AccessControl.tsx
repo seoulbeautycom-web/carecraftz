@@ -735,188 +735,218 @@ export default function AccessControl() {
             })}
           </div>
 
-          <div className="grid gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="space-y-3">
-              <div className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
-                <div className="flex items-center justify-between gap-3">
+          <div className="space-y-3">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-xs font-semibold text-gray-900">Roles</h2>
+                    <p className="text-xs font-semibold text-gray-800">Roles</p>
                     <p className="text-[11px] text-gray-500">System roles and custom templates</p>
                   </div>
-                  <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                  <div className="relative w-full sm:w-56">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 w-3.5 h-3.5 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={roleSearch}
+                      onChange={(event) => setRoleSearch(event.target.value)}
+                      placeholder="Search roles"
+                      className="w-full rounded-lg border border-[#D9D0C2] bg-white py-1.5 pl-8 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-[#E8E0D4] bg-[#FBF8F2]/60">
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Role</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Code</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Staff</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Permissions</th>
+                        <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRoles.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-xs text-gray-500">No roles found</td>
+                        </tr>
+                      ) : (
+                        filteredRoles.map((role) => {
+                          const meta = fallbackRoleMeta(role.code)
+                          const isSelected = role.code === selectedRole?.code
+                          const assignedCount = staffAssignmentCounts[role.code] ?? 0
+                          const permissionCount = rolePermissionCount[role.id] ?? 0
 
-                <div className="relative mt-4">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={roleSearch}
-                    onChange={(event) => setRoleSearch(event.target.value)}
-                    placeholder="Search roles"
-                    className="w-full rounded-xl border border-[#D9D0C2] bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  {filteredRoles.map((role) => {
-                    const meta = fallbackRoleMeta(role.code)
-                    const isSelected = role.code === selectedRole?.code
-                    const assignedCount = staffAssignmentCounts[role.code] ?? 0
-                    const permissionCount = rolePermissionCount[role.id] ?? 0
-
-                    return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        onClick={() => applyRoleSelection(role, rolePermissions)}
-                        className={`group w-full rounded-xl border p-3 text-left transition-all ${
-                          isSelected
-                            ? 'border-indigo-500 bg-indigo-50/70 shadow-sm'
-                            : 'border-[#D9D0C2] bg-white hover:border-indigo-300 hover:bg-[#F7F2E8]'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${meta.color}`}>
-                                {role.name}
-                              </span>
-                              {role.is_system && (
-                                <span className="rounded-full bg-[#F0E9DC] px-2.5 py-1 text-xs font-medium text-gray-600">
-                                  System
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-2 text-sm text-gray-500 line-clamp-2">{role.description}</p>
-                          </div>
-                          {!role.is_system && assignedCount === 0 && (
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                void handleDeleteRole(role)
-                              }}
-                              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                              title="Delete role"
+                          return (
+                            <tr
+                              key={role.id}
+                              onClick={() => applyRoleSelection(role, rolePermissions)}
+                              className={`border-b border-[#F0E9DC] last:border-0 cursor-pointer transition-colors ${
+                                isSelected ? 'bg-indigo-50/70' : 'hover:bg-[#F7F2E8]/50'
+                              }`}
                             >
-                              {deletingRoleCode === role.code ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                          <span>{assignedCount} staff</span>
-                          <span>{permissionCount} permissions</span>
-                        </div>
-                      </button>
-                    )
-                  })}
+                              <td className="px-4 py-2.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-medium ${meta.color}`}>
+                                    {role.name}
+                                  </span>
+                                  {role.is_system && (
+                                    <span className="rounded-md bg-[#F0E9DC] px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                                      System
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="mt-1 text-[11px] text-gray-500 line-clamp-1 max-w-md">{role.description}</p>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className="text-[11px] font-mono text-gray-600">{role.code}</span>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className="text-xs font-medium text-gray-800">{assignedCount}</span>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className="text-xs font-medium text-gray-800">{permissionCount}</span>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                {!role.is_system && assignedCount === 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      void handleDeleteRole(role)
+                                    }}
+                                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                                    title="Delete role"
+                                  >
+                                    {deletingRoleCode === role.code ? (
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-gray-400">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#D9D0C2] bg-white p-3.5">
-                <div className="flex items-center justify-between gap-3">
+              <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
+                <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-xs font-semibold text-gray-900">Staff assignments</h2>
+                    <p className="text-xs font-semibold text-gray-800">Staff assignments</p>
                     <p className="text-[11px] text-gray-500">Assign one role to each staff member</p>
                   </div>
-                  <Users className="h-5 w-5 text-emerald-600" />
+                  <div className="relative w-full sm:w-56">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 w-3.5 h-3.5 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={staffSearch}
+                      onChange={(event) => setStaffSearch(event.target.value)}
+                      placeholder="Search staff"
+                      className="w-full rounded-lg border border-[#D9D0C2] bg-white py-1.5 pl-8 pr-3 text-xs text-gray-700 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    />
+                  </div>
                 </div>
+                <div className="overflow-x-auto max-h-[28rem] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-[#FBF8F2] z-10">
+                      <tr className="border-b border-[#E8E0D4]">
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Member</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Current role</th>
+                        <th className="text-left px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Assign role</th>
+                        <th className="text-right px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStaff.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-xs text-gray-500">No staff found</td>
+                        </tr>
+                      ) : (
+                        filteredStaff.map((member) => {
+                          const currentRoleCode = staffRoleLookup.get(member.id) ?? member.role
+                          const currentRole = fallbackRoleMeta(currentRoleCode)
+                          const initials = member.full_name
+                            .split(' ')
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((part) => part[0])
+                            .join('')
+                            .toUpperCase()
 
-                <div className="relative mt-4">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={staffSearch}
-                    onChange={(event) => setStaffSearch(event.target.value)}
-                    placeholder="Search staff"
-                    className="w-full rounded-xl border border-[#D9D0C2] bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="mt-4 space-y-3 max-h-[520px] overflow-y-auto pr-1">
-                  {filteredStaff.map((member) => {
-                    const currentRoleCode = staffRoleLookup.get(member.id) ?? member.role
-                    const currentRole = fallbackRoleMeta(currentRoleCode)
-                    const initials = member.full_name
-                      .split(' ')
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((part) => part[0])
-                      .join('')
-                      .toUpperCase()
-
-                    return (
-                      <div key={member.id} className="rounded-xl border border-[#E8E0D4] bg-[#F7F2E8]/50 p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
-                            {initials}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-gray-900">{member.full_name}</p>
-                                <p className="truncate text-xs text-gray-500">{member.email}</p>
-                              </div>
-                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${member.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-gray-600'}`}>
-                                {member.is_active ? 'Active' : 'Inactive'}
-                              </span>
-                            </div>
-
-                            <p className="mt-2 text-xs text-gray-500">Last signed in {formatLastSignedIn(member.last_signed_in)}</p>
-
-                            <div className="mt-3 flex items-center gap-2">
-                              <select
-                                value={staffAssignmentDraft[member.id] ?? currentRoleCode}
-                                onChange={(event) =>
-                                  setStaffAssignmentDraft((current) => ({
-                                    ...current,
-                                    [member.id]: event.target.value,
-                                  }))
-                                }
-                                className="flex-1 rounded-xl border border-[#D9D0C2] bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-                              >
-                                {roles.map((role) => (
-                                  <option key={role.id} value={role.code}>
-                                    {role.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => void handleAssignStaffRole(member.id)}
-                                disabled={savingStaffId === member.id}
-                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {savingStaffId === member.id ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Save className="h-4 w-4" />
-                                )}
-                                Assign
-                              </button>
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                              <span className={`rounded-full px-2.5 py-1 font-medium ${currentRole.color}`}>
-                                {currentRole.label}
-                              </span>
-                              <span>{currentRole.permissions}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                          return (
+                            <tr key={member.id} className="border-b border-[#F0E9DC] last:border-0 hover:bg-[#F7F2E8]/50">
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white shrink-0">
+                                    {initials}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="truncate text-xs font-medium text-gray-900">{member.full_name}</p>
+                                    <p className="truncate text-[10px] text-gray-500">{member.email}</p>
+                                    <p className="text-[10px] text-gray-400">Last in {formatLastSignedIn(member.last_signed_in)}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${member.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                                  {member.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-medium ${currentRole.color}`}>
+                                  {currentRole.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <select
+                                  value={staffAssignmentDraft[member.id] ?? currentRoleCode}
+                                  onChange={(event) =>
+                                    setStaffAssignmentDraft((current) => ({
+                                      ...current,
+                                      [member.id]: event.target.value,
+                                    }))
+                                  }
+                                  className="w-full min-w-[8rem] rounded-lg border border-[#D9D0C2] bg-white px-2 py-1.5 text-[11px] text-gray-700 focus:border-indigo-400 focus:outline-none"
+                                >
+                                  {roles.map((role) => (
+                                    <option key={role.id} value={role.code}>
+                                      {role.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAssignStaffRole(member.id)}
+                                  disabled={savingStaffId === member.id}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                  {savingStaffId === member.id ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Save className="w-3 h-3" />
+                                  )}
+                                  Assign
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-3">
               <div className="rounded-xl border border-[#D9D0C2] bg-white p-4">
                 {selectedRole ? (
                   <>
@@ -1177,8 +1207,6 @@ export default function AccessControl() {
               </div>
             </div>
           </div>
-        </div>
-
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
