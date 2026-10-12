@@ -61,15 +61,18 @@ export default function Brands() {
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [pageError, setPageError] = useState('')
   const [pageSuccess, setPageSuccess] = useState('')
+  const [formError, setFormError] = useState('')
   const [userName, setUserName] = useState('Admin')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [allOrders, setAllOrders] = useState<HeaderOrder[]>([])
   const [newOrdersCount, setNewOrdersCount] = useState(0)
-  const [showForm, setShowForm] = useState(false)
+  const [showFormModal, setShowFormModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
@@ -122,29 +125,30 @@ export default function Brands() {
     void fetchBrands()
   }, [fetchUserName, fetchOrdersForNotifications, fetchBrands])
 
-  const resetForm = () => {
-    setShowForm(false)
+  const closeFormModal = () => {
+    setShowFormModal(false)
     setEditingId(null)
     setName('')
     setLogoUrl('')
+    setFormError('')
   }
 
   const openCreate = () => {
     setEditingId(null)
     setName('')
     setLogoUrl('')
-    setShowForm(true)
-    setPageError('')
+    setFormError('')
     setPageSuccess('')
+    setShowFormModal(true)
   }
 
   const openEdit = (brand: Brand) => {
     setEditingId(brand.id)
     setName(brand.name)
     setLogoUrl(brand.logo_url || '')
-    setShowForm(true)
-    setPageError('')
+    setFormError('')
     setPageSuccess('')
+    setShowFormModal(true)
   }
 
   const handleLogoUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -152,12 +156,12 @@ export default function Brands() {
     event.target.value = ''
     if (!file) return
     if (!canCreate && !canEdit) {
-      setPageError('You need product edit permission to upload logos.')
+      setFormError('You need product edit permission to upload logos.')
       return
     }
 
     setLogoUploading(true)
-    setPageError('')
+    setFormError('')
 
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
@@ -168,7 +172,7 @@ export default function Brands() {
       setLogoUrl(data.publicUrl)
     } catch (error) {
       console.error('Failed to upload brand logo:', error)
-      setPageError(getErrorMessage(error, 'Failed to upload brand logo'))
+      setFormError(getErrorMessage(error, 'Failed to upload brand logo'))
     } finally {
       setLogoUploading(false)
     }
@@ -178,24 +182,25 @@ export default function Brands() {
     event.preventDefault()
     const trimmedName = name.trim()
     if (!trimmedName) {
-      setPageError('Brand name is required.')
+      setFormError('Brand name is required.')
       return
     }
     if (!logoUrl.trim()) {
-      setPageError('Brand logo is required.')
+      setFormError('Brand logo is required.')
       return
     }
 
     if (editingId && !canEdit) {
-      setPageError('You need products.edit permission to update brands.')
+      setFormError('You need products.edit permission to update brands.')
       return
     }
     if (!editingId && !canCreate) {
-      setPageError('You need products.create permission to add brands.')
+      setFormError('You need products.create permission to add brands.')
       return
     }
 
     setSaving(true)
+    setFormError('')
     setPageError('')
     setPageSuccess('')
 
@@ -219,34 +224,39 @@ export default function Brands() {
         if (error) throw error
         setPageSuccess('Brand added.')
       }
-      resetForm()
+      closeFormModal()
       await fetchBrands()
     } catch (error) {
       console.error('Failed to save brand:', error)
-      setPageError(getErrorMessage(error, 'Failed to save brand'))
+      setFormError(getErrorMessage(error, 'Failed to save brand'))
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (brand: Brand) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     if (!canDelete) {
       setPageError('You need products.delete permission to remove brands.')
+      setDeleteTarget(null)
       return
     }
-    if (!window.confirm(`Delete brand “${brand.name}”?`)) return
 
+    setDeleting(true)
     setPageError('')
     setPageSuccess('')
     try {
-      const { error } = await supabase.from('brands').delete().eq('id', brand.id)
+      const { error } = await supabase.from('brands').delete().eq('id', deleteTarget.id)
       if (error) throw error
       setPageSuccess('Brand deleted.')
-      if (editingId === brand.id) resetForm()
+      if (editingId === deleteTarget.id) closeFormModal()
+      setDeleteTarget(null)
       await fetchBrands()
     } catch (error) {
       console.error('Failed to delete brand:', error)
       setPageError(getErrorMessage(error, 'Failed to delete brand'))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -261,7 +271,7 @@ export default function Brands() {
         <div className="sticky top-0 z-20 border-b border-[#E8E0D4] bg-[#F7F2E8]/95 backdrop-blur-sm px-4 py-2.5 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-gray-900">Brand</h1>
+              <h1 className="text-base font-bold text-gray-900">Brands</h1>
               <p className="text-[11px] text-gray-500">Manage brand names and logos.</p>
             </div>
 
@@ -385,86 +395,9 @@ export default function Brands() {
             </div>
           )}
 
-          {showForm && (
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-xl border border-[#D9D0C2] bg-white p-4 sm:p-5 space-y-4"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-gray-900">
-                  {editingId ? 'Edit brand' : 'Add brand'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-[#F7F2E8] rounded-md"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-[140px_1fr] sm:items-start">
-                <div>
-                  <p className="text-[11px] font-medium text-gray-600 mb-1.5">Logo</p>
-                  <label className="relative flex h-28 w-28 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8] hover:border-indigo-300 transition-colors">
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Brand logo preview" className="h-full w-full object-contain p-2" />
-                    ) : (
-                      <span className="flex flex-col items-center gap-1 text-gray-400">
-                        <ImagePlus className="w-5 h-5" />
-                        <span className="text-[10px]">{logoUploading ? 'Uploading…' : 'Upload'}</span>
-                      </span>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={handleLogoUpload}
-                      disabled={logoUploading || saving}
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <label htmlFor="brand-name" className="block text-[11px] font-medium text-gray-600 mb-1.5">
-                    Name
-                  </label>
-                  <input
-                    id="brand-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. CareCraftz"
-                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-                    disabled={saving}
-                  />
-                  <p className="mt-3 text-[11px] text-gray-500">Only name and one logo image.</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-[#F7F2E8]"
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || logoUploading}
-                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add brand'}
-                </button>
-              </div>
-            </form>
-          )}
-
           <div className="rounded-xl border border-[#D9D0C2] bg-white overflow-hidden">
             <div className="px-4 py-3 border-b border-[#E8E0D4] bg-[#FBF8F2] flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-800">Brands</p>
+              <p className="text-xs font-semibold text-gray-800">All brands</p>
               <span className="text-[11px] text-gray-500">{brands.length} total</span>
             </div>
 
@@ -506,7 +439,7 @@ export default function Brands() {
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => void handleDelete(brand)}
+                          onClick={() => setDeleteTarget(brand)}
                           className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
                           title="Delete"
                         >
@@ -520,6 +453,134 @@ export default function Brands() {
             )}
           </div>
         </div>
+
+        {showFormModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close dialog"
+              className="absolute inset-0 bg-black/40"
+              onClick={closeFormModal}
+            />
+            <form
+              onSubmit={handleSubmit}
+              className="relative z-10 w-full max-w-md rounded-2xl border border-[#D9D0C2] bg-white shadow-xl"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-[#E8E0D4] bg-[#FBF8F2] px-4 py-3 rounded-t-2xl">
+                <h2 className="text-sm font-semibold text-gray-900">
+                  {editingId ? 'Edit brand' : 'Add brand'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={closeFormModal}
+                  className="p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-md"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {formError && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {formError}
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[11px] font-medium text-gray-600 mb-1.5">Logo</p>
+                  <label className="relative mx-auto flex h-28 w-28 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#D9D0C2] bg-[#F7F2E8] hover:border-indigo-300 transition-colors">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Brand logo preview" className="h-full w-full object-contain p-2" />
+                    ) : (
+                      <span className="flex flex-col items-center gap-1 text-gray-400">
+                        <ImagePlus className="w-5 h-5" />
+                        <span className="text-[10px]">{logoUploading ? 'Uploading…' : 'Upload'}</span>
+                      </span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={handleLogoUpload}
+                      disabled={logoUploading || saving}
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label htmlFor="brand-name" className="block text-[11px] font-medium text-gray-600 mb-1.5">
+                    Name
+                  </label>
+                  <input
+                    id="brand-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. CareCraftz"
+                    autoFocus
+                    className="w-full rounded-lg border border-[#D9D0C2] bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] px-4 py-3 bg-[#FBF8F2] rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={closeFormModal}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white"
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || logoUploading}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add brand'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close dialog"
+              className="absolute inset-0 bg-black/40"
+              onClick={() => !deleting && setDeleteTarget(null)}
+            />
+            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-[#D9D0C2] bg-white shadow-xl">
+              <div className="px-4 py-4">
+                <h2 className="text-sm font-semibold text-gray-900">Delete brand</h2>
+                <p className="mt-1.5 text-xs text-gray-600">
+                  Delete <span className="font-medium text-gray-900">“{deleteTarget.name}”</span>? This can’t be undone.
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-[#E8E0D4] px-4 py-3 bg-[#FBF8F2] rounded-b-2xl">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-white"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmDelete()}
+                  disabled={deleting}
+                  className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )

@@ -111,7 +111,7 @@ export const ADMIN_ROUTE_DEFINITIONS: AdminRouteDefinition[] = [
   },
   {
     path: '/brands',
-    label: 'Brand',
+    label: 'Brands',
     icon: Tag,
     requiredAnyPermissions: PRODUCT_PERMISSIONS,
     showInNavigation: true,
