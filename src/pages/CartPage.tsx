@@ -5,141 +5,224 @@ import PageFrame from '../components/PageFrame'
 
 function CartInner() {
   const navigate = useNavigate()
-  const { items, removeFromCart, updateQuantity, grandTotalByCurrency, clearCart } = useCart()
+  const {
+    items,
+    removeFromCart,
+    updateQuantity,
+    totalPriceByCurrency,
+    deliveryChargesByCurrency,
+    grandTotalByCurrency,
+    clearCart,
+  } = useCart()
 
   const formatCurrency = (amount: number, currency: 'PKR' | 'AED') =>
     currency === 'PKR'
       ? `₨ ${amount.toLocaleString('en-PK')}`
       : `AED ${amount.toLocaleString('en-AE')}`
 
-  const pkrItems = items.filter(i => i.currency === 'PKR')
-  const aedItems = items.filter(i => i.currency === 'AED')
+  const pkrItems = items.filter((i) => i.currency === 'PKR')
+  const aedItems = items.filter((i) => i.currency === 'AED' || !i.currency)
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 text-center">
-        <div className="w-24 h-24 rounded-full bg-[#B0E4FF]/30 flex items-center justify-center mb-6">
-          <ShoppingBag className="w-10 h-10 text-[#2b2b2b]/40" />
+      <div
+        className="pt-24 pb-16 px-4 flex flex-col items-center justify-center text-center min-h-[60vh]"
+        style={{ fontFamily: "'Poppins', sans-serif" }}
+      >
+        <div className="w-20 h-20 rounded-full bg-[#B0E4FF]/35 border border-[#2b2b2b]/08 flex items-center justify-center mb-5">
+          <ShoppingBag className="w-8 h-8 text-[#2b2b2b]/40" />
         </div>
-        <h2 className="text-2xl font-light text-[#2b2b2b] mb-2">Your cart is empty</h2>
-        <p className="text-sm text-[#696a67] mb-8 max-w-xs">Looks like you haven't added anything yet. Explore our handcrafted collection.</p>
-        <button
-          onClick={() => navigate('/shop')}
-          className="flex items-center gap-2 px-8 py-3.5 bg-[#2b2b2b] text-white rounded-2xl text-sm font-semibold hover:bg-black transition-all"
+        <h1
+          className="text-[#2b2b2b] mb-2"
+          style={{ fontWeight: 600, fontSize: 'clamp(1.35rem, 2.4vw, 1.75rem)' }}
         >
-          Shop Now <ArrowRight className="w-4 h-4" />
+          Your bag is empty
+        </h1>
+        <p className="text-sm text-[#696a67] mb-7 max-w-xs">
+          Explore the shop and add something you love — it will land here.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/shop')}
+          className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider"
+        >
+          Shop now <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
     )
   }
 
   return (
-    <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-light text-[#2b2b2b]">Your Cart <span className="text-lg text-[#696a67]">({items.length} {items.length === 1 ? 'item' : 'items'})</span></h1>
-        <button onClick={clearCart} className="text-xs text-red-400 hover:text-red-600 transition-colors font-medium">
+    <div
+      className="pt-20 pb-10 px-4 sm:px-5 lg:px-6 max-w-6xl mx-auto"
+      style={{ fontFamily: "'Poppins', sans-serif" }}
+    >
+      <div className="flex items-end justify-between gap-3 mb-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-1">Bag</p>
+          <h1
+            className="text-[#2b2b2b] leading-tight"
+            style={{ fontWeight: 600, fontSize: 'clamp(1.35rem, 2.4vw, 1.75rem)' }}
+          >
+            Your cart
+            <span className="ml-2 text-base font-medium text-[#696a67]">
+              ({items.length} {items.length === 1 ? 'item' : 'items'})
+            </span>
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={clearCart}
+          className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] hover:text-rose-600 transition-colors shrink-0"
+        >
           Clear all
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Items List */}
-        <div className="lg:col-span-2 space-y-4">
-          {items.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100">
-              <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+        {/* Items */}
+        <div className="lg:col-span-3 space-y-2.5">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-3.5 py-3.5 flex gap-3.5"
+            >
+              <div className="w-[4.5rem] h-[4.5rem] rounded-xl overflow-hidden flex-shrink-0 bg-[#f0ece0]">
                 {item.image ? (
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-8 h-8 text-gray-300" />
+                    <Package className="w-7 h-7 text-[#2b2b2b]/25" />
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-[#2b2b2b] text-sm leading-snug mb-1 truncate">{item.name}</h3>
-                <p className="text-xs text-[#696a67] mb-3">{item.location} · {item.currency}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="w-6 text-center text-sm font-semibold text-[#2b2b2b]">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-[#2b2b2b] leading-snug truncate">
+                      {item.name}
+                    </h3>
+                    <p className="text-[11px] text-[#696a67] mt-0.5">
+                      {item.location} · {item.currency}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-[#2b2b2b]">
-                      {formatCurrency(item.price * item.quantity, item.currency)}
+                  <button
+                    type="button"
+                    onClick={() => removeFromCart(item.id)}
+                    className="p-1.5 rounded-lg text-[#696a67] hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0"
+                    aria-label={`Remove ${item.name}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <div className="inline-flex items-center gap-0.5 p-0.5 rounded-full bg-[#f0ece0] border border-[#2b2b2b]/06">
+                    <button
+                      type="button"
+                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      className="w-7 h-7 rounded-full bg-white flex items-center justify-center hover:bg-[#fbfcf4] transition-colors"
+                    >
+                      <Minus className="w-3 h-3 text-[#2b2b2b]" />
+                    </button>
+                    <span className="w-7 text-center text-xs font-semibold text-[#2b2b2b]">
+                      {item.quantity}
                     </span>
                     <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                      type="button"
+                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      className="w-7 h-7 rounded-full bg-white flex items-center justify-center hover:bg-[#fbfcf4] transition-colors"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Plus className="w-3 h-3 text-[#2b2b2b]" />
                     </button>
                   </div>
+                  <span className="text-sm font-semibold text-[#2b2b2b]">
+                    {formatCurrency(item.price * item.quantity, item.currency)}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Order Summary */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-base font-semibold text-[#2b2b2b] mb-4">Order Summary</h3>
-            <div className="space-y-3">
-              {pkrItems.length > 0 && (
-                <div className="p-3 bg-[#f0fdf4] rounded-xl">
-                  <p className="text-xs text-[#696a67] mb-1 font-medium uppercase tracking-wide">Pakistan (PKR)</p>
-                  <p className="text-lg font-semibold text-[#2b2b2b]">
-                    {formatCurrency(grandTotalByCurrency.PKR, 'PKR')}
-                  </p>
-                  <p className="text-xs text-[#696a67] mt-0.5">{pkrItems.length} item{pkrItems.length !== 1 ? 's' : ''}</p>
+        {/* Summary */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="rounded-2xl bg-white border border-[#2b2b2b]/08 px-4 py-4">
+            <h2
+              className="text-[#2b2b2b] leading-tight mb-3"
+              style={{ fontWeight: 600, fontSize: '1.05rem' }}
+            >
+              Order summary
+            </h2>
+
+            {pkrItems.length > 0 && (
+              <div className="mb-3 pb-3 border-b border-[#2b2b2b]/08">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-2">
+                  Pakistan · PKR · {pkrItems.length} item{pkrItems.length !== 1 ? 's' : ''}
+                </p>
+                <div className="space-y-1 text-xs text-[#696a67]">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(totalPriceByCurrency.PKR, 'PKR')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Delivery</span>
+                    <span>{formatCurrency(deliveryChargesByCurrency.PKR, 'PKR')}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-[#2b2b2b] pt-1">
+                    <span>Total</span>
+                    <span>{formatCurrency(grandTotalByCurrency.PKR, 'PKR')}</span>
+                  </div>
                 </div>
-              )}
-              {aedItems.length > 0 && (
-                <div className="p-3 bg-[#eff6ff] rounded-xl">
-                  <p className="text-xs text-[#696a67] mb-1 font-medium uppercase tracking-wide">UAE (AED)</p>
-                  <p className="text-lg font-semibold text-[#2b2b2b]">
-                    {formatCurrency(grandTotalByCurrency.AED, 'AED')}
-                  </p>
-                  <p className="text-xs text-[#696a67] mt-0.5">{aedItems.length} item{aedItems.length !== 1 ? 's' : ''}</p>
+              </div>
+            )}
+
+            {aedItems.length > 0 && (
+              <div className={pkrItems.length > 0 ? '' : 'mb-1'}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#696a67] mb-2">
+                  UAE · AED · {aedItems.length} item{aedItems.length !== 1 ? 's' : ''}
+                </p>
+                <div className="space-y-1 text-xs text-[#696a67]">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(totalPriceByCurrency.AED, 'AED')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Delivery</span>
+                    <span>{formatCurrency(deliveryChargesByCurrency.AED, 'AED')}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-[#2b2b2b] pt-1">
+                    <span>Total</span>
+                    <span>{formatCurrency(grandTotalByCurrency.AED, 'AED')}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <button
+              type="button"
               onClick={() => navigate('/checkout')}
-              className="mt-5 w-full py-3.5 bg-[#2b2b2b] text-white rounded-2xl text-sm font-semibold hover:bg-black transition-all flex items-center justify-center gap-2"
+              className="mt-4 w-full py-3 rounded-full bg-[#1F331F] text-white text-[11px] font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
             >
-              Proceed to Checkout <ArrowRight className="w-4 h-4" />
+              Proceed to checkout <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <button
+              type="button"
               onClick={() => navigate('/shop')}
-              className="mt-2 w-full py-3 text-sm text-[#696a67] hover:text-[#2b2b2b] transition-colors"
+              className="mt-2 w-full py-2.5 rounded-full border border-[#2b2b2b]/12 text-[#2b2b2b] text-[11px] font-semibold uppercase tracking-wider hover:bg-[#fbfcf4] transition-colors"
             >
-              ← Continue Shopping
+              Continue shopping
             </button>
           </div>
 
-          {/* Free delivery nudge */}
-          <div className="bg-[#B0E4FF]/20 rounded-2xl p-4 border border-[#B0E4FF]/40">
-            <p className="text-xs text-[#2b2b2b] font-medium mb-1">🌿 Eco-Friendly Packaging</p>
-            <p className="text-xs text-[#696a67]">All orders ship in 100% recyclable packaging. Part of our zero-waste commitment.</p>
+          <div className="rounded-2xl bg-[#B0E4FF]/25 border border-[#2b2b2b]/08 px-4 py-3.5">
+            <p className="text-xs font-semibold text-[#2b2b2b] mb-1">Verified sellers</p>
+            <p className="text-[11px] text-[#696a67] leading-relaxed">
+              Every product on CareCraftz ships from a verified partner. Delivery is calculated per
+              currency from live store settings.
+            </p>
           </div>
         </div>
-
       </div>
     </div>
   )
